@@ -53,9 +53,20 @@ class OllamaGateway(ModelGateway):
         if req.temperature is not None:
             payload["temperature"] = req.temperature
 
-        resp = self.client.post("/chat/completions", json=payload)
-        resp.raise_for_status()
-        data = resp.json()
+        try:
+            resp = self.client.post("/chat/completions", json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+        except httpx.HTTPStatusError as exc:
+            raise ModelGatewayError(f"Ollama returned HTTP {exc.response.status_code}") from exc
+        except httpx.RequestError as exc:
+            if isinstance(exc, httpx.TimeoutException):
+                msg = "Ollama request timed out"
+            else:
+                msg = f"Ollama request failed: {exc}"
+            raise ModelGatewayError(msg) from exc
+        except ValueError as exc:
+            raise ModelGatewayError("Ollama returned invalid JSON") from exc
         try:
             content = data["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError) as exc:

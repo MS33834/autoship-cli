@@ -52,6 +52,12 @@ coverage.xml
 # Logs
 *.log
 
+# Benchmarks
+benchmarks/results.json
+
+# MkDocs build output
+site/
+
 # OS
 .DS_Store
 Thumbs.db

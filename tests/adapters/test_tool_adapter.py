@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 from autoship.adapters.tool_adapter import ToolChain
 
@@ -54,3 +57,27 @@ def test_toolchain_apply_runs_autoflake_and_black(project_root: Path) -> None:
     ):
         toolchain.apply([Path(".")])
     assert mock_run.call_count == 2
+
+
+def test_toolchain_preview_raises_on_tool_failure(project_root: Path) -> None:
+    toolchain = ToolChain(["black"], project_root)
+    with (
+        patch("shutil.which", return_value="/usr/bin/black"),
+        patch("subprocess.run") as mock_run,
+    ):
+        mock_run.side_effect = subprocess.CalledProcessError(
+            returncode=1, cmd=["black", "--diff", "."], stderr="syntax error"
+        )
+        with pytest.raises(subprocess.CalledProcessError):
+            toolchain.preview([Path(".")])
+
+
+def test_toolchain_apply_raises_on_tool_failure(project_root: Path) -> None:
+    toolchain = ToolChain(["black"], project_root)
+    with (
+        patch("shutil.which", return_value="/usr/bin/black"),
+        patch("subprocess.run") as mock_run,
+    ):
+        mock_run.side_effect = subprocess.CalledProcessError(returncode=123, cmd=["black", "."])
+        with pytest.raises(subprocess.CalledProcessError):
+            toolchain.apply([Path(".")])

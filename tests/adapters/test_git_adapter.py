@@ -53,3 +53,32 @@ def test_commit_stages_and_commits(git_repo: GitAdapter, project_root) -> None:
         text=True,
     )
     assert "Initial commit" in result.stdout
+
+
+def test_non_git_directory_raises(project_root) -> None:
+    from autoship.exceptions import GitError
+
+    adapter = GitAdapter(project_root)
+    with pytest.raises(GitError):
+        adapter.diff()
+
+
+def test_commit_with_no_changes_raises(git_repo: GitAdapter) -> None:
+    from autoship.exceptions import GitError
+
+    with pytest.raises(GitError):
+        git_repo.commit("Empty commit")
+
+
+def test_has_changes_true_for_binary_file(git_repo: GitAdapter, project_root) -> None:
+    (project_root / "data.bin").write_bytes(b"\x00\x01\x02")
+    assert git_repo.has_changes() is True
+
+
+def test_diff_includes_binary_stats(git_repo: GitAdapter, project_root) -> None:
+    (project_root / "data.bin").write_bytes(b"\x00\x01\x02")
+    subprocess.run(["git", "add", "data.bin"], cwd=project_root, check=True, capture_output=True)
+    git_repo.commit("add binary")
+    (project_root / "data.bin").write_bytes(b"\x00\x01\x02\x03")
+    stats = git_repo.stats()
+    assert "data.bin" in stats

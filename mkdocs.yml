@@ -1,0 +1,81 @@
+site_name: AutoShip CLI
+site_description: AutoShip-CLI 文档 — 本地优先的智能交付助手
+site_author: AutoShip Team
+site_url: https://docs.autoship.dev
+
+docs_dir: docs
+
+repo_url: https://github.com/autoship-cli/autoship-cli
+repo_name: autoship-cli/autoship-cli
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: zh
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: 切换到深色模式
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: 切换到浅色模式
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+
+nav:
+  - 首页: index.md
+  - 命令参考:
+      - commands.md
+  - 配置说明: configuration.md
+  - 插件: plugins.md
+  - 插件开发指南: plugin-development.md
+  - Changelog: changelog.md
+  - 贡献指南: contributing.md
+  - 安全策略: security.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: ["."]
+      restrict_base_path: false
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/autoship-cli/autoship-cli
+      name: GitHub
+    - icon: fontawesome/solid/envelope
+      link: mailto:team@autoship.dev
+      name: 联系团队
+  version:
+    provider: mike
+
+copyright: Copyright &copy; 2026 AutoShip Team

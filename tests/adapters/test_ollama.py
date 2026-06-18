@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 import respx
 
 from autoship.adapters.model_gateway import ChatCompletionRequest, ChatMessage
@@ -88,3 +89,78 @@ def test_chat_request_payload() -> None:
         assert b'"temperature":0.5' in sent
         assert b'"max_tokens":100' in sent
         assert b'"stream":false' in sent
+
+
+def test_chat_raises_on_empty_choices() -> None:
+    from autoship.exceptions import ModelGatewayError
+
+    with respx.mock:
+        respx.post("http://localhost:11434/chat/completions").respond(
+            200, json={"model": "llama3", "choices": []}
+        )
+        req = ChatCompletionRequest(messages=[ChatMessage(role="user", content="hi")])
+        with pytest.raises(ModelGatewayError, match="Unexpected response structure"):
+            _gateway().chat(req)
+
+
+def test_chat_raises_on_missing_choices() -> None:
+    from autoship.exceptions import ModelGatewayError
+
+    with respx.mock:
+        respx.post("http://localhost:11434/chat/completions").respond(200, json={"model": "llama3"})
+        req = ChatCompletionRequest(messages=[ChatMessage(role="user", content="hi")])
+        with pytest.raises(ModelGatewayError, match="Unexpected response structure"):
+            _gateway().chat(req)
+
+
+def test_chat_raises_on_malformed_message() -> None:
+    from autoship.exceptions import ModelGatewayError
+
+    with respx.mock:
+        respx.post("http://localhost:11434/chat/completions").respond(
+            200, json={"model": "llama3", "choices": [{"message": {}}]}
+        )
+        req = ChatCompletionRequest(messages=[ChatMessage(role="user", content="hi")])
+        with pytest.raises(ModelGatewayError, match="Unexpected response structure"):
+            _gateway().chat(req)
+
+
+def test_chat_raises_on_invalid_json() -> None:
+    from autoship.exceptions import ModelGatewayError
+
+    with respx.mock:
+        respx.post("http://localhost:11434/chat/completions").respond(200, text="not json")
+        req = ChatCompletionRequest(messages=[ChatMessage(role="user", content="hi")])
+        with pytest.raises(ModelGatewayError):
+            _gateway().chat(req)
+
+
+def test_chat_raises_on_server_error() -> None:
+    from autoship.exceptions import ModelGatewayError
+
+    with respx.mock:
+        respx.post("http://localhost:11434/chat/completions").respond(500)
+        req = ChatCompletionRequest(messages=[ChatMessage(role="user", content="hi")])
+        with pytest.raises(ModelGatewayError):
+            _gateway().chat(req)
+
+
+def test_chat_raises_on_timeout() -> None:
+    from autoship.exceptions import ModelGatewayError
+
+    with respx.mock:
+        respx.post("http://localhost:11434/chat/completions").mock(
+            side_effect=httpx.TimeoutException("timeout")
+        )
+        req = ChatCompletionRequest(messages=[ChatMessage(role="user", content="hi")])
+        with pytest.raises(ModelGatewayError):
+            _gateway().chat(req)
+
+
+def test_list_models_raises_on_invalid_structure() -> None:
+    from autoship.exceptions import ModelGatewayError
+
+    with respx.mock:
+        respx.get("http://localhost:11434/models").respond(200, json={"models": []})
+        with pytest.raises(ModelGatewayError, match="Unexpected response structure"):
+            _gateway().list_models()
