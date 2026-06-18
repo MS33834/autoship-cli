@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "autoship"
-version = "0.1.0"
+version = "0.2.0-beta.1"
 description = "AutoShip-CLI: local-first intelligent delivery assistant"
 readme = "README.md"
 license = { text = "MIT" }

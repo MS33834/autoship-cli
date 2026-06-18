@@ -2,6 +2,26 @@
 
 本文档遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/) 格式，并遵守 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [0.2.0-beta.1] - 2026-06-18
+
+### Added
+
+- 边界测试与错误注入覆盖模型层、Git 层、工具链层、插件层与文件/资源层。
+- 性能基准测试框架 `benchmarks/benchmark.py`，支持启动时间、clean 执行时间、空闲内存等指标。
+- CI/CD 多平台打包：Linux/macOS/Windows 单文件可执行程序、SHA256 checksum、SBOM。
+- `benchmark.yml` 工作流支持手动与 PR 触发性能回归。
+- MkDocs Material 文档站点与 GitHub Pages 自动部署。
+- 可选遥测与错误上报，默认关闭，仅收集命令/时长/退出码/异常类型（不含代码内容）。
+
+### Fixed
+
+- `OllamaGateway.chat` 现在正确将 HTTP 错误、JSON 解析错误与超时转换为 `ModelGatewayError`。
+- `clean` 命令的 `--check` 参数在直接调用时使用真实布尔默认值。
+
+### Changed
+
+- 开发依赖增加 `pyinstaller>=6.0.0` 与 `mkdocs-material>=9.0.0`。
+
 ## [0.1.0] - 2026-06-18
 
 ### Added

@@ -1,0 +1,98 @@
+name: Bug 报告
+description: 报告 autoship 中的问题或异常行为
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您抽出时间报告 bug！请尽量填写以下信息，帮助我们快速定位和修复问题。
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 描述
+      description: 简明扼要地描述您遇到的 bug。
+      placeholder: 例如：运行 autoship commit 时命令卡住，没有任何输出。
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤
+      description: 请列出能稳定复现该问题的具体步骤。
+      placeholder: |
+        1. 运行 `autoship init`
+        2. 运行 `autoship commit`
+        3. 选择默认配置
+        4. 问题出现
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 您期望程序如何响应？
+      placeholder: 例如：应该成功生成提交信息并退出。
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 实际发生了什么？
+      placeholder: 例如：命令一直挂起，按 Ctrl+C 后才能退出。
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## 环境信息
+
+  - type: input
+    id: python_version
+    attributes:
+      label: Python 版本
+      placeholder: 例如：3.11.4
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: 操作系统
+      placeholder: 例如：macOS 14.4 / Ubuntu 22.04 / Windows 11
+    validations:
+      required: true
+
+  - type: input
+    id: autoship_version
+    attributes:
+      label: autoship 版本
+      description: 可通过 `autoship --version` 获取。
+      placeholder: 例如：0.5.1
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: 配置文件（可选）
+      description: |
+        如果问题与配置相关，可贴出相关配置片段。**请勿包含 API token、密码或其他敏感信息。**
+      render: yaml
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志片段
+      description: 请粘贴相关的命令输出或日志。如有完整 traceback，请一并提供。
+      render: shell
+    validations:
+      required: false

@@ -1,0 +1,43 @@
+title: "[Beta 反馈] "
+labels: ["beta-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您参与 autoship Beta 测试！请分享您的使用体验，帮助我们持续改进。
+
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 使用场景
+      description: 您在什么场景下使用 autoship？解决了哪些实际问题？
+      placeholder: 例如：我用 autoship 来规范团队提交信息，并自动执行发布流水线。
+    validations:
+      required: true
+
+  - type: textarea
+    id: overall
+    attributes:
+      label: 总体评价
+      description: 您对当前 Beta 版本的整体印象如何？
+      placeholder: 例如：整体体验流畅，但配置文档可以更丰富一些。
+    validations:
+      required: true
+
+  - type: textarea
+    id: biggest_issue
+    attributes:
+      label: 遇到的最大问题
+      description: 使用过程中最困扰您的一个问题是什么？
+      placeholder: 例如：首次配置时不知道如何设置模型密钥。
+    validations:
+      required: false
+
+  - type: textarea
+    id: expectations
+    attributes:
+      label: 功能期望
+      description: 您希望 Beta 后续版本新增或优化哪些功能？
+      placeholder: 例如：希望支持更多的模型提供商，以及更详细的命令行帮助。
+    validations:
+      required: false

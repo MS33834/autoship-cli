@@ -1,0 +1,78 @@
+"""Tests for telemetry collection."""
+
+from __future__ import annotations
+
+import json
+import time
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
+from autoship.core.telemetry import TelemetryCollector, TelemetryEvent
+
+
+@pytest.fixture
+def telemetry_log(tmp_path: Path) -> Path:
+    return tmp_path / "telemetry.logl"
+
+
+def test_collector_does_nothing_when_disabled(telemetry_log: Path) -> None:
+    collector = TelemetryCollector(enabled=False, log_dir=telemetry_log.parent)
+    event = collector.record("clean", time.perf_counter(), 0)
+    assert event is None
+    assert not telemetry_log.exists()
+
+
+def test_collector_writes_local_log(telemetry_log: Path) -> None:
+    collector = TelemetryCollector(enabled=True, log_dir=telemetry_log.parent)
+    start = time.perf_counter()
+    event = collector.record("commit", start, 0)
+    assert event is not None
+    assert event.command == "commit"
+    assert event.exit_code == 0
+
+    lines = telemetry_log.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert record["command"] == "commit"
+    assert record["exit_code"] == 0
+    assert "duration_ms" in record
+    assert "python_version" in record
+
+
+def test_collector_records_exception_info(telemetry_log: Path) -> None:
+    collector = TelemetryCollector(enabled=True, log_dir=telemetry_log.parent)
+    try:
+        raise ValueError("secret detail")
+    except ValueError as exc:
+        event = collector.record("verify", time.perf_counter(), 1, exc=exc)
+
+    assert event is not None
+    assert event.exception_type == "ValueError"
+    assert event.exception_lineno is not None
+    lines = telemetry_log.read_text(encoding="utf-8").strip().splitlines()
+    record = json.loads(lines[0])
+    assert record["exception_type"] == "ValueError"
+    assert "secret detail" not in json.dumps(record)
+
+
+def test_collector_sends_to_endpoint_when_configured(telemetry_log: Path) -> None:
+    collector = TelemetryCollector(
+        enabled=True,
+        endpoint="https://example.com/telemetry",
+        log_dir=telemetry_log.parent,
+    )
+    with patch("autoship.core.telemetry.httpx.post") as mock_post:
+        collector.record("upload", time.perf_counter(), 0)
+    mock_post.assert_called_once()
+    call = mock_post.call_args
+    assert call.kwargs["timeout"] == 5.0
+
+
+def test_event_to_dict() -> None:
+    event = TelemetryEvent(command="clean", duration_ms=12.3, exit_code=0)
+    data = event.to_dict()
+    assert data["command"] == "clean"
+    assert data["duration_ms"] == 12.3
+    assert data["exit_code"] == 0
