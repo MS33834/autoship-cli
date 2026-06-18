@@ -27,9 +27,10 @@ class HookDispatcher:
 
     def _load_builtin(self) -> None:
         """Load built-in plugins."""
-        from autoship.plugins import defaults
+        from autoship.plugins import defaults, security_scan
 
         self.pm.register(defaults.plugin)
+        self.pm.register(security_scan.plugin)
 
     def _discover_entry_points(self) -> None:
         """Discover and register external plugins via ``autoship.plugins`` entry points."""

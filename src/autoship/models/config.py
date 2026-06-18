@@ -48,6 +48,23 @@ class CommitConfig(BaseModel):
     auto_push: bool = False
 
 
+class SecurityThreshold(str, Enum):
+    """Severity threshold for security scans."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class SecurityConfig(BaseModel):
+    """Configuration for the security-scan plugin."""
+
+    enabled: bool = True
+    tools: list[str] = ["bandit"]
+    threshold: SecurityThreshold = SecurityThreshold.MEDIUM
+    fail_fast: bool = True
+
+
 class ModelConfig(BaseModel):
     """Configuration for model routing and fallback."""
 
@@ -66,4 +83,5 @@ class AppConfig(BaseModel):
     audit_log_dir: Path | None = None
     clean: CleanConfig = Field(default_factory=CleanConfig)
     commit: CommitConfig = Field(default_factory=CommitConfig)
+    security: SecurityConfig = Field(default_factory=SecurityConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)

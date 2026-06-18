@@ -18,6 +18,7 @@ class ExitCode(IntEnum):
     CLEAN_ERROR = 40
     VERIFY_ERROR = 50
     UPLOAD_ERROR = 60
+    SECURITY_ERROR = 70
     USER_ABORT = 130
 
 
@@ -78,3 +79,9 @@ class VerifyError(AutoShipError):
     """Raised when a verification command fails."""
 
     code = ExitCode.VERIFY_ERROR
+
+
+class SecurityScanError(AutoShipError):
+    """Raised when a security scan finds issues above the configured threshold."""
+
+    code = ExitCode.SECURITY_ERROR
