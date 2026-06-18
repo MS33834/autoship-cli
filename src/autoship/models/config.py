@@ -65,6 +65,35 @@ class SecurityConfig(BaseModel):
     fail_fast: bool = True
 
 
+class WebSearchProvider(str, Enum):
+    """Supported web search backends."""
+
+    DUCKDUCKGO = "duckduckgo"
+
+
+class WebSearchConfig(BaseModel):
+    """Configuration for the web-search plugin.
+
+    Web search is disabled by default and must be explicitly enabled, because it
+    sends error snippets to a public search service.
+    """
+
+    enabled: bool = False
+    provider: WebSearchProvider = WebSearchProvider.DUCKDUCKGO
+    max_results: int = 3
+    timeout: float = 10.0
+
+
+class DockerShipConfig(BaseModel):
+    """Configuration for the docker-ship plugin."""
+
+    enabled: bool = True
+    default_image: str | None = None
+    default_tag: str = "latest"
+    push: bool = False
+    build_args: dict[str, str] = Field(default_factory=dict)
+
+
 class ModelConfig(BaseModel):
     """Configuration for model routing and fallback."""
 
@@ -84,4 +113,6 @@ class AppConfig(BaseModel):
     clean: CleanConfig = Field(default_factory=CleanConfig)
     commit: CommitConfig = Field(default_factory=CommitConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
+    web_search: WebSearchConfig = Field(default_factory=WebSearchConfig)
+    docker_ship: DockerShipConfig = Field(default_factory=DockerShipConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)

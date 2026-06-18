@@ -120,3 +120,29 @@ autoship --verbose verify pytest
 - **尊重 `dry_run` 与 `yes`**：在修改文件系统或远程状态前检查这两个标志。
 - **不要泄露敏感信息**：从 `context.config` 读取凭证时避免打印到日志。
 - **使用类型注解**：便于静态检查（pyright / mypy）并保持与核心代码一致。
+
+## 插件 Registry CLI
+
+AutoShip 内置插件管理命令，方便查看、安装和配置第三方插件：
+
+```bash
+# 列出已注册插件
+autoship plugin list
+
+# 安装插件（支持 PyPI 包名、本地路径或 git URL）
+autoship plugin install my-plugin
+
+# 调整插件信任等级
+autoship plugin trust my-plugin verified
+
+# 卸载插件
+autoship plugin uninstall my-plugin
+```
+
+信任等级分为：`builtin`、`verified`、`community`、`untrusted`。默认安装的第三方插件为 `community`，建议仅在审阅源码后再提升为 `verified`。
+
+## 官方内置插件
+
+- **security-scan**：在 `pre_commit` 阶段运行 `bandit`/`gitleaks`/`osv-scanner` 安全检查，发现达到阈值的问题时阻止提交。
+- **docker-ship**：在 `autoship upload --target docker` 前后自动构建/推送 Docker 镜像。
+- **web-search**：当 `verify --fix` 失败且配置中 `web_search.enabled = true` 时，联网搜索错误上下文并辅助生成修复建议。默认关闭，启用前请确认你愿意将错误摘要发送到公共搜索服务。

@@ -8,6 +8,7 @@ import typer
 
 from autoship.core.audit_logger import AuditLogger
 from autoship.core.context import CommandContext
+from autoship.core.hardware_profiler import detect_hardware
 from autoship.models.config import AppConfig
 from autoship.plugin_manager import manager as plugin_manager
 from autoship.utils.project_detector import detect_project_type
@@ -33,6 +34,7 @@ def init(
     yes: bool = ctx.obj.get("yes", False)
 
     detected = project_type or detect_project_type(config.project_root)
+    hardware = detect_hardware()
     context = CommandContext(
         command="init",
         project_root=config.project_root,
@@ -42,7 +44,14 @@ def init(
         trace_id=audit.trace_id,
     )
 
-    audit.record("init.start", {"detected": detected, "output": str(output)})
+    audit.record(
+        "init.start",
+        {
+            "detected": detected,
+            "output": str(output),
+            "recommended_tier": hardware.recommended_tier,
+        },
+    )
     plugin_manager.call("pre_init", context=context, fail_fast=False)
 
     if output.exists() and not yes and not typer.confirm(f"{output} already exists. Overwrite?"):
@@ -50,7 +59,7 @@ def init(
         audit.record("init.aborted", {"reason": "overwrite_declined"})
         raise typer.Exit(code=0)
 
-    rendered = render_default_config(detected)
+    rendered = render_default_config(detected, default_tier=hardware.recommended_tier)
 
     if dry_run:
         typer.echo(f"[dry-run] Would write config to: {output}")
