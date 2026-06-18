@@ -5,6 +5,7 @@ from __future__ import annotations
 import pluggy
 
 from autoship.core.context import CommandContext
+from autoship.core.fix import FixSuggestion
 
 hookspec = pluggy.HookspecMarker("autoship")
 hookimpl = pluggy.HookimplMarker("autoship")
@@ -54,5 +55,5 @@ class AutoShipHookSpec:
         """Called after ``autoship upload`` completes."""
 
     @hookspec
-    def on_error(self, context: CommandContext, error: Exception) -> None:
-        """Called when a command raises an error; may suppress or enrich it."""
+    def on_error(self, context: CommandContext, error: Exception) -> FixSuggestion | None:
+        """Called when a command raises an error; may return a fix suggestion."""

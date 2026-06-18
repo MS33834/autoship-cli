@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
+from importlib.metadata import entry_points
 from typing import Any
 
 import pluggy
@@ -21,12 +23,35 @@ class HookDispatcher:
         self.pm = pluggy.PluginManager("autoship")
         self.pm.add_hookspecs(AutoShipHookSpec)
         self._load_builtin()
+        self._discover_entry_points()
 
     def _load_builtin(self) -> None:
         """Load built-in plugins."""
         from autoship.plugins import defaults
 
         self.pm.register(defaults.plugin)
+
+    def _discover_entry_points(self) -> None:
+        """Discover and register external plugins via ``autoship.plugins`` entry points."""
+        try:
+            eps = entry_points()
+            group = (
+                eps.select(group="autoship.plugins")
+                if hasattr(eps, "select")
+                else eps.get("autoship.plugins", [])
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to discover entry-point plugins: %s", exc)
+            return
+
+        for ep in group:
+            try:
+                plugin = ep.load()
+                if inspect.isfunction(plugin) or inspect.ismethod(plugin):
+                    plugin = plugin()
+                self.pm.register(plugin, name=ep.name)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Failed to load plugin %s: %s", ep.name, exc)
 
     def call(
         self,

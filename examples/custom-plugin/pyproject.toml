@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "autoship-custom-plugin"
+version = "0.1.0"
+description = "Example AutoShip-CLI plugin"
+requires-python = ">=3.10"
+dependencies = [
+    "autoship>=0.1.0",
+]
+
+[project.entry-points."autoship.plugins"]
+custom = "autoship_custom_plugin.plugin:register"

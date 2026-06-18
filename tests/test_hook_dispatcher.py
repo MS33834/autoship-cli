@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from autoship.core.context import CommandContext
@@ -105,3 +107,25 @@ def test_call_failing_hook_fail_fast_raises(app_config: AppConfig) -> None:
     )
     with pytest.raises(PluginError, match="Hook pre_verify failed"):
         dispatcher.call("pre_verify", context=ctx, fail_fast=True)
+
+
+def test_entry_point_discovery(app_config: AppConfig) -> None:
+    """External plugins declared via ``autoship.plugins`` entry points are loaded."""
+
+    class EntryPointPlugin:
+        @hookimpl
+        def pre_init(self, context: CommandContext) -> None:
+            pass
+
+    ep = MagicMock()
+    ep.name = "entry_stub"
+    ep.load.return_value = EntryPointPlugin()
+
+    group = MagicMock()
+    group.select.return_value = [ep]
+
+    with patch("autoship.core.hook_dispatcher.entry_points", return_value=group):
+        dispatcher = HookDispatcher()
+
+    impls = dispatcher.pm.hook.pre_init.get_hookimpls()
+    assert any(isinstance(impl.plugin, EntryPointPlugin) for impl in impls)
