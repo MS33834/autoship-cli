@@ -10,8 +10,8 @@
 
 [查看文字版演示](docs/demo.md)
 
-> 快速演示：30 秒 AutoShip 工作流 asciinema 录制（待补充）。
-> 可使用以下命令在本地录制：
+> 文字版演示已就绪：[查看 docs/demo.md](docs/demo.md)。
+> asciinema 视频录制完成后将替换为以下命令生成的 `docs/demo.cast`：
 >
 > ```bash
 > asciinema rec docs/demo.cast --command "autoship init && autoship clean && autoship commit"
