@@ -89,6 +89,13 @@
       "license": "Apache-2.0",
       "sha256": "a3f5c8e2b4d6f7a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5",
       "signature": "-----BEGIN PGP SIGNATURE-----\n...\n-----END PGP SIGNATURE-----",
+      "permissions": {
+        "filesystem": "read-only",
+        "network": false,
+        "shell": false,
+        "git": true,
+        "env": []
+      },
       "categories": ["security", "git"],
       "tags": ["gpg", "sign", "commit"],
       "downloads": 42,
@@ -112,6 +119,13 @@
       },
       "maintainer": "Community",
       "license": "MIT",
+      "permissions": {
+        "filesystem": "read-only",
+        "network": false,
+        "shell": false,
+        "git": true,
+        "env": ["JIRA_BASE_URL"]
+      },
       "categories": ["productivity", "git"],
       "tags": ["jira", "ticket", "commit"],
       "downloads": 128,

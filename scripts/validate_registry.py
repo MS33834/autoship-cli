@@ -111,6 +111,27 @@ def validate_plugin(plugin: dict, index: int, names: set[str]) -> int:
                     _error(f"{prefix} 'publisher' missing required field '{key}'")
                     errors += 1
 
+    permissions = plugin.get("permissions") or plugin.get("capabilities")
+    if permissions is not None:
+        if not isinstance(permissions, dict):
+            _error(f"{prefix} 'permissions' must be an object")
+            errors += 1
+        else:
+            for key, expected_type in (
+                ("filesystem", str),
+                ("network", bool),
+                ("shell", bool),
+                ("git", bool),
+            ):
+                value = permissions.get(key)
+                if value is not None and not isinstance(value, expected_type):
+                    _error(f"{prefix} 'permissions.{key}' must be a {expected_type.__name__}")
+                    errors += 1
+            env = permissions.get("env")
+            if env is not None and not isinstance(env, list):
+                _error(f"{prefix} 'permissions.env' must be a list")
+                errors += 1
+
     return errors
 
 

@@ -6,16 +6,17 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import typer
 from packaging.version import Version
 from packaging.version import parse as parse_version
 
 from autoship.core.i18n import I18n, get_i18n_from_ctx
-from autoship.core.plugin_registry import PluginRegistry, PluginSpec, TrustLevel
+from autoship.core.plugin_registry import CapabilityManifest, PluginRegistry, PluginSpec, TrustLevel
 from autoship.core.plugin_stats import PluginStats
 from autoship.core.registry_index import RegistryIndex
+from autoship.core.sandbox import SandboxRunner
 from autoship.exceptions import PluginError
 
 app = typer.Typer()
@@ -26,6 +27,36 @@ def _pip_cmd() -> list[str]:
     if shutil.which("uv"):
         return ["uv", "pip"]
     return ["pip"]
+
+
+def _run_pip_install(
+    pip_cmd: list[str],
+    spec: str,
+    *,
+    upgrade: bool = False,
+    sandbox: bool = True,
+    env_whitelist: list[str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run pip install, optionally inside a sandbox for untrusted plugins."""
+    args = [*pip_cmd, "install", "--quiet"]
+    if upgrade:
+        args.append("--upgrade")
+    args.append(spec)
+
+    if sandbox:
+        runner = SandboxRunner(
+            network=True,
+            env_whitelist=env_whitelist or ["PATH", "HOME", "USER", "LANG", "LC_ALL", "PIP_INDEX_URL"],
+        )
+        result = runner.run(args)
+        return subprocess.CompletedProcess(
+            args=args,
+            returncode=result.returncode,
+            stdout=result.stdout,
+            stderr=result.stderr,
+        )
+
+    return subprocess.run(args, check=True, capture_output=True, text=True)
 
 
 def _installed_version(package: str) -> Version | None:
@@ -87,6 +118,25 @@ def _publisher_badge(plugin: dict[str, Any]) -> str:
     return f"{publisher.get('id', '?')} ({badge})"
 
 
+def _capabilities_from_index(indexed: dict[str, Any] | None) -> dict[str, Any]:
+    """Build capability kwargs from registry entry permissions/capabilities."""
+    if not indexed:
+        return {}
+    permissions = cast(dict[str, Any], indexed.get("permissions") or indexed.get("capabilities") or {})
+    return {
+        "filesystem": permissions.get("filesystem", "read-only"),
+        "network": permissions.get("network", False),
+        "shell": permissions.get("shell", False),
+        "git": permissions.get("git", False),
+        "env": permissions.get("env", []),
+    }
+
+
+def _format_capabilities(capabilities: CapabilityManifest) -> str:
+    """Return a concise, human-readable capability summary."""
+    return ", ".join(capabilities.summary()) or "none"
+
+
 @app.command("search")
 def search_plugins(
     ctx: typer.Context,
@@ -133,6 +183,7 @@ def info(
     typer.echo(f"License:     {plugin.get('license', 'Unknown')}")
     typer.echo(f"Categories:  {', '.join(plugin.get('categories', [])) or '—'}")
     typer.echo(f"Tags:        {', '.join(plugin.get('tags', [])) or '—'}")
+    typer.echo(f"Permissions: {_format_capabilities(CapabilityManifest(**_capabilities_from_index(plugin)))}")
     typer.echo(f"Downloads:   {plugin.get('downloads', 0)}")
     rating = plugin.get("rating")
     rating_str = f"{rating['score']:.1f} / 5 ({rating['count']})" if rating and rating.get("count") else "—"
@@ -154,6 +205,7 @@ def install(
     dry_run: bool = typer.Option(False, "--dry-run", help="Show actions without executing"),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmations"),
     skip_trust_check: bool = typer.Option(False, "--skip-trust-check", help="Skip trust level warnings"),
+    no_sandbox: bool = typer.Option(False, "--no-sandbox", help="Run pip install without sandbox"),
 ) -> None:
     """Install a plugin package and register it locally."""
     i18n: I18n = get_i18n_from_ctx(ctx)
@@ -177,8 +229,10 @@ def install(
         plugin_trust = trust or TrustLevel.COMMUNITY
         source_for_pip = source
 
+    capabilities = CapabilityManifest(**_capabilities_from_index(indexed))
+
     if not dry_run:
-        _confirm_trust(i18n, plugin_name, plugin_trust, indexed, yes, skip_trust_check)
+        _confirm_trust(i18n, plugin_name, plugin_trust, indexed, capabilities, yes, skip_trust_check)
 
     if (
         not dry_run
@@ -196,14 +250,18 @@ def install(
         )
         return
 
+    use_sandbox = not no_sandbox and plugin_trust in (TrustLevel.COMMUNITY, TrustLevel.UNTRUSTED)
+
     pip_cmd = _pip_cmd()
     try:
-        subprocess.run(
-            [*pip_cmd, "install", "--quiet", source_for_pip],
-            check=True,
-            capture_output=True,
-            text=True,
+        result = _run_pip_install(
+            pip_cmd,
+            source_for_pip,
+            sandbox=use_sandbox,
+            env_whitelist=capabilities.env + ["PATH", "HOME", "USER", "LANG", "LC_ALL", "PIP_INDEX_URL"],
         )
+        if result.returncode != 0:
+            raise subprocess.CalledProcessError(result.returncode, result.args, output=result.stdout, stderr=result.stderr)
     except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
         raise PluginError(i18n._("plugin.install_failed", plugin_name=plugin_name, exc=exc)) from exc
 
@@ -215,6 +273,7 @@ def install(
             entry_point=indexed.get("entry_point") if indexed else None,
             hooks=indexed.get("hooks", []) if indexed else [],
             trust_level=plugin_trust,
+            capabilities=capabilities,
             sha256=indexed.get("sha256") if indexed else None,
             signature=indexed.get("signature") if indexed else None,
             maintainer=indexed.get("maintainer") if indexed else None,
@@ -230,6 +289,7 @@ def _confirm_trust(
     plugin_name: str,
     plugin_trust: TrustLevel,
     indexed: dict[str, Any] | None,
+    capabilities: CapabilityManifest,
     yes: bool,
     skip_trust_check: bool,
 ) -> None:
@@ -244,6 +304,12 @@ def _confirm_trust(
             else "plugin.install_trust_warning_untrusted"
         )
         typer.echo(i18n._(message_key, plugin_name=plugin_name))
+        typer.echo(
+            i18n._(
+                "plugin.install_permissions",
+                permissions=_format_capabilities(capabilities),
+            )
+        )
         if not typer.confirm(i18n._("plugin.install_trust_confirm"), abort=False):
             typer.echo(i18n._("common.aborted"))
             raise typer.Exit(code=0)
@@ -355,8 +421,9 @@ def update(
     name: str | None = typer.Argument(None, help="Plugin name to update"),
     all_plugins: bool = typer.Option(False, "--all", help="Update all registered plugins"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show actions without executing"),
-    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmations"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip interactive confirmations"),
     skip_trust_check: bool = typer.Option(False, "--skip-trust-check", help="Skip trust level warnings"),
+    no_sandbox: bool = typer.Option(False, "--no-sandbox", help="Run pip install without sandbox"),
 ) -> None:
     """Check for and install plugin updates."""
     i18n: I18n = get_i18n_from_ctx(ctx)
@@ -422,15 +489,28 @@ def update(
             typer.echo(i18n._("plugin.update_dry_run", plugin_name=plugin.name, source_for_pip=source_for_pip))
             continue
 
-        _confirm_trust(i18n, plugin.name, plugin.trust_level, index.get(plugin.name), yes, skip_trust_check)
+        _confirm_trust(
+            i18n,
+            plugin.name,
+            plugin.trust_level,
+            index.get(plugin.name),
+            plugin.capabilities,
+            yes,
+            skip_trust_check,
+        )
+
+        use_sandbox = not no_sandbox and plugin.trust_level in (TrustLevel.COMMUNITY, TrustLevel.UNTRUSTED)
 
         try:
-            subprocess.run(
-                [*pip_cmd, "install", "--quiet", "--upgrade", source_for_pip],
-                check=True,
-                capture_output=True,
-                text=True,
+            result = _run_pip_install(
+                pip_cmd,
+                source_for_pip,
+                upgrade=True,
+                sandbox=use_sandbox,
+                env_whitelist=plugin.capabilities.env + ["PATH", "HOME", "USER", "LANG", "LC_ALL", "PIP_INDEX_URL"],
             )
+            if result.returncode != 0:
+                raise subprocess.CalledProcessError(result.returncode, result.args, output=result.stdout, stderr=result.stderr)
         except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
             raise PluginError(i18n._("plugin.update_failed", plugin_name=plugin.name, exc=exc)) from exc
 

@@ -24,12 +24,30 @@ class TrustLevel(str, Enum):
 
 
 class CapabilityManifest(BaseModel):
-    """Minimal capability manifest for a plugin."""
+    """Permission/capability manifest for a plugin.
+
+    Plugins declare what resources they need so the CLI can warn users
+    and, in the future, enforce sandbox restrictions.
+    """
 
     filesystem: str = "read-only"
     network: bool = False
     shell: bool = False
     git: bool = False
+    env: list[str] = Field(default_factory=list)
+
+    def summary(self) -> list[str]:
+        """Return a human-readable list of declared capabilities."""
+        items = [f"filesystem={self.filesystem}"]
+        if self.network:
+            items.append("network=yes")
+        if self.shell:
+            items.append("shell=yes")
+        if self.git:
+            items.append("git=yes")
+        if self.env:
+            items.append(f"env={','.join(self.env)}")
+        return items
 
 
 class PluginSpec(BaseModel):

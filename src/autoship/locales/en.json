@@ -63,6 +63,7 @@
   "plugin.install_trust_warning_untrusted": "Warning: {plugin_name} is marked as untrusted. Only install if you fully understand the source.",
   "plugin.install_unverified_signature": "Warning: {plugin_name} is listed as verified but has no checksum or signature in the registry.",
   "plugin.install_trust_confirm": "Do you want to continue with the installation?",
+  "plugin.install_permissions": "Requested permissions: {permissions}",
   "plugin.update_name_or_all": "Please specify a plugin name or use --all.",
   "plugin.update_skip_builtin": "built-in plugin",
   "plugin.update_skip_local": "local source",

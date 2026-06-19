@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from unittest.mock import patch
 
 from packaging.version import parse as parse_version
@@ -99,13 +100,16 @@ def test_plugin_install_untrusted_requires_confirmation() -> None:
 
 
 def test_plugin_install_skip_trust_check() -> None:
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value = None
+    with patch("autoship.cli.commands.plugin._run_pip_install") as mock_install:
+        mock_install.return_value = subprocess.CompletedProcess(
+            args=["pip", "install", "jira-link"], returncode=0, stdout="", stderr=""
+        )
         result = runner.invoke(
             app, ["plugin", "install", "jira-link", "--skip-trust-check", "--yes"]
         )
     assert result.exit_code == 0
     assert "Installed plugin: jira-link" in result.output
+    mock_install.assert_called_once()
 
 
 def test_plugin_install_verified_without_signature_warns() -> None:
@@ -190,6 +194,9 @@ def test_plugin_update_upgrades_plugin() -> None:
         patch("autoship.cli.commands.plugin._installed_version", return_value=parse_version("1.0.0")),
         patch("subprocess.run") as mock_run,
     ):
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=["pip", "install", "--upgrade", "pkg-a"], returncode=0, stdout="", stderr=""
+        )
         mock_reg.return_value.list.return_value = plugins
         mock_reg.return_value.get.return_value = plugins[0]
         mock_index.return_value.get.return_value = {"version": "2.0.0"}
@@ -250,3 +257,51 @@ def test_plugin_info_shows_details() -> None:
     assert "commit-sign" in result.output
     assert "alice-chen" in result.output
     assert "42" in result.output
+
+
+def test_plugin_info_shows_permissions() -> None:
+    with patch("autoship.cli.commands.plugin.RegistryIndex") as mock_index:
+        mock_index.return_value.get.return_value = {
+            "name": "jira-link",
+            "version": "0.2.1",
+            "trust_level": "community",
+            "permissions": {
+                "filesystem": "read-only",
+                "network": False,
+                "shell": False,
+                "git": True,
+                "env": ["JIRA_BASE_URL"],
+            },
+        }
+        result = runner.invoke(app, ["plugin", "info", "jira-link"])
+    assert result.exit_code == 0
+    assert "Permissions:" in result.output
+    assert "git=yes" in result.output
+    assert "JIRA_BASE_URL" in result.output
+
+
+def test_plugin_install_community_shows_permissions() -> None:
+    result = runner.invoke(app, ["plugin", "install", "jira-link"], input="n\n")
+    assert result.exit_code == 0
+    assert "community plugin" in result.output
+    assert "Requested permissions" in result.output
+    assert "git=yes" in result.output
+
+
+def test_plugin_install_stores_capabilities() -> None:
+    with (
+        patch("autoship.cli.commands.plugin._run_pip_install") as mock_install,
+        patch("autoship.cli.commands.plugin.PluginRegistry") as mock_reg,
+        patch("autoship.cli.commands.plugin.PluginStats"),
+    ):
+        mock_install.return_value = subprocess.CompletedProcess(
+            args=["pip", "install", "jira-link"], returncode=0, stdout="", stderr=""
+        )
+        result = runner.invoke(
+            app,
+            ["plugin", "install", "jira-link", "--yes", "--skip-trust-check"],
+        )
+    assert result.exit_code == 0
+    spec = mock_reg.return_value.add.call_args[0][0]
+    assert spec.capabilities.git is True
+    assert "JIRA_BASE_URL" in spec.capabilities.env
