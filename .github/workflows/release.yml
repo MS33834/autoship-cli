@@ -37,8 +37,14 @@ jobs:
           uv run pyright
           uv run pytest -q
 
-      - name: Build distributions
-        run: uv build
+      - name: Dry-run build autoship
+        run: |
+          uv build --package autoship --out-dir dist
+
+      - name: Verify autoship wheel metadata
+        run: |
+          wheel=$(ls dist/autoship-*.whl | head -n 1)
+          unzip -p "$wheel" 'autoship-*.dist-info/METADATA' | grep -E '^Requires-Dist:' || true
 
       - name: Publish autoship to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -75,8 +81,13 @@ jobs:
           uv run pyright
           uv run pytest -q
 
-      - name: Build SDK distributions
+      - name: Dry-run build autoship-sdk
         run: uv build --package autoship-sdk --out-dir autoship-sdk/dist
+
+      - name: Verify autoship-sdk wheel metadata
+        run: |
+          wheel=$(ls autoship-sdk/dist/autoship_sdk-*.whl | head -n 1)
+          unzip -p "$wheel" 'autoship_sdk-*.dist-info/METADATA' | grep -E '^Requires-Dist:' || true
 
       - name: Publish autoship-sdk to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -111,13 +122,20 @@ jobs:
       - name: Build executable
         shell: bash
         run: |
-          uv run pyinstaller --onefile --name autoship src/autoship/__main__.py
+          uv run pyinstaller --onefile --name autoship --collect-all autoship src/autoship/__main__.py
           mkdir -p dist/bin
           if [ "${{ runner.os }}" = "Windows" ]; then
             mv dist/autoship.exe "dist/bin/autoship-${{ matrix.os }}.exe"
           else
             mv dist/autoship "dist/bin/autoship-${{ matrix.os }}"
           fi
+
+      - name: Smoke test Linux binary
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          ./dist/bin/autoship-${{ matrix.os }} --help
+          ./dist/bin/autoship-${{ matrix.os }} doctor
 
       - name: Generate SHA256 checksum
         shell: bash

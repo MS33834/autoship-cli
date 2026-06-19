@@ -85,3 +85,9 @@ class SecurityScanError(AutoShipError):
     """Raised when a security scan finds issues above the configured threshold."""
 
     code = ExitCode.SECURITY_ERROR
+
+
+class SandboxError(AutoShipError):
+    """Raised when a required sandbox cannot be enforced."""
+
+    code = ExitCode.SECURITY_ERROR

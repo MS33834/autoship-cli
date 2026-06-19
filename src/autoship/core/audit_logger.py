@@ -5,15 +5,33 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
 from autoship.models.config import AppConfig
 
 logger = logging.getLogger("autoship")
+
+# Common sensitive field names that should never be forwarded to a SIEM.
+SENSITIVE_KEYS = frozenset(
+    {
+        "token",
+        "api_key",
+        "password",
+        "secret",
+        "siem_token",
+        "key",
+        "private",
+        "credentials",
+        "auth",
+        "authorization",
+        "access_token",
+        "refresh_token",
+    }
+)
 
 
 class AuditLogger:
@@ -77,97 +95,111 @@ class AuditLogger:
             logger.warning("Failed to write audit record for %s: %s", event, exc)
         self._forward_to_siem(entry)
 
-    def _redact(self, payload: dict[str, Any]) -> dict[str, Any]:
-        """Remove sensitive keys from audit payloads."""
-        sensitive = {"api_key", "token", "password", "secret", "credentials"}
-        redacted: dict[str, Any] = {}
-        for key, value in payload.items():
-            if any(s in key.lower() for s in sensitive):
-                redacted[key] = "***"
-            else:
-                redacted[key] = value
-        return redacted
-
-    def _forward_to_siem(self, entry: dict[str, Any]) -> None:
-        """Best-effort forward a single audit record to a configured SIEM."""
-        if self._siem_client is None:
-            return
-        try:
-            self._siem_client.post("", json=entry)
-        except httpx.HTTPError as exc:
-            logger.debug("Failed to forward audit record to SIEM: %s", exc)
-
     def export(
         self,
         since: datetime | None = None,
         output: Path | None = None,
     ) -> Path:
-        """Export audit records newer than ``since`` to a JSON Lines file.
+        """Export audit records to a single JSON Lines file.
 
-        If ``output`` is not provided, a timestamped file is created in the
-        current audit log directory.
+        If ``since`` is provided, only records with a timestamp greater than or
+        equal to ``since`` are included. If ``output`` is not provided, a
+        temporary file is created.
         """
         if output is None:
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-            output = self.log_dir / f"audit-export.{timestamp}.jsonl"
-        output = Path(output)
+            output = self.log_dir / f"audit.export.{self.trace_id}.jsonl"
 
-        if since is None:
-            cutoff = datetime.min.replace(tzinfo=timezone.utc)
-        else:
-            cutoff = since.astimezone(timezone.utc)
-
-        exported = 0
-        with output.open("w", encoding="utf-8") as out:
-            for log_file in sorted(self.log_dir.glob("audit.*.jsonl")):
+        records: list[dict[str, Any]] = []
+        for log_file in sorted(self.log_dir.glob("audit.*.jsonl")):
+            if log_file == output or log_file.name.startswith("audit.export."):
+                continue
+            try:
+                text = log_file.read_text()
+            except OSError:
+                continue
+            for line in text.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
                 try:
-                    with log_file.open("r", encoding="utf-8") as f:
-                        for line in f:
-                            line = line.strip()
-                            if not line:
-                                continue
-                            try:
-                                record = json.loads(line)
-                            except json.JSONDecodeError:
-                                continue
-                            ts = self._parse_ts(record.get("ts", ""))
-                            if ts is None or ts >= cutoff:
-                                out.write(line + "\n")
-                                exported += 1
-                except OSError as exc:
-                    logger.warning("Failed to read audit file %s: %s", log_file, exc)
+                    entry_raw = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(entry_raw, dict):
+                    continue
+                entry = cast(dict[str, Any], entry_raw)
+                if since is not None:
+                    ts = entry.get("ts")
+                    if isinstance(ts, str):
+                        try:
+                            entry_dt = datetime.fromisoformat(ts)
+                        except ValueError:
+                            continue
+                        if entry_dt.tzinfo is None:
+                            entry_dt = entry_dt.replace(tzinfo=timezone.utc)
+                        if entry_dt < since:
+                            continue
+                records.append(entry)
 
-        logger.info("Exported %d audit records to %s", exported, output)
+        output.write_text("".join(json.dumps(record) + "\n" for record in records))
         return output
 
-    def _parse_ts(self, value: Any) -> datetime | None:
-        """Parse an ISO timestamp string, returning None on failure."""
-        if not isinstance(value, str):
-            return None
-        try:
-            parsed = datetime.fromisoformat(value)
-            if parsed.tzinfo is None:
-                parsed = parsed.replace(tzinfo=timezone.utc)
-            return parsed.astimezone(timezone.utc)
-        except ValueError:
-            return None
-
     def cleanup(self, retention_days: int | None = None) -> int:
-        """Remove audit log files older than the retention period."""
-        days = retention_days if retention_days is not None else self.config.audit.retention_days
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        """Remove audit log files older than the retention period.
+
+        Returns the number of files removed.
+        """
+        if retention_days is None:
+            retention_days = self.config.audit.retention_days
+        cutoff = datetime.now(timezone.utc).timestamp() - retention_days * 86400
         removed = 0
         for log_file in self.log_dir.glob("audit.*.jsonl"):
+            if log_file == self.log_file or log_file.name.startswith("audit.export."):
+                continue
             try:
-                mtime = datetime.fromtimestamp(log_file.stat().st_mtime, tz=timezone.utc)
-                if mtime < cutoff:
+                mtime = log_file.stat().st_mtime
+            except OSError:
+                continue
+            if mtime < cutoff:
+                try:
                     log_file.unlink()
                     removed += 1
-            except OSError as exc:
-                logger.warning("Failed to remove old audit file %s: %s", log_file, exc)
+                except OSError:
+                    continue
         return removed
 
     def bind_context(self, **kwargs: Any) -> AuditLogger:
-        """Return a new logger with additional default payload fields."""
-        # Placeholder for future enrichment; currently returns self.
+        """Bind extra context to future records.
+
+        This is a no-op placeholder that returns ``self`` for compatibility.
+        """
         return self
+
+    def _redact(self, value: Any) -> Any:
+        """Recursively remove sensitive keys from audit payloads."""
+        if isinstance(value, dict):
+            value_dict = cast(dict[str, Any], value)
+            redacted: dict[str, Any] = {}
+            for key, item in value_dict.items():
+                if any(s in key.lower() for s in SENSITIVE_KEYS):
+                    redacted[key] = "***"
+                else:
+                    redacted[key] = self._redact(item)
+            return redacted
+        if isinstance(value, list):
+            value_list = cast(list[Any], value)
+            return [self._redact(item) for item in value_list]
+        return value
+
+    def _forward_to_siem(self, entry: dict[str, Any]) -> None:
+        """Best-effort forward a single audit record to a configured SIEM.
+
+        The record is redacted before transmission to avoid leaking tokens,
+        credentials, or other secrets.
+        """
+        if self._siem_client is None:
+            return
+        try:
+            self._siem_client.post("", json=self._redact(entry))
+        except httpx.HTTPError as exc:
+            logger.debug("Failed to forward audit record to SIEM: %s", exc)

@@ -82,6 +82,12 @@ class AuditConfig(BaseModel):
     retention_days: int = 30
 
 
+class SandboxConfig(BaseModel):
+    """Configuration for sandbox isolation requirements."""
+
+    required: bool = False
+
+
 class WebSearchConfig(BaseModel):
     """Configuration for the web-search plugin.
 
@@ -91,6 +97,7 @@ class WebSearchConfig(BaseModel):
 
     enabled: bool = False
     provider: WebSearchProvider = WebSearchProvider.DUCKDUCKGO
+    api_key: str | None = Field(default=None, repr=False)
     max_results: int = 3
     timeout: float = 10.0
 
@@ -153,6 +160,7 @@ class AppConfig(BaseModel):
     commit: CommitConfig = Field(default_factory=CommitConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     audit: AuditConfig = Field(default_factory=AuditConfig)
+    sandbox: SandboxConfig = Field(default_factory=SandboxConfig)
     web_search: WebSearchConfig = Field(default_factory=WebSearchConfig)
     docker_ship: DockerShipConfig = Field(default_factory=DockerShipConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)

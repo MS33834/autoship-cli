@@ -5,7 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-from autoship.core.sandbox import SandboxRunner
+import pytest
+
+from autoship.core.sandbox import SandboxError, SandboxRunner
 
 
 def test_sandbox_runs_command() -> None:
@@ -49,6 +51,22 @@ def test_sandbox_falls_back_without_tool() -> None:
     with patch("shutil.which", return_value=None):
         wrapped = runner._wrap_network(["python", "-c", "pass"])
     assert wrapped == ["python", "-c", "pass"]
+
+
+def test_sandbox_required_raises_when_tool_missing() -> None:
+    runner = SandboxRunner(network=False, required=True)
+    with (
+        patch("shutil.which", return_value=None),
+        pytest.raises(SandboxError),
+    ):
+        runner._wrap_network(["python", "-c", "pass"])
+
+
+def test_sandbox_required_uses_tool_when_available() -> None:
+    runner = SandboxRunner(network=False, required=True)
+    with patch("shutil.which", side_effect=[None, "firejail"]):
+        wrapped = runner._wrap_network(["python", "-c", "pass"])
+    assert wrapped[0] == "firejail"
 
 
 def test_sandbox_available_reports_capabilities() -> None:

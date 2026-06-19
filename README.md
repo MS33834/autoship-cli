@@ -8,7 +8,7 @@
 [![CI](https://github.com/autoship-cli/autoship-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/autoship-cli/autoship-cli/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-docs.autoship.dev-blue)](https://docs.autoship.dev)
 
-![Demo](docs/demo.svg) <!-- TODO: 替换为真实 asciinema/gif -->
+[查看文字版演示](docs/demo.md)
 
 > 快速演示：30 秒 AutoShip 工作流 asciinema 录制（待补充）。
 > 可使用以下命令在本地录制：

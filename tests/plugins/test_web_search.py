@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
+import respx
 
+from autoship.adapters.web_search import BraveSearchAdapter, WebSearchError, WebSearchResult
 from autoship.core.context import CommandContext
 from autoship.core.fix import FixSuggestion
 from autoship.exceptions import VerifyError
@@ -88,9 +91,9 @@ def test_web_search_routes_to_duckduckgo(web_context: CommandContext) -> None:
     mock_search.assert_called_once()
 
 
-def test_web_search_unimplemented_provider_raises(web_context: CommandContext) -> None:
+def test_web_search_brave_missing_api_key_raises(web_context: CommandContext) -> None:
     web_context.config.web_search.provider = WebSearchProvider.BRAVE
-    with pytest.raises(NotImplementedError, match="brave"):
+    with pytest.raises(ValueError, match="Brave web search provider requires an API key"):
         web_search.plugin.on_error(
             web_context,
             VerifyError("failed", details={"command": "pytest", "stderr": "error"}),
@@ -99,10 +102,108 @@ def test_web_search_unimplemented_provider_raises(web_context: CommandContext) -
 
 def test_search_routes_to_duckduckgo() -> None:
     with patch.object(web_search.WebSearchAdapter, "search", return_value=[]) as mock_search:
-        web_search._search("pytest error", WebSearchProvider.DUCKDUCKGO, max_results=3, timeout=10.0)
+        web_search._search(
+            "pytest error",
+            WebSearchProvider.DUCKDUCKGO,
+            api_key=None,
+            max_results=3,
+            timeout=10.0,
+        )
     mock_search.assert_called_once_with("pytest error", max_results=3)
 
 
-def test_search_unimplemented_provider_raises() -> None:
-    with pytest.raises(NotImplementedError, match="brave"):
-        web_search._search("pytest error", WebSearchProvider.BRAVE, max_results=3, timeout=10.0)
+def test_search_routes_to_brave() -> None:
+    with patch.object(
+        web_search.BraveSearchAdapter, "search", return_value=[]
+    ) as mock_search:
+        web_search._search(
+            "pytest error",
+            WebSearchProvider.BRAVE,
+            api_key="test-key",
+            max_results=3,
+            timeout=10.0,
+        )
+    mock_search.assert_called_once_with("pytest error", max_results=3)
+
+
+def test_search_brave_missing_api_key_raises() -> None:
+    with pytest.raises(ValueError, match="Brave web search provider requires an API key"):
+        web_search._search(
+            "pytest error",
+            WebSearchProvider.BRAVE,
+            api_key=None,
+            max_results=3,
+            timeout=10.0,
+        )
+
+
+def test_search_unsupported_provider_raises() -> None:
+    with pytest.raises(NotImplementedError, match="Unsupported"):
+        web_search._search(
+            "pytest error",
+            MagicMock(value="unknown"),  # type: ignore[arg-type]
+            api_key=None,
+            max_results=3,
+            timeout=10.0,
+        )
+
+
+def test_brave_search_returns_results() -> None:
+    brave_response = {
+        "query": {"original": "pytest error"},
+        "web": {
+            "results": [
+                {
+                    "title": "Fix 1",
+                    "url": "https://example.com/1",
+                    "description": "Do this.",
+                },
+                {
+                    "title": "Fix 2",
+                    "url": "https://example.com/2",
+                    "description": "Do that.",
+                },
+            ]
+        },
+    }
+
+    with respx.mock:
+        route = respx.get("https://api.search.brave.com/res/v1/web/search").mock(
+            return_value=httpx.Response(200, json=brave_response)
+        )
+        adapter = BraveSearchAdapter(api_key="test-key", timeout=5.0)
+        results = adapter.search("pytest error", max_results=2)
+
+    assert route.called
+    request = route.calls.last.request
+    assert request.headers["Authorization"] == "Bearer test-key"
+    assert request.url.params["q"] == "pytest error"
+    assert request.url.params["count"] == "2"
+
+    assert results == [
+        WebSearchResult(title="Fix 1", url="https://example.com/1", snippet="Do this."),
+        WebSearchResult(title="Fix 2", url="https://example.com/2", snippet="Do that."),
+    ]
+
+
+def test_brave_search_missing_api_key_raises() -> None:
+    with pytest.raises(ValueError, match="Brave web search provider requires an API key"):
+        web_search._search(
+            "pytest error",
+            WebSearchProvider.BRAVE,
+            api_key=None,
+            max_results=3,
+            timeout=10.0,
+        )
+
+
+def test_brave_search_http_error_raises() -> None:
+    with respx.mock:
+        route = respx.get("https://api.search.brave.com/res/v1/web/search").mock(
+            return_value=httpx.Response(401, text="Unauthorized")
+        )
+        adapter = BraveSearchAdapter(api_key="bad-key")
+        with pytest.raises(WebSearchError, match="Brave search request failed"):
+            adapter.search("pytest error", max_results=2)
+
+    assert route.called

@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from autoship.exceptions import SandboxError
+
 logger = logging.getLogger("autoship")
 
 
@@ -48,9 +50,11 @@ class SandboxRunner:
     - If ``network`` is ``False`` and a supported network namespace tool is
       available, the command is wrapped to block network access.
 
-    The runner degrades gracefully when sandbox tooling is unavailable: it
-    still applies the environment and directory restrictions and logs a
-    warning that network isolation could not be enforced.
+    The runner degrades gracefully when sandbox tooling is unavailable unless
+    ``required`` is ``True``: it still applies the environment and directory
+    restrictions and logs a warning that network isolation could not be
+    enforced. When ``required`` is ``True`` and no isolation tool is available,
+    a ``SandboxError`` is raised instead of degrading.
     """
 
     def __init__(
@@ -59,10 +63,12 @@ class SandboxRunner:
         network: bool = False,
         env_whitelist: list[str] | None = None,
         working_dir: Path | None = None,
+        required: bool = False,
     ) -> None:
         self.network = network
         self.env_whitelist = env_whitelist or ["PATH", "HOME", "USER", "LANG", "LC_ALL"]
         self.working_dir = working_dir
+        self.required = required
 
     def run(
         self,
@@ -154,6 +160,12 @@ class SandboxRunner:
             return ["unshare", "--net", "--", *command]
         if shutil.which("firejail"):
             return ["firejail", "--net=none", "--quiet", "--", *command]
+
+        if self.required:
+            raise SandboxError(
+                "Sandbox is required but no network isolation tool is available "
+                "(unshare/firejail)"
+            )
 
         logger.warning("No network sandbox tool available (unshare/firejail); network not blocked")
         return command

@@ -10,6 +10,7 @@ from __future__ import annotations
 import html
 import re
 from dataclasses import dataclass
+from typing import Any, TypedDict, cast
 from urllib.parse import quote_plus
 
 import httpx
@@ -26,6 +27,21 @@ class WebSearchResult:
 
 class WebSearchError(Exception):
     """Raised when a web search request fails."""
+
+
+class _BraveWebResult(TypedDict, total=False):
+    title: str
+    url: str
+    description: str
+
+
+class _BraveWebSection(TypedDict, total=False):
+    results: list[_BraveWebResult]
+
+
+class _BraveSearchResponse(TypedDict, total=False):
+    query: dict[str, Any]
+    web: _BraveWebSection
 
 
 class WebSearchAdapter:
@@ -82,6 +98,68 @@ class WebSearchAdapter:
         """Remove HTML tags and collapse whitespace."""
         cleaned = re.sub(r"<[^>]+>", "", text)
         return re.sub(r"\s+", " ", cleaned).strip()
+
+
+class BraveSearchAdapter:
+    """Search the web using the Brave Search API."""
+
+    _BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
+
+    def __init__(self, api_key: str, timeout: float = 10.0) -> None:
+        self.api_key = api_key
+        self.timeout = timeout
+
+    def search(self, query: str, max_results: int = 3) -> list[WebSearchResult]:
+        """Search for ``query`` via Brave and return up to ``max_results`` items."""
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Accept": "application/json",
+        }
+        params: dict[str, str | int] = {"q": query, "count": max_results}
+        try:
+            response = httpx.get(
+                self._BRAVE_SEARCH_URL,
+                headers=headers,
+                params=params,
+                timeout=self.timeout,
+                follow_redirects=True,
+            )
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise WebSearchError(f"Brave search request failed: {exc}") from exc
+
+        payload = cast(_BraveSearchResponse, response.json())
+        return self._parse_brave(payload, max_results)
+
+    def _parse_brave(
+        self, payload: _BraveSearchResponse, max_results: int
+    ) -> list[WebSearchResult]:
+        """Parse Brave Search JSON response."""
+        results: list[WebSearchResult] = []
+        web = payload.get("web")
+        if web is None:
+            return results
+
+        items = web.get("results")
+        if items is None:
+            return results
+
+        for item in items:
+            if len(results) >= max_results:
+                break
+            title = item.get("title")
+            url = item.get("url")
+            snippet = item.get("description")
+            if title and url:
+                results.append(
+                    WebSearchResult(
+                        title=title,
+                        url=url,
+                        snippet=snippet or "",
+                    )
+                )
+
+        return results
 
 
 def format_results(results: list[WebSearchResult]) -> str:

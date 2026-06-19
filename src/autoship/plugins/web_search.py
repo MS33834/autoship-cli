@@ -10,7 +10,12 @@ from __future__ import annotations
 import logging
 
 from autoship.adapters.model_gateway import ChatMessage
-from autoship.adapters.web_search import WebSearchAdapter, WebSearchResult, format_results
+from autoship.adapters.web_search import (
+    BraveSearchAdapter,
+    WebSearchAdapter,
+    WebSearchResult,
+    format_results,
+)
 from autoship.core.context import CommandContext
 from autoship.core.fix import FixSuggestion
 from autoship.core.model_router import ModelRouter
@@ -39,8 +44,14 @@ class WebSearchPlugin:
             return None
 
         try:
-            results = _search(query, config.provider, max_results=config.max_results, timeout=config.timeout)
-        except NotImplementedError:
+            results = _search(
+                query,
+                config.provider,
+                api_key=config.api_key,
+                max_results=config.max_results,
+                timeout=config.timeout,
+            )
+        except (NotImplementedError, ValueError):
             raise
         except Exception as exc:  # noqa: BLE001
             logger.warning("Web search failed: %s", exc)
@@ -56,6 +67,7 @@ def _search(
     query: str,
     provider: WebSearchProvider,
     *,
+    api_key: str | None,
     max_results: int,
     timeout: float,
 ) -> list[WebSearchResult]:
@@ -63,7 +75,14 @@ def _search(
     if provider == WebSearchProvider.DUCKDUCKGO:
         return WebSearchAdapter(timeout=timeout).search(query, max_results=max_results)
     if provider == WebSearchProvider.BRAVE:
-        raise NotImplementedError(f"Web search provider '{provider.value}' is not implemented yet.")
+        if not api_key:
+            raise ValueError(
+                "Brave web search provider requires an API key. "
+                "Set web_search.api_key in your configuration."
+            )
+        return BraveSearchAdapter(api_key=api_key, timeout=timeout).search(
+            query, max_results=max_results
+        )
     raise NotImplementedError(f"Unsupported web search provider: {provider.value}")
 
 

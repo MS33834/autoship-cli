@@ -7,6 +7,8 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
+import httpx
+
 from autoship.core.audit_logger import AuditLogger
 from autoship.models.config import AppConfig
 
@@ -24,7 +26,7 @@ def test_audit_logger_creates_log_file(project_root, app_config: AppConfig, monk
 
     monkeypatch.setattr(AuditLogger, "__init__", _init)
     audit = AuditLogger(app_config)
-    audit.record("test.event", {"key": "value"})
+    audit.record("test.event", {"status": "value"})
 
     assert audit.log_file.exists()
     lines = audit.log_file.read_text().strip().splitlines()
@@ -32,7 +34,7 @@ def test_audit_logger_creates_log_file(project_root, app_config: AppConfig, monk
     entry = json.loads(lines[0])
     assert entry["event"] == "test.event"
     assert entry["trace_id"] == "trace-123"
-    assert entry["payload"]["key"] == "value"
+    assert entry["payload"]["status"] == "value"
 
 
 def test_audit_logger_bind_context_returns_self(app_config: AppConfig) -> None:
@@ -102,3 +104,106 @@ def test_audit_logger_cleanup_removes_old_files(
     assert removed == 1
     assert not old_file.exists()
     assert new_file.exists()
+
+
+def test_audit_logger_redacts_sensitive_fields(
+    project_root: Path, app_config: AppConfig, monkeypatch
+) -> None:
+    log_dir = project_root / "logs"
+
+    def _init(self: AuditLogger, config: AppConfig) -> None:
+        self.config = config
+        self.trace_id = "trace-redact"
+        self.log_dir = log_dir
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.log_file = self.log_dir / "audit.test.jsonl"
+        self._siem_client = None
+
+    monkeypatch.setattr(AuditLogger, "__init__", _init)
+    audit = AuditLogger(app_config)
+
+    audit.record(
+        "test.secrets",
+        {
+            "event_type": "command",
+            "command": "deploy",
+            "returncode": 0,
+            "duration_ms": 42,
+            "api_key": "super-secret",
+            "nested": {"password": "nested-secret", "siem_token": "token123"},
+            "items": [{"private": "private123"}, {"ok": "value"}],
+        },
+    )
+
+    lines = audit.log_file.read_text().strip().splitlines()
+    entry = json.loads(lines[0])
+    payload = entry["payload"]
+    assert payload["event_type"] == "command"
+    assert payload["command"] == "deploy"
+    assert payload["returncode"] == 0
+    assert payload["duration_ms"] == 42
+    assert payload["api_key"] == "***"
+    assert payload["nested"]["password"] == "***"
+    assert payload["nested"]["siem_token"] == "***"
+    assert payload["items"][0]["private"] == "***"
+    assert payload["items"][1]["ok"] == "value"
+
+
+def test_audit_logger_forwards_redacted_record_to_siem(
+    project_root: Path, app_config: AppConfig, monkeypatch
+) -> None:
+    log_dir = project_root / "logs"
+    posted: list[dict[str, object]] = []
+
+    class FakeClient:
+        def post(self, _path: str, *, json: dict[str, object]) -> None:
+            posted.append(json)
+
+    def _init(self: AuditLogger, config: AppConfig) -> None:
+        self.config = config
+        self.trace_id = "trace-siem"
+        self.log_dir = log_dir
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.log_file = self.log_dir / "audit.test.jsonl"
+        self._siem_client = FakeClient()
+
+    monkeypatch.setattr(AuditLogger, "__init__", _init)
+    audit = AuditLogger(app_config)
+
+    audit.record(
+        "test.siem",
+        {"command": "deploy", "api_key": "secret", "nested": {"token": "tok"}},
+    )
+
+    assert len(posted) == 1
+    forwarded = posted[0]
+    assert forwarded["event"] == "test.siem"
+    assert forwarded["payload"]["command"] == "deploy"
+    assert forwarded["payload"]["api_key"] == "***"
+    assert forwarded["payload"]["nested"]["token"] == "***"
+
+
+def test_audit_logger_siem_failure_is_best_effort(
+    project_root: Path, app_config: AppConfig, monkeypatch
+) -> None:
+    log_dir = project_root / "logs"
+
+    class FailingClient:
+        def post(self, _path: str, *, json: object) -> None:
+            raise httpx.ConnectError("connection refused")
+
+    def _init(self: AuditLogger, config: AppConfig) -> None:
+        self.config = config
+        self.trace_id = "trace-siem-fail"
+        self.log_dir = log_dir
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.log_file = self.log_dir / "audit.test.jsonl"
+        self._siem_client = FailingClient()
+
+    monkeypatch.setattr(AuditLogger, "__init__", _init)
+    audit = AuditLogger(app_config)
+
+    # Should not raise despite SIEM being down.
+    audit.record("test.siem_fail", {"status": "value"})
+
+    assert audit.log_file.exists()
