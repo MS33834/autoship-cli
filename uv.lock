@@ -138,6 +138,7 @@ ai = [
     { name = "openai" },
 ]
 dev = [
+    { name = "autoship-sdk" },
     { name = "cyclonedx-bom" },
     { name = "freezegun" },
     { name = "mkdocs-material" },
@@ -161,6 +162,7 @@ security = [
 
 [package.metadata]
 requires-dist = [
+    { name = "autoship-sdk", marker = "extra == 'dev'", editable = "autoship-sdk" },
     { name = "bandit", extras = ["toml"], marker = "extra == 'security'", specifier = ">=1.7.8" },
     { name = "cyclonedx-bom", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "freezegun", marker = "extra == 'dev'", specifier = ">=1.5.0" },

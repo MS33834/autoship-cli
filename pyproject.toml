@@ -61,6 +61,7 @@ dev = [
     "cyclonedx-bom>=4.0.0",
     "pyinstaller>=6.0.0",
     "mkdocs-material>=9.0.0",
+    "autoship-sdk",
 ]
 
 [project.scripts]
@@ -111,3 +112,6 @@ skips = ["B101", "B404", "B603", "B607"]
 
 [tool.uv.workspace]
 members = [".", "autoship-sdk"]
+
+[tool.uv.sources]
+autoship-sdk = { workspace = true }
