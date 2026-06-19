@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 from unittest.mock import patch
@@ -21,6 +22,14 @@ def _write_artifacts(root: Path, names: list[str]) -> list[Path]:
         artifact.write_text(f"artifact {name}", encoding="utf-8")
         artifacts.append(artifact)
     return artifacts
+
+
+def _mock_run_for_github(cmd, **_kwargs):
+    """Return fake output for gh repo view; otherwise behave as success."""
+    if cmd[:4] == ["gh", "repo", "view", "--json"]:
+        mock = type("CompletedProcess", (), {"stdout": json.dumps({"url": "https://github.com/owner/repo"})})()
+        return mock
+    return type("CompletedProcess", (), {"returncode": 0})()
 
 
 def test_github_dry_run(tmp_path: Path) -> None:
@@ -46,18 +55,19 @@ def test_github_upload_success(tmp_path: Path) -> None:
     uploader = GitHubUploader(tmp_path, tag="v1.0.0", artifacts=["dist/*"])
     with (
         patch("shutil.which", return_value="/usr/bin/gh"),
-        patch("subprocess.run") as mock_run,
+        patch("subprocess.run", side_effect=_mock_run_for_github) as mock_run,
     ):
         result = uploader.upload()
 
     assert result.success is True
     assert result.target == "github"
-    assert result.url == "https://github.com/release/v1.0.0"
+    assert result.url == "https://github.com/owner/repo/releases/tag/v1.0.0"
     assert result.details["tag"] == "v1.0.0"
     assert result.details["artifacts"] == ["dist/*"]
-    assert mock_run.call_count == 2
+    assert mock_run.call_count == 3
 
-    create_call, upload_call = mock_run.call_args_list
+    repo_call, create_call, upload_call = mock_run.call_args_list
+    assert repo_call.args[0] == ["gh", "repo", "view", "--json", "url"]
     assert create_call.args[0] == [
         "gh",
         "release",
@@ -76,8 +86,10 @@ def test_github_upload_failure_raises_upload_error(tmp_path: Path) -> None:
     _write_artifacts(tmp_path, ["dist/package.tar.gz"])
     uploader = GitHubUploader(tmp_path, tag="v1.0.0", artifacts=["dist/*"])
 
-    def _fail_create(*_args, **_kwargs) -> None:
-        raise subprocess.CalledProcessError(1, ["gh", "release", "create"])
+    def _fail_create(cmd, **_kwargs) -> None:
+        if cmd[:4] == ["gh", "repo", "view", "--json"]:
+            return type("CompletedProcess", (), {"stdout": json.dumps({"url": "https://github.com/owner/repo"})})()
+        raise subprocess.CalledProcessError(1, cmd)
 
     with (
         patch("shutil.which", return_value="/usr/bin/gh"),
@@ -92,11 +104,11 @@ def test_github_upload_verbose_prints_commands(tmp_path: Path, capsys) -> None:
     uploader = GitHubUploader(tmp_path, tag="v1.0.0", artifacts=["dist/*"])
     with (
         patch("shutil.which", return_value="/usr/bin/gh"),
-        patch("subprocess.run") as mock_run,
+        patch("subprocess.run", side_effect=_mock_run_for_github) as mock_run,
     ):
         uploader.upload(verbose=True)
 
     captured = capsys.readouterr()
     assert "gh release create v1.0.0 --generate-notes" in captured.out
     assert "gh release upload v1.0.0 dist/*" in captured.out
-    assert mock_run.call_count == 2
+    assert mock_run.call_count == 3

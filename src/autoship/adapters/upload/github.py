@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -37,6 +38,14 @@ class GitHubUploader(UploadAdapter):
         self.validate()
 
         try:
+            repo_info = subprocess.run(
+                ["gh", "repo", "view", "--json", "url"],
+                cwd=self.project_root,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            repo_url = json.loads(repo_info.stdout).get("url", "").rstrip("/")
             create_cmd = ["gh", "release", "create", self.tag, "--generate-notes"]
             upload_cmd = ["gh", "release", "upload", self.tag, *self.artifacts]
             if verbose:
@@ -47,9 +56,10 @@ class GitHubUploader(UploadAdapter):
         except subprocess.CalledProcessError as exc:
             raise UploadError(f"GitHub release failed: {exc}") from exc
 
+        release_url = f"{repo_url}/releases/tag/{self.tag}" if repo_url else ""
         return UploadResult(
             success=True,
             target=self.name,
-            url=f"https://github.com/release/{self.tag}",
+            url=release_url,
             details={"tag": self.tag, "artifacts": self.artifacts},
         )
