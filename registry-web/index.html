@@ -38,9 +38,19 @@
         <option value="community">community</option>
         <option value="untrusted">untrusted</option>
       </select>
+      <select id="filter-category" aria-label="Filter by category">
+        <option value="">All categories</option>
+      </select>
     </section>
 
     <section id="plugin-grid" class="plugin-grid"></section>
+
+    <dialog id="plugin-modal" class="plugin-modal">
+      <div class="modal-content">
+        <button id="modal-close" class="modal-close" aria-label="Close">&times;</button>
+        <div id="modal-body"></div>
+      </div>
+    </dialog>
 
     <section class="submit">
       <h2>Submit a plugin</h2>

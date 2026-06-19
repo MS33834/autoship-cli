@@ -92,9 +92,13 @@ class TelemetryCollector:
 
     def _persist(self, event: TelemetryEvent) -> None:
         """Write the event to the local log and optionally send it."""
+        self.record_event(event.to_dict())
+
+    def record_event(self, data: dict[str, Any]) -> None:
+        """Write an arbitrary dictionary event to the local log and optionally send it."""
         self.log_dir.mkdir(parents=True, exist_ok=True)
         log_path = self.log_dir / "telemetry.logl"
-        record = json.dumps(event.to_dict(), separators=(",", ":"), ensure_ascii=False)
+        record = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
         try:
             with log_path.open("a", encoding="utf-8") as fh:
                 fh.write(record + "\n")

@@ -1,0 +1,149 @@
+"""Local plugin usage statistics and ratings.
+
+Stats are stored locally in ``~/.config/autoship/plugin_stats.json`` and never
+include project paths or personal information. Anonymous telemetry emission is
+only performed when the user has explicitly enabled telemetry.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import time
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import Any
+
+from autoship.core.telemetry import TelemetryCollector
+
+logger = logging.getLogger("autoship")
+
+DEFAULT_STATS_DIR = Path.home() / ".config" / "autoship"
+DEFAULT_STATS_FILE = DEFAULT_STATS_DIR / "plugin_stats.json"
+
+
+@dataclass
+class PluginRating:
+    """Aggregate rating for a plugin."""
+
+    score: float = 0.0
+    count: int = 0
+
+    def add(self, score: float) -> None:
+        """Add a new rating and recompute the average."""
+        total = self.score * self.count + score
+        self.count += 1
+        self.score = total / self.count
+
+
+@dataclass
+class PluginStat:
+    """Local statistics for a single plugin."""
+
+    installs: int = 0
+    uninstalls: int = 0
+    rating: PluginRating = field(default_factory=PluginRating)
+
+
+class PluginStats:
+    """Manage local plugin usage statistics and optional telemetry."""
+
+    def __init__(
+        self,
+        stats_file: Path | None = None,
+        telemetry: TelemetryCollector | None = None,
+    ) -> None:
+        self.stats_file = stats_file or DEFAULT_STATS_FILE
+        self._stats: dict[str, PluginStat] = {}
+        self._telemetry = telemetry
+        self._load()
+
+    def record_install(self, plugin_name: str) -> None:
+        """Record a plugin installation."""
+        self._touch(plugin_name).installs += 1
+        self._save()
+        self._emit("install", plugin_name)
+
+    def record_uninstall(self, plugin_name: str) -> None:
+        """Record a plugin uninstallation."""
+        self._touch(plugin_name).uninstalls += 1
+        self._save()
+        self._emit("uninstall", plugin_name)
+
+    def record_rate(self, plugin_name: str, score: float) -> None:
+        """Record a user rating for a plugin."""
+        if not 1 <= score <= 5:
+            raise ValueError("Rating must be between 1 and 5")
+        self._touch(plugin_name).rating.add(score)
+        self._save()
+        self._emit("rate", plugin_name, score=score)
+
+    def get(self, plugin_name: str) -> PluginStat:
+        """Return stats for a plugin, defaulting to zeros."""
+        return self._touch(plugin_name)
+
+    def summary(self) -> dict[str, Any]:
+        """Return a serializable summary of all recorded stats."""
+        return {
+            name: {
+                "installs": stat.installs,
+                "uninstalls": stat.uninstalls,
+                "rating": {"score": stat.rating.score, "count": stat.rating.count},
+            }
+            for name, stat in sorted(self._stats.items())
+        }
+
+    def _touch(self, plugin_name: str) -> PluginStat:
+        if plugin_name not in self._stats:
+            self._stats[plugin_name] = PluginStat()
+        return self._stats[plugin_name]
+
+    def _emit(self, action: str, plugin_name: str, **kwargs: Any) -> None:
+        if self._telemetry is None or not self._telemetry.enabled:
+            return
+        event = {
+            "type": "plugin_stat",
+            "action": action,
+            "plugin": plugin_name,
+            "timestamp": time.time(),
+            **kwargs,
+        }
+        self._telemetry.record_event(event)
+
+    def _load(self) -> None:
+        if not self.stats_file.exists():
+            return
+        try:
+            raw = json.loads(self.stats_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Failed to load plugin stats: %s", exc)
+            return
+
+        for name, data in raw.items():
+            try:
+                rating_data = data.get("rating", {})
+                self._stats[name] = PluginStat(
+                    installs=int(data.get("installs", 0)),
+                    uninstalls=int(data.get("uninstalls", 0)),
+                    rating=PluginRating(
+                        score=float(rating_data.get("score", 0.0)),
+                        count=int(rating_data.get("count", 0)),
+                    ),
+                )
+            except (TypeError, ValueError) as exc:
+                logger.warning("Skipping invalid plugin stat entry %s: %s", name, exc)
+
+    def _save(self) -> None:
+        try:
+            self.stats_file.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                name: {
+                    "installs": stat.installs,
+                    "uninstalls": stat.uninstalls,
+                    "rating": asdict(stat.rating),
+                }
+                for name, stat in self._stats.items()
+            }
+            self.stats_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        except OSError as exc:
+            logger.warning("Failed to save plugin stats: %s", exc)

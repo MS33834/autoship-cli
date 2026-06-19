@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
 
 import typer
+from packaging.version import Version
+from packaging.version import parse as parse_version
 
 from autoship.core.i18n import I18n, get_i18n_from_ctx
 from autoship.core.plugin_registry import PluginRegistry, PluginSpec, TrustLevel
+from autoship.core.plugin_stats import PluginStats
 from autoship.core.registry_index import RegistryIndex
 from autoship.exceptions import PluginError
 
@@ -22,6 +26,28 @@ def _pip_cmd() -> list[str]:
     if shutil.which("uv"):
         return ["uv", "pip"]
     return ["pip"]
+
+
+def _installed_version(package: str) -> Version | None:
+    """Return the installed version of a package, or None if not installed."""
+    pip_cmd = _pip_cmd()
+    try:
+        result = subprocess.run(
+            [*pip_cmd, "show", package],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+        return None
+
+    match = re.search(r"^Version:\s*(\S+)", result.stdout, re.MULTILINE)
+    if not match:
+        return None
+    try:
+        return parse_version(match.group(1))
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def register(parent: typer.Typer) -> None:
@@ -152,6 +178,7 @@ def install(
             license=indexed.get("license") if indexed else None,
         )
     )
+    PluginStats().record_install(plugin_name)
     typer.echo(i18n._("plugin.installed", plugin_name=plugin_name))
 
 
@@ -221,7 +248,48 @@ def uninstall(
         raise PluginError(i18n._("plugin.uninstall_failed", name=name, exc=exc)) from exc
 
     registry.remove(name)
+    PluginStats().record_uninstall(name)
     typer.echo(i18n._("plugin.uninstalled", name=name))
+
+
+@app.command("rate")
+def rate(
+    ctx: typer.Context,
+    name: str = typer.Argument(..., help="Name of the plugin to rate"),
+    score: float = typer.Argument(..., help="Rating from 1 to 5"),
+) -> None:
+    """Rate a registered plugin."""
+    i18n: I18n = get_i18n_from_ctx(ctx)
+    registry = PluginRegistry()
+    if registry.get(name) is None:
+        raise PluginError(i18n._("plugin.not_registered", name=name))
+    try:
+        PluginStats().record_rate(name, score)
+    except ValueError as exc:
+        raise PluginError(str(exc)) from exc
+    typer.echo(i18n._("plugin.rated", name=name, score=score))
+
+
+@app.command("stats")
+def stats(
+    ctx: typer.Context,
+) -> None:
+    """Show local plugin usage statistics."""
+    i18n: I18n = get_i18n_from_ctx(ctx)
+    summary = PluginStats().summary()
+    if not summary:
+        typer.echo(i18n._("plugin.no_stats"))
+        return
+
+    typer.echo(
+        f"{'Name':<30} {'Installs':<10} {'Uninstalls':<12} {'Rating':<15}"
+    )
+    for name, data in summary.items():
+        rating = data["rating"]
+        rating_str = f"{rating['score']:.1f} ({rating['count']})" if rating["count"] else "—"
+        typer.echo(
+            f"{name:<30} {data['installs']:<10} {data['uninstalls']:<12} {rating_str:<15}"
+        )
 
 
 @app.command("trust")
@@ -236,3 +304,98 @@ def trust(
     if not registry.trust(name, level):
         raise PluginError(i18n._("plugin.not_registered", name=name))
     typer.echo(i18n._("plugin.trust_set", name=name, level=level.value))
+
+
+@app.command("update")
+def update(
+    ctx: typer.Context,
+    name: str | None = typer.Argument(None, help="Plugin name to update"),
+    all_plugins: bool = typer.Option(False, "--all", help="Update all registered plugins"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show actions without executing"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmations"),
+    skip_trust_check: bool = typer.Option(False, "--skip-trust-check", help="Skip trust level warnings"),
+) -> None:
+    """Check for and install plugin updates."""
+    i18n: I18n = get_i18n_from_ctx(ctx)
+    registry = PluginRegistry()
+    index = RegistryIndex()
+
+    plugins = registry.list()
+    if name:
+        plugin = registry.get(name)
+        if plugin is None:
+            raise PluginError(i18n._("plugin.not_registered", name=name))
+        candidates = [plugin]
+    elif all_plugins:
+        candidates = plugins
+    else:
+        raise PluginError(i18n._("plugin.update_name_or_all"))
+
+    updatable: list[tuple[PluginSpec, Version, Version]] = []
+    skipped: list[tuple[PluginSpec, str]] = []
+    for plugin in candidates:
+        if plugin.trust_level == TrustLevel.BUILTIN:
+            skipped.append((plugin, i18n._("plugin.update_skip_builtin")))
+            continue
+        if not plugin.source or plugin.source.startswith((".", "/", "~")):
+            skipped.append((plugin, i18n._("plugin.update_skip_local")))
+            continue
+
+        installed = _installed_version(plugin.source)
+        if installed is None:
+            skipped.append((plugin, i18n._("plugin.update_skip_not_installed")))
+            continue
+
+        indexed = index.get(plugin.name)
+        latest_raw = indexed.get("version") if indexed else plugin.version
+        try:
+            latest = parse_version(latest_raw or plugin.version)
+        except Exception:  # noqa: BLE001
+            latest = parse_version(plugin.version)
+
+        if latest > installed:
+            updatable.append((plugin, installed, latest))
+        else:
+            skipped.append((plugin, i18n._("plugin.update_skip_latest", installed=installed, latest=latest)))
+
+    if not updatable:
+        typer.echo(i18n._("plugin.update_none"))
+        for plugin, reason in skipped:
+            typer.echo(f"  - {plugin.name}: {reason}")
+        return
+
+    typer.echo(i18n._("plugin.update_available_header"))
+    for plugin, installed, latest in updatable:
+        typer.echo(f"  - {plugin.name}: {installed} -> {latest}")
+
+    if not dry_run and not yes and not typer.confirm(i18n._("plugin.update_confirm")):
+        typer.echo(i18n._("common.aborted"))
+        raise typer.Exit(code=0)
+
+    pip_cmd = _pip_cmd()
+    for plugin, _installed, latest in updatable:
+        source_for_pip = plugin.source
+        if dry_run:
+            typer.echo(i18n._("plugin.update_dry_run", plugin_name=plugin.name, source_for_pip=source_for_pip))
+            continue
+
+        _confirm_trust(i18n, plugin.name, plugin.trust_level, index.get(plugin.name), yes, skip_trust_check)
+
+        try:
+            subprocess.run(
+                [*pip_cmd, "install", "--quiet", "--upgrade", source_for_pip],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
+            raise PluginError(i18n._("plugin.update_failed", plugin_name=plugin.name, exc=exc)) from exc
+
+        plugin.version = str(latest)
+        registry.add(plugin)
+        typer.echo(i18n._("plugin.updated", plugin_name=plugin.name, version=latest))
+
+    if skipped:
+        typer.echo(i18n._("plugin.update_skipped_header"))
+        for plugin, reason in skipped:
+            typer.echo(f"  - {plugin.name}: {reason}")
