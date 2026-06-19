@@ -56,4 +56,4 @@ All done! ✨ 🍰 ✨
 ## Recommendations
 
 - Continue dogfooding with a running local model (Ollama/LM Studio) for `commit`/`verify` paths.
-- Consider adding `autoship doctor` command to diagnose missing model/toolchain dependencies.
+- `autoship doctor` has been implemented and now diagnoses missing model/toolchain dependencies.
