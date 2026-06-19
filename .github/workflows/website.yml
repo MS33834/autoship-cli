@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "autoship-cli/website/**"
+      - "website/**"
   workflow_dispatch:
 
 permissions:
@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: autoship-cli/website
+        working-directory: website
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,7 +38,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: autoship-cli/website/dist
+          path: website/dist
 
   deploy:
     needs: build

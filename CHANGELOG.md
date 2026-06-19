@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-06-19
+
+### Added
+
+- Official 1.0 stable release.
+- Community health files and issue templates for production feedback.
+
+### Changed
+
+- `autoship` version bumped to `1.0.0`.
+- `autoship-sdk` version bumped to `1.0.0` and depends on `autoship>=1.0.0`.
+
+### Fixed
+
+- All GitHub Actions workflows updated to use repository-root paths instead of
+  the previous `autoship-cli/` subdirectory assumption.
+- `release.yml` now also builds and publishes `autoship-sdk` to PyPI.
+
 ## [1.0.0-rc.1] - 2026-06-19
 
 ### Added

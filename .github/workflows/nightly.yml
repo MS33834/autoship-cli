@@ -14,10 +14,6 @@ jobs:
     name: Full check
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: autoship-cli
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,7 +59,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
-          path: autoship-cli/benchmarks/results.json
+          path: benchmarks/results.json
 
       - name: Notify on failure
         if: failure()
@@ -86,11 +82,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-
-    defaults:
-      run:
-        working-directory: autoship-cli
-        shell: bash
 
     steps:
       - name: Checkout
@@ -118,7 +109,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nightly-dist
-          path: autoship-cli/dist/*
+          path: dist/*
 
       - name: Build executable
         run: |
@@ -147,4 +138,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: binary-${{ matrix.os }}
-          path: autoship-cli/dist/bin/*
+          path: dist/bin/*
