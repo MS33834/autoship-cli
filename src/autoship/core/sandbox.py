@@ -4,6 +4,13 @@ This module provides a ``SandboxRunner`` that executes a command inside a
 restricted subprocess environment. It is a first-phase implementation: it
 limits the environment and working directory, and optionally blocks network
 access when ``unshare`` or ``firejail`` is available.
+
+Roadmap:
+
+* Phase 2: filesystem isolation via read-only root mounts and tmpfs overlay.
+* Phase 3: cgroup-based CPU, memory and I/O limits.
+* Phase 4: seccomp-bpf syscall filtering and user namespace support.
+* Phase 5: declarative sandbox profiles per plugin type.
 """
 
 from __future__ import annotations
@@ -49,6 +56,9 @@ class SandboxRunner:
     - Only whitelisted environment variables are inherited.
     - If ``network`` is ``False`` and a supported network namespace tool is
       available, the command is wrapped to block network access.
+
+    See the module docstring for the planned roadmap (filesystem isolation,
+    cgroup limits, seccomp-bpf, etc.).
 
     The runner degrades gracefully when sandbox tooling is unavailable unless
     ``required`` is ``True``: it still applies the environment and directory
