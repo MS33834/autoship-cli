@@ -68,3 +68,13 @@ def test_locale_files_are_shipped() -> None:
 def test_i18n_class_basic_usage() -> None:
     translator = I18n("test", {"greeting": "Hello {name}"})
     assert translator._("greeting", name="World") == "Hello World"
+
+
+def test_i18n_returns_template_on_format_error() -> None:
+    translator = I18n("test", {"greeting": "Hello {name}"})
+    assert translator._("greeting") == "Hello {name}"
+
+
+def test_i18n_returns_template_on_missing_kwarg() -> None:
+    translator = I18n("test", {"greeting": "Hello {name}"})
+    assert translator._("greeting", unused="value") == "Hello {name}"

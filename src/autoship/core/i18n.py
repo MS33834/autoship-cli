@@ -20,11 +20,20 @@ class I18n:
         self.catalog = catalog
 
     def _(self, key: str, **kwargs: Any) -> str:
-        """Return the translated string for ``key`` with optional formatting."""
+        """Return the translated string for ``key`` with optional formatting.
+
+        If formatting fails (e.g. missing or malformed placeholders), the raw
+        template is returned and a warning is logged so that callers never
+        crash because of a bad translation or missing substitution value.
+        """
         template = self.catalog.get(key, key)
-        if kwargs:
+        if not kwargs:
+            return template
+        try:
             return template.format(**kwargs)
-        return template
+        except (KeyError, ValueError, IndexError) as exc:
+            logger.warning("Failed to format i18n key %r: %s", key, exc)
+            return template
 
 
 def _locales_dir() -> Path:
