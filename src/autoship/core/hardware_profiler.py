@@ -57,7 +57,7 @@ def _memory_gb() -> float:
     try:
         import psutil
 
-        return psutil.virtual_memory().total / (1024**3)
+        return float(psutil.virtual_memory().total) / (1024**3)
     except Exception as exc:  # noqa: BLE001
         logger.debug("psutil unavailable or failed: %s", exc)
 

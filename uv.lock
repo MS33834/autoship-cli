@@ -112,11 +112,12 @@ wheels = [
 
 [[package]]
 name = "autoship"
-version = "0.2.0b1"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "gitpython" },
     { name = "httpx" },
+    { name = "packaging" },
     { name = "pluggy" },
     { name = "psutil" },
     { name = "pydantic" },
@@ -162,6 +163,7 @@ requires-dist = [
     { name = "mkdocs-material", marker = "extra == 'dev'", specifier = ">=9.0.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10.0" },
     { name = "openai", marker = "extra == 'ai'", specifier = ">=1.25.0" },
+    { name = "packaging", specifier = ">=24.0" },
     { name = "pip-audit", marker = "extra == 'security'", specifier = ">=2.7.0" },
     { name = "pluggy", specifier = ">=1.5.0" },
     { name = "psutil", specifier = ">=5.9.0" },

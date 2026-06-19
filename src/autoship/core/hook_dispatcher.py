@@ -160,8 +160,7 @@ class HookDispatcher:
 
     def _serialize_context(self, context: CommandContext) -> dict[str, Any]:
         """Convert a CommandContext to a JSON-serializable dict."""
-        config: Any = cast(Any, context.config)  # type: ignore[reportUnknownMemberType]
-        config_dict: Any = config.model_dump(mode="json", warnings=False)
+        config_dict: dict[str, Any] = context.config.model_dump(mode="json", warnings=False)
         return {
             "command": context.command,
             "project_root": str(context.project_root),
