@@ -4,10 +4,22 @@ from __future__ import annotations
 
 import httpx
 
-from autoship.adapters.model_gateway import ChatCompletionRequest, ChatMessage
-from autoship.adapters.providers.ollama import OllamaGateway
+from autoship.adapters.model_gateway import ChatCompletionRequest, ChatMessage, ModelGateway
+from autoship.adapters.providers import (
+    LlamaCppGateway,
+    LmStudioGateway,
+    OllamaGateway,
+    VllmGateway,
+)
 from autoship.exceptions import ModelGatewayError
-from autoship.models.config import AppConfig
+from autoship.models.config import AppConfig, Provider
+
+_PROVIDER_GATEWAYS: dict[Provider, type[ModelGateway]] = {
+    Provider.OLLAMA: OllamaGateway,
+    Provider.LM_STUDIO: LmStudioGateway,
+    Provider.LLAMA_CPP: LlamaCppGateway,
+    Provider.VLLM: VllmGateway,
+}
 
 
 class ModelRouter:
@@ -16,12 +28,16 @@ class ModelRouter:
     def __init__(self, config: AppConfig) -> None:
         self.config = config
 
-    def _gateways(self) -> list[OllamaGateway]:
+    def _gateways(self) -> list[ModelGateway]:
         """Return configured gateway instances."""
-        gateways: list[OllamaGateway] = []
+        gateways: list[ModelGateway] = []
         for backend in self.config.model.backends:
-            if backend.provider.value == "ollama":
-                gateways.append(OllamaGateway(backend))
+            gateway_cls = _PROVIDER_GATEWAYS.get(backend.provider)
+            if gateway_cls is None:
+                raise ModelGatewayError(
+                    f"Unsupported model backend provider: {backend.provider.value}"
+                )
+            gateways.append(gateway_cls(backend))
         return gateways
 
     def _chat(self, messages: list[ChatMessage], task_type: str) -> str:
@@ -47,7 +63,7 @@ class ModelRouter:
             raise ModelGatewayError(f"All model backends unhealthy: {last_error}") from last_error
         raise ModelGatewayError("All model backends are unhealthy")
 
-    def select_backend(self, tier: int | None = None) -> OllamaGateway | None:
+    def select_backend(self, tier: int | None = None) -> ModelGateway | None:
         """Return the first healthy configured backend, or None if all are unhealthy."""
         for gateway in self._gateways():
             try:

@@ -92,6 +92,6 @@ class LlmClient:
             return True
         try:
             response = httpx.get("http://localhost:11434", timeout=2.0)
-            return response.status_code == 200
+            return int(response.status_code) == 200
         except httpx.HTTPError:
             return False

@@ -11,7 +11,8 @@ import json
 import logging
 import shutil
 import subprocess
-from typing import Any
+from decimal import ROUND_UP, Decimal
+from typing import Any, cast
 
 from autoship.core.context import CommandContext
 from autoship.exceptions import SecurityScanError
@@ -24,6 +25,7 @@ _SEVERITY_ORDER = {
     "LOW": 1,
     "MEDIUM": 2,
     "HIGH": 3,
+    "CRITICAL": 4,
 }
 
 
@@ -44,8 +46,9 @@ class SecurityScanPlugin:
 
         summary = _summarize(findings)
         logger.info(
-            "Security scan completed: %s findings (%s high, %s medium, %s low)",
+            "Security scan completed: %s findings (%s critical, %s high, %s medium, %s low)",
             summary["total"],
+            summary["critical"],
             summary["high"],
             summary["medium"],
             summary["low"],
@@ -170,25 +173,139 @@ def _scan_osv(executable: str, project_root: Any) -> list[dict[str, Any]]:
     return findings
 
 
+def _score_to_severity(score: float) -> str:
+    """Map a CVSS base score to a qualitative severity label."""
+    if score >= 9.0:
+        return "CRITICAL"
+    if score >= 7.0:
+        return "HIGH"
+    if score >= 4.0:
+        return "MEDIUM"
+    return "LOW"
+
+
+def _cvss_v3_base_score(vector: str) -> float | None:
+    """Compute a CVSS v3 base score from a vector string.
+
+    Supports both ``CVSS:3.0`` and ``CVSS:3.1`` vectors. Returns ``None`` when
+    the vector is missing required metrics or uses unsupported values.
+    """
+    metrics: dict[str, str] = {}
+    for part in vector.split("/"):
+        if ":" in part:
+            key, value = part.split(":", 1)
+            metrics[key] = value
+
+    required = {"AV", "AC", "PR", "UI", "S", "C", "I", "A"}
+    if not required.issubset(metrics):
+        return None
+
+    av_map = {
+        "N": Decimal("0.85"),
+        "A": Decimal("0.62"),
+        "L": Decimal("0.55"),
+        "P": Decimal("0.2"),
+    }
+    ac_map = {"L": Decimal("0.77"), "H": Decimal("0.44")}
+    pr_unchanged = {"N": Decimal("0.85"), "L": Decimal("0.62"), "H": Decimal("0.27")}
+    pr_changed = {"N": Decimal("0.85"), "L": Decimal("0.68"), "H": Decimal("0.5")}
+    ui_map = {"N": Decimal("0.85"), "R": Decimal("0.62")}
+    cia_map = {"H": Decimal("0.56"), "L": Decimal("0.22"), "N": Decimal("0")}
+
+    av = av_map.get(metrics["AV"])
+    ac = ac_map.get(metrics["AC"])
+    scope_changed = metrics["S"] == "C"
+    pr = (pr_changed if scope_changed else pr_unchanged).get(metrics["PR"])
+    ui = ui_map.get(metrics["UI"])
+    c = cia_map.get(metrics["C"])
+    i = cia_map.get(metrics["I"])
+    a = cia_map.get(metrics["A"])
+    if any(metric is None for metric in (av, ac, pr, ui, c, i, a)):
+        return None
+    assert av is not None
+    assert ac is not None
+    assert pr is not None
+    assert ui is not None
+    assert c is not None
+    assert i is not None
+    assert a is not None
+
+    iss = Decimal("1") - (Decimal("1") - c) * (Decimal("1") - i) * (Decimal("1") - a)
+    if scope_changed:
+        impact = Decimal("7.52") * (iss - Decimal("0.029")) - Decimal("3.25") * (
+            iss - Decimal("0.02")
+        ) ** 15
+    else:
+        impact = Decimal("6.42") * iss
+
+    exploitability = Decimal("8.22") * av * ac * pr * ui
+
+    if impact <= 0:
+        score = Decimal("0")
+    elif scope_changed:
+        score = min(Decimal("1.08") * (impact + exploitability), Decimal("10"))
+    else:
+        score = min(impact + exploitability, Decimal("10"))
+
+    return float(score.quantize(Decimal("0.1"), rounding=ROUND_UP))
+
+
 def _osv_severity(vuln: dict[str, Any]) -> str:
     """Extract the highest CVSS severity from an OSV vulnerability record."""
-    severities = vuln.get("severity", [])
-    if not severities:
-        return "MEDIUM"
-    order = {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
-    highest = max(
-        (order.get(s.get("type", "").upper() or s.get("score", "").upper(), 0) for s in severities),
-        default=2,
-    )
-    for label, value in order.items():
-        if value == highest:
+    severities = vuln.get("severity")
+
+    if isinstance(severities, str):
+        label = severities.strip().upper()
+        if label in _SEVERITY_ORDER:
             return label
+        base = _cvss_v3_base_score(severities)
+        if base is not None:
+            return _score_to_severity(base)
+        return "MEDIUM"
+
+    if not isinstance(severities, list) or not severities:
+        return "MEDIUM"
+
+    highest = 0
+    severity_list: list[Any] = cast(list[Any], severities)
+    entry: Any
+    for entry in severity_list:
+        if isinstance(entry, str):
+            label = entry.strip().upper()
+            if label in _SEVERITY_ORDER:
+                highest = max(highest, _SEVERITY_ORDER[label])
+            continue
+        if not isinstance(entry, dict):
+            continue
+
+        entry_dict = cast(dict[str, Any], entry)
+        score: Any = entry_dict.get("score")
+        if isinstance(score, str):
+            label = score.strip().upper()
+            if label in _SEVERITY_ORDER:
+                highest = max(highest, _SEVERITY_ORDER[label])
+                continue
+            base = _cvss_v3_base_score(score)
+            if base is not None:
+                highest = max(highest, _SEVERITY_ORDER[_score_to_severity(base)])
+                continue
+
+        type_label: Any = entry_dict.get("type")
+        if isinstance(type_label, str):
+            label = type_label.strip().upper()
+            if label in _SEVERITY_ORDER:
+                highest = max(highest, _SEVERITY_ORDER[label])
+
+    if highest:
+        for label, value in _SEVERITY_ORDER.items():
+            if value == highest:
+                return label
     return "MEDIUM"
 
 
 def _summarize(findings: list[dict[str, Any]]) -> dict[str, Any]:
     """Aggregate findings into a simple severity summary."""
-    counts = {"LOW": 0, "MEDIUM": 0, "HIGH": 0}
+    counts = {"LOW": 0, "MEDIUM": 0, "HIGH": 0, "CRITICAL": 0}
     for finding in findings:
         severity = finding.get("severity", "LOW").upper()
         counts[severity] = counts.get(severity, 0) + 1
@@ -207,6 +324,7 @@ def _summarize(findings: list[dict[str, Any]]) -> dict[str, Any]:
         "low": counts["LOW"],
         "medium": counts["MEDIUM"],
         "high": counts["HIGH"],
+        "critical": counts["CRITICAL"],
         "max_severity": max_severity,
         "max_severity_value": max_value,
     }

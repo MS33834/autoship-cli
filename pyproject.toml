@@ -109,3 +109,6 @@ branch = true
 exclude_dirs = ["tests"]
 skips = ["B101", "B404", "B603", "B607"]
 
+[tool.uv.workspace]
+members = [".", "autoship-sdk"]
+

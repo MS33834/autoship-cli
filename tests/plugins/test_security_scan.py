@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import patch
 
 import pytest
@@ -75,13 +76,19 @@ def test_gitleaks_detects_secret(security_context: CommandContext) -> None:
             security_scan.plugin.pre_commit(security_context)
 
 
-def test_osv_scanner_detects_vulnerability(security_context: CommandContext) -> None:
-    security_context.config.security.tools = ["osv-scanner"]
-    payload = (
+def _osv_payload(severity_value: object) -> str:
+    severity_json = json.dumps(severity_value)
+    return (
         '{"results": [{"packages": [{"vulnerabilities": ['
-        '{"id": "GHSA-1", "summary": "bad lib", "severity": [{"type": "CVSS_V3", "score": "HIGH"}]}'
+        f'{{"id": "GHSA-1", "summary": "bad lib", "severity": {severity_json}}}'
         "]}]}]}"
     )
+
+
+def test_osv_scanner_detects_vulnerability(security_context: CommandContext) -> None:
+    security_context.config.security.tools = ["osv-scanner"]
+    # Real CVSS v3.1 vector that computes to a CRITICAL base score.
+    payload = _osv_payload([{"type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}])
     with (
         patch("shutil.which", return_value="/usr/bin/osv-scanner"),
         patch("subprocess.run") as mock_run,
@@ -89,6 +96,39 @@ def test_osv_scanner_detects_vulnerability(security_context: CommandContext) -> 
         mock_run.return_value.stdout = payload
         with pytest.raises(SecurityScanError, match="Security scan found"):
             security_scan.plugin.pre_commit(security_context)
+
+
+@pytest.mark.parametrize(
+    ("vuln", "expected"),
+    [
+        (
+            {
+                "severity": [
+                    {
+                        "type": "CVSS_V3",
+                        "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                    }
+                ]
+            },
+            "CRITICAL",
+        ),
+        (
+            {
+                "severity": [
+                    {
+                        "type": "CVSS_V3",
+                        "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                    }
+                ]
+            },
+            "MEDIUM",
+        ),
+        ({"severity": "HIGH"}, "HIGH"),
+        ({}, "MEDIUM"),
+    ],
+)
+def test_osv_severity_parsing(vuln: dict[str, object], expected: str) -> None:
+    assert security_scan._osv_severity(vuln) == expected
 
 
 def test_unsupported_tool_is_skipped(security_context: CommandContext) -> None:
@@ -103,6 +143,7 @@ def test_summarize_empty() -> None:
         "low": 0,
         "medium": 0,
         "high": 0,
+        "critical": 0,
         "max_severity": "LOW",
         "max_severity_value": 0,
     }
@@ -118,3 +159,4 @@ def test_summarize_multiple() -> None:
     assert summary["total"] == 3
     assert summary["max_severity"] == "HIGH"
     assert summary["max_severity_value"] == 3
+    assert summary["critical"] == 0

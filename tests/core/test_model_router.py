@@ -8,13 +8,20 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from autoship.adapters.model_gateway import ChatCompletionResponse, ChatMessage
+from autoship.adapters.providers import (
+    LlamaCppGateway,
+    LmStudioGateway,
+    VllmGateway,
+)
 from autoship.core.model_router import ModelRouter
 from autoship.exceptions import ModelGatewayError
 from autoship.models.config import AppConfig, ModelBackendConfig, Provider
 
 
-def _backend(base_url: str = "http://localhost:11434") -> ModelBackendConfig:
-    return ModelBackendConfig(provider=Provider.OLLAMA, base_url=base_url, model="llama3")
+def _backend(
+    provider: Provider = Provider.OLLAMA, base_url: str = "http://localhost:11434"
+) -> ModelBackendConfig:
+    return ModelBackendConfig(provider=provider, base_url=base_url, model="llama3")
 
 
 def test_chat_raises_when_no_backends(project_root: Path) -> None:
@@ -70,3 +77,47 @@ def test_generate_commit_message(project_root: Path) -> None:
     messages: list[ChatMessage] = args[0]
     assert any(m.role == "system" for m in messages)
     assert any("Diff" in m.content for m in messages)
+
+
+def test_router_instantiates_lm_studio_backend(project_root: Path) -> None:
+    config = AppConfig(
+        project_root=project_root,
+        model={"backends": [_backend(Provider.LM_STUDIO, "http://localhost:1234/v1")]},
+    )
+    router = ModelRouter(config)
+    gateways = router._gateways()
+    assert len(gateways) == 1
+    assert isinstance(gateways[0], LmStudioGateway)
+
+
+def test_router_instantiates_llama_cpp_backend(project_root: Path) -> None:
+    config = AppConfig(
+        project_root=project_root,
+        model={"backends": [_backend(Provider.LLAMA_CPP, "http://localhost:8080/v1")]},
+    )
+    router = ModelRouter(config)
+    gateways = router._gateways()
+    assert len(gateways) == 1
+    assert isinstance(gateways[0], LlamaCppGateway)
+
+
+def test_router_instantiates_vllm_backend(project_root: Path) -> None:
+    config = AppConfig(
+        project_root=project_root,
+        model={"backends": [_backend(Provider.VLLM, "http://localhost:8000/v1")]},
+    )
+    router = ModelRouter(config)
+    gateways = router._gateways()
+    assert len(gateways) == 1
+    assert isinstance(gateways[0], VllmGateway)
+
+
+def test_router_raises_for_unsupported_provider(project_root: Path) -> None:
+    config = AppConfig(project_root=project_root, model={"backends": [_backend()]})
+    router = ModelRouter(config)
+    with patch.dict(
+        "autoship.core.model_router._PROVIDER_GATEWAYS",
+        {},
+        clear=True,
+    ), pytest.raises(ModelGatewayError, match="Unsupported model backend provider"):
+        router._gateways()
