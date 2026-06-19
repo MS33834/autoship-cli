@@ -69,6 +69,7 @@ class WebSearchProvider(str, Enum):
     """Supported web search backends."""
 
     DUCKDUCKGO = "duckduckgo"
+    BRAVE = "brave"
 
 
 class AuditConfig(BaseModel):

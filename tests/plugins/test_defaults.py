@@ -35,6 +35,50 @@ def test_parse_suggestion_with_patch() -> None:
     assert "```" not in suggestion.patch
 
 
+def test_parse_suggestion_with_backticks_inside_patch() -> None:
+    text = (
+        "Fix the markdown string.\n\n"
+        "```diff\n"
+        "--- a/src/example.py\n"
+        "+++ b/src/example.py\n"
+        "@@ -1 +1 @@\n"
+        "-x = 'hello ```world```'\n"
+        "+x = 'hello world'\n"
+        "```"
+    )
+    suggestion = _parse_suggestion(text)
+    assert suggestion.description == "Fix the markdown string."
+    assert "```world```" in suggestion.patch
+    assert suggestion.patch.endswith("+x = 'hello world'")
+
+
+def test_parse_suggestion_with_multiple_patches() -> None:
+    text = (
+        "Update both files.\n\n"
+        "```diff\n"
+        "--- a/src/one.py\n"
+        "+++ b/src/one.py\n"
+        "@@ -1 +1 @@\n"
+        "-old\n"
+        "+new\n"
+        "```\n\n"
+        "```diff\n"
+        "--- a/src/two.py\n"
+        "+++ b/src/two.py\n"
+        "@@ -1 +1 @@\n"
+        "-foo\n"
+        "+bar\n"
+        "```"
+    )
+    suggestion = _parse_suggestion(text)
+    assert suggestion.description == "Update both files."
+    assert "--- a/src/one.py" in suggestion.patch
+    assert "--- a/src/two.py" in suggestion.patch
+    assert "+new" in suggestion.patch
+    assert "+bar" in suggestion.patch
+    assert "```" not in suggestion.patch
+
+
 def test_pre_commit_delegates_to_security_scan(command_context: CommandContext) -> None:
     """Builtin pre_commit should forward to the real security-scan plugin."""
     with patch("autoship.plugins.security_scan.plugin.pre_commit") as mock_pre_commit:

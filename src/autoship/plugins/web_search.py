@@ -16,6 +16,7 @@ from autoship.core.fix import FixSuggestion
 from autoship.core.model_router import ModelRouter
 from autoship.exceptions import ModelGatewayError, VerifyError
 from autoship.hookspec import hookimpl
+from autoship.models.config import WebSearchProvider
 
 logger = logging.getLogger("autoship")
 
@@ -37,9 +38,10 @@ class WebSearchPlugin:
         if not query:
             return None
 
-        adapter = WebSearchAdapter(timeout=config.timeout)
         try:
-            results = adapter.search(query, max_results=config.max_results)
+            results = _search(query, config.provider, max_results=config.max_results, timeout=config.timeout)
+        except NotImplementedError:
+            raise
         except Exception as exc:  # noqa: BLE001
             logger.warning("Web search failed: %s", exc)
             return None
@@ -48,6 +50,21 @@ class WebSearchPlugin:
             return None
 
         return _suggest_with_search(context, error, results)
+
+
+def _search(
+    query: str,
+    provider: WebSearchProvider,
+    *,
+    max_results: int,
+    timeout: float,
+) -> list[WebSearchResult]:
+    """Route the search query to the configured provider implementation."""
+    if provider == WebSearchProvider.DUCKDUCKGO:
+        return WebSearchAdapter(timeout=timeout).search(query, max_results=max_results)
+    if provider == WebSearchProvider.BRAVE:
+        raise NotImplementedError(f"Web search provider '{provider.value}' is not implemented yet.")
+    raise NotImplementedError(f"Unsupported web search provider: {provider.value}")
 
 
 def _build_query(error: Exception) -> str:

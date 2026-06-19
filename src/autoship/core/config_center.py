@@ -187,6 +187,7 @@ def load_config(
     _validate_clean_tools(merged)
 
     try:
-        return AppConfig.model_validate(merged)
+        config: AppConfig = AppConfig.model_validate(merged)
+        return config
     except ValidationError as exc:
         raise ConfigError(f"Invalid configuration: {exc}") from exc

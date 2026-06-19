@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 
 from autoship.adapters.model_gateway import ChatMessage
@@ -10,6 +11,8 @@ from autoship.core.fix import FixSuggestion
 from autoship.core.model_router import ModelRouter
 from autoship.exceptions import ModelGatewayError, VerifyError
 from autoship.hookspec import hookimpl
+
+_DIFF_BLOCK_RE = re.compile(r"```diff\s*\n(.*?)\n```\s*(?:\n|$)", re.DOTALL)
 
 
 class BuiltinPlugins:
@@ -64,10 +67,11 @@ class BuiltinPlugins:
 
 def _parse_suggestion(text: str) -> FixSuggestion:
     """Split a model response into description and optional diff patch."""
-    if "```diff" in text:
-        description, _, patch_block = text.partition("```diff")
-        patch = patch_block.replace("```", "").strip()
-        return FixSuggestion(description=description.strip(), patch=patch)
+    matches = _DIFF_BLOCK_RE.findall(text)
+    if matches:
+        patch = "\n".join(matches).strip()
+        description = _DIFF_BLOCK_RE.sub("", text).strip()
+        return FixSuggestion(description=description, patch=patch)
     return FixSuggestion(description=text.strip())
 
 
