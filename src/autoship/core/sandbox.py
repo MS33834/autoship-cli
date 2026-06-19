@@ -60,11 +60,13 @@ class SandboxRunner:
     See the module docstring for the planned roadmap (filesystem isolation,
     cgroup limits, seccomp-bpf, etc.).
 
-    The runner degrades gracefully when sandbox tooling is unavailable unless
-    ``required`` is ``True``: it still applies the environment and directory
-    restrictions and logs a warning that network isolation could not be
-    enforced. When ``required`` is ``True`` and no isolation tool is available,
-    a ``SandboxError`` is raised instead of degrading.
+    The runner does **not** degrade to un-sandboxed execution by default. When
+    ``required`` is ``True`` (the default) and no network isolation tool is
+    available, a ``SandboxError`` is raised instead of running the command
+    without network restrictions. Callers that explicitly want graceful
+    degradation must pass ``required=False``; in that case the runner still
+    applies the environment and directory restrictions and logs a warning that
+    network isolation could not be enforced.
     """
 
     def __init__(
@@ -73,7 +75,7 @@ class SandboxRunner:
         network: bool = False,
         env_whitelist: list[str] | None = None,
         working_dir: Path | None = None,
-        required: bool = False,
+        required: bool = True,
     ) -> None:
         self.network = network
         self.env_whitelist = env_whitelist or ["PATH", "HOME", "USER", "LANG", "LC_ALL"]

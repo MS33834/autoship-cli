@@ -48,15 +48,15 @@ def test_sandbox_wraps_network_when_tool_available() -> None:
     assert wrapped[1] == "--net"
 
 
-def test_sandbox_falls_back_without_tool() -> None:
-    runner = SandboxRunner(network=False)
+def test_sandbox_falls_back_without_tool_when_explicitly_optional() -> None:
+    runner = SandboxRunner(network=False, required=False)
     with patch("shutil.which", return_value=None):
         wrapped = runner._wrap_network(["python", "-c", "pass"])
     assert wrapped == ["python", "-c", "pass"]
 
 
-def test_sandbox_required_raises_when_tool_missing() -> None:
-    runner = SandboxRunner(network=False, required=True)
+def test_sandbox_default_raises_when_tool_missing() -> None:
+    runner = SandboxRunner(network=False)
     with (
         patch("shutil.which", return_value=None),
         pytest.raises(SandboxError),

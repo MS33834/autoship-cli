@@ -92,7 +92,7 @@ class AuditConfig(BaseModel):
 class SandboxConfig(BaseModel):
     """Configuration for sandbox isolation requirements."""
 
-    required: bool = False
+    required: bool = True
 
 
 class WebSearchConfig(BaseModel):
@@ -168,6 +168,29 @@ class CacheConfig(BaseModel):
     dir: Path | None = None
 
 
+class VerifyConfig(BaseModel):
+    """Configuration for the ``verify`` command."""
+
+    allowed_commands: list[str] = Field(
+        default_factory=lambda: [
+            "pytest",
+            "python",
+            "python3",
+            "ruff",
+            "mypy",
+            "black",
+            "isort",
+            "tox",
+            "nox",
+            "npm",
+            "yarn",
+            "pnpm",
+            "poetry",
+            "make",
+        ]
+    )
+
+
 class AppConfig(BaseModel):
     """Top-level application configuration."""
 
@@ -182,6 +205,7 @@ class AppConfig(BaseModel):
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     audit: AuditConfig = Field(default_factory=AuditConfig)
     sandbox: SandboxConfig = Field(default_factory=SandboxConfig)
+    verify: VerifyConfig = Field(default_factory=VerifyConfig)
     web_search: WebSearchConfig = Field(default_factory=WebSearchConfig)
     docker_ship: DockerShipConfig = Field(default_factory=DockerShipConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)
