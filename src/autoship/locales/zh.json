@@ -124,6 +124,16 @@
   "doctor.dirs_not_writable": "目录不可写：{paths}",
   "doctor.dirs_writable_suggestion": "确保当前用户对这些目录有写入权限。",
   "doctor.dirs_ok": "配置和数据目录可访问",
+  "doctor.cache_ok": "本地磁盘缓存读写正常",
+  "doctor.cache_error": "缓存读写失败：{error}",
+  "doctor.cache_warning": "缓存探测返回意外值",
+  "doctor.cache_suggestion": "请检查 ~/.autoship/cache 的权限。",
+  "doctor.observability_ok_empty": "尚未收集任何指标",
+  "doctor.observability_ok": "{metrics} 个指标（{counters} 计数器，{histograms} 直方图）",
+
+  "metrics.title": "运行时指标",
+  "metrics.empty": "尚未收集任何指标。",
+  "metrics.exported": "指标已导出到 {path}",
 
   "upload.help": "将产物上传到已配置的目标。",
   "upload.option.target": "上传目标，例如 pypi/docker/github",

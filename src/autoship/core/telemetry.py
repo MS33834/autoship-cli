@@ -24,6 +24,8 @@ from typing import Any
 import httpx
 import structlog
 
+from autoship.core.metrics import get_registry
+
 logger = structlog.get_logger()
 
 DEFAULT_ENDPOINT_ENV = "AUTOSHIP_TELEMETRY_ENDPOINT"
@@ -40,6 +42,7 @@ class TelemetryEvent:
     exception_lineno: int | None = None
     python_version: str = sys.version.split()[0]
     platform: str = platform.system()
+    metrics_summary: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -86,9 +89,23 @@ class TelemetryCollector:
             exit_code=exit_code,
             exception_type=exception_type,
             exception_lineno=exception_lineno,
+            metrics_summary=self._metrics_summary(),
         )
         self._persist(event)
         return event
+
+    def _metrics_summary(self) -> dict[str, Any]:
+        """Return a compact summary of the global metrics registry."""
+        try:
+            snapshot = get_registry().snapshot()
+            return {
+                "num_metrics": len(snapshot),
+                "counters": {
+                    n: d["value"] for n, d in snapshot.items() if d.get("type") == "counter"
+                },
+            }
+        except Exception:  # noqa: BLE001
+            return {}
 
     def _persist(self, event: TelemetryEvent) -> None:
         """Write the event to the local log and optionally send it."""

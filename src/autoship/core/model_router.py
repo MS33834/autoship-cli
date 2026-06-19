@@ -14,6 +14,7 @@ from autoship.adapters.providers import (
     OpenRouterGateway,
     VllmGateway,
 )
+from autoship.core.metrics import get_registry
 from autoship.exceptions import ModelGatewayError
 from autoship.models.config import AppConfig, Provider
 
@@ -48,18 +49,34 @@ class ModelRouter:
 
     def _chat(self, messages: list[ChatMessage], task_type: str) -> str:
         """Send a chat request, falling back across healthy backends."""
+        registry = get_registry()
         gateways = self._gateways()
         if not gateways:
             raise ModelGatewayError("No model backends configured")
 
         last_error: Exception | None = None
+        attempts = 0
         for gateway in gateways:
+            attempts += 1
             try:
                 if gateway.health():
                     req = ChatCompletionRequest(messages=messages)
                     resp = gateway.chat(req)
+                    registry.inc(
+                        "model_backend_success",
+                        description="Successful model backend requests",
+                    )
+                    if attempts > 1:
+                        registry.inc(
+                            "model_backend_fallbacks",
+                            description="Model backend fallback occurrences",
+                        )
                     return resp.content
             except (ModelGatewayError, httpx.RequestError, httpx.TimeoutException) as exc:
+                registry.inc(
+                    "model_backend_errors",
+                    description="Model backend request errors",
+                )
                 last_error = exc
                 if not self.config.model.fallback:
                     break

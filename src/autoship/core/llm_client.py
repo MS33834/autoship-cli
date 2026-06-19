@@ -11,6 +11,7 @@ from typing import Any
 import httpx
 
 from autoship.core.cache import DiskCache
+from autoship.core.metrics import get_registry
 from autoship.exceptions import ModelGatewayError
 from autoship.models.config import LlmConfig, LlmProvider
 
@@ -79,6 +80,7 @@ class AsyncLlmClient:
 
     async def chat(self, system_prompt: str, user_prompt: str) -> str:
         """Send a chat request asynchronously and return the assistant's reply."""
+        registry = get_registry()
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -87,8 +89,12 @@ class AsyncLlmClient:
         if self.cache is not None:
             cached = self.cache.get(cache_key)
             if cached is not None:
+                registry.inc("llm_cache_hits", description="LLM cache hits")
                 return str(cached)
+            registry.inc("llm_cache_misses", description="LLM cache misses")
 
+        registry.inc("llm_requests", description="Total LLM requests")
+        start = asyncio.get_event_loop().time()
         async with httpx.AsyncClient(
             headers=self._headers(), timeout=self.config.timeout
         ) as client:
@@ -99,11 +105,16 @@ class AsyncLlmClient:
                 )
                 response.raise_for_status()
             except httpx.HTTPError as exc:
+                registry.inc("llm_errors", description="LLM request errors")
                 raise ModelGatewayError(f"LLM request failed: {exc}") from exc
+            finally:
+                elapsed_ms = (asyncio.get_event_loop().time() - start) * 1000
+                registry.record("llm_latency_ms", elapsed_ms, description="LLM request latency")
 
         try:
             data = response.json()
         except json.JSONDecodeError as exc:
+            registry.inc("llm_errors", description="LLM request errors")
             raise ModelGatewayError(f"Invalid LLM response: {exc}") from exc
 
         result = self._parse_response(data)

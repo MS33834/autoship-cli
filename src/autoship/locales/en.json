@@ -124,6 +124,16 @@
   "doctor.dirs_not_writable": "Directories not writable: {paths}",
   "doctor.dirs_writable_suggestion": "Ensure the directories are writable by the current user.",
   "doctor.dirs_ok": "Config and data directories accessible",
+  "doctor.cache_ok": "Local disk cache read/write OK",
+  "doctor.cache_error": "Cache read/write failed: {error}",
+  "doctor.cache_warning": "Cache probe returned unexpected value",
+  "doctor.cache_suggestion": "Check permissions in ~/.autoship/cache.",
+  "doctor.observability_ok_empty": "No metrics collected yet",
+  "doctor.observability_ok": "{metrics} metrics ({counters} counters, {histograms} histograms)",
+
+  "metrics.title": "Runtime metrics",
+  "metrics.empty": "No metrics collected yet.",
+  "metrics.exported": "Metrics exported to {path}",
 
   "upload.help": "Upload artifacts to a configured target.",
   "upload.option.target": "Upload target, e.g. pypi/docker/github",

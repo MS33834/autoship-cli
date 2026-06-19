@@ -18,6 +18,8 @@ from pathlib import Path
 
 import psutil
 
+from autoship.core.metrics import get_registry
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
 BENCHMARKS_DIR = REPO_ROOT / "benchmarks"
@@ -144,6 +146,7 @@ def benchmark_idle_memory() -> Benchmark:
 
 def run_benchmarks() -> dict:
     """Run all benchmarks and return a report."""
+    get_registry().reset()
     benchmarks = [
         benchmark_startup(),
         benchmark_clean(),
@@ -151,6 +154,7 @@ def run_benchmarks() -> dict:
     ]
     return {
         "benchmarks": [b.to_dict() for b in benchmarks],
+        "metrics": get_registry().snapshot(),
         "all_passed": all(b.to_dict()["passed"] for b in benchmarks),
     }
 

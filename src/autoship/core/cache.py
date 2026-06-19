@@ -19,6 +19,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from autoship.core.metrics import get_registry
+
 _has_fcntl = importlib.util.find_spec("fcntl") is not None
 
 
@@ -72,22 +74,28 @@ class DiskCache:
 
     def get(self, key: str) -> Any | None:
         """Return the cached value for ``key`` or ``None`` if missing/expired."""
+        registry = get_registry()
         path = self._cache_path(key)
         with self._lock, self._file_lock(key, exclusive=False):
             if not path.exists():
+                registry.inc("cache_misses", description="Cache misses")
                 return None
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError):
+                registry.inc("cache_errors", description="Cache read errors")
                 return None
 
             expires = data.get("expires")
             if expires is not None and time.time() > expires:
+                registry.inc("cache_expired", description="Cache expired entries")
                 return None
+            registry.inc("cache_hits", description="Cache hits")
             return data.get("value")
 
     def set(self, key: str, value: Any, ttl: int | None = None) -> None:
         """Store ``value`` under ``key`` with an optional TTL override."""
+        registry = get_registry()
         path = self._cache_path(key)
         with self._lock, self._file_lock(key, exclusive=True):
             expires = time.time() + (ttl if ttl is not None else self.default_ttl)
@@ -95,6 +103,7 @@ class DiskCache:
             tmp_path = path.with_suffix(".tmp")
             tmp_path.write_text(payload, encoding="utf-8")
             tmp_path.replace(path)
+            registry.inc("cache_writes", description="Cache writes")
 
     def invalidate(self, key: str) -> None:
         """Remove the entry for ``key`` if it exists."""

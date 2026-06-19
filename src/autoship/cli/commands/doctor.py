@@ -12,8 +12,10 @@ from pathlib import Path
 
 import typer
 
+from autoship.core.cache import DiskCache
 from autoship.core.config_center import load_config
 from autoship.core.i18n import I18n, get_i18n_from_ctx
+from autoship.core.metrics import get_registry
 from autoship.core.model_router import ModelRouter
 from autoship.models.config import AppConfig
 
@@ -171,6 +173,52 @@ def check_directories(config: AppConfig, i18n: I18n) -> CheckResult:
     return CheckResult("directories", Status.OK, i18n._("doctor.dirs_ok"))
 
 
+def check_cache(i18n: I18n) -> CheckResult:
+    try:
+        cache = DiskCache()
+        cache.set("__doctor_probe__", "ok", ttl=10)
+        value = cache.get("__doctor_probe__")
+        cache.invalidate("__doctor_probe__")
+        if value == "ok":
+            return CheckResult("cache", Status.OK, i18n._("doctor.cache_ok"))
+    except OSError as exc:
+        return CheckResult(
+            "cache",
+            Status.ERROR,
+            i18n._("doctor.cache_error", error=str(exc)),
+            i18n._("doctor.cache_suggestion"),
+        )
+    return CheckResult(
+        "cache",
+        Status.WARNING,
+        i18n._("doctor.cache_warning"),
+        i18n._("doctor.cache_suggestion"),
+    )
+
+
+def check_observability(i18n: I18n) -> CheckResult:
+    registry = get_registry()
+    snapshot = registry.snapshot()
+    if not snapshot:
+        return CheckResult(
+            "observability",
+            Status.OK,
+            i18n._("doctor.observability_ok_empty"),
+        )
+    counter_count = sum(1 for d in snapshot.values() if d.get("type") == "counter")
+    hist_count = sum(1 for d in snapshot.values() if d.get("type") == "histogram")
+    return CheckResult(
+        "observability",
+        Status.OK,
+        i18n._(
+            "doctor.observability_ok",
+            metrics=len(snapshot),
+            counters=counter_count,
+            histograms=hist_count,
+        ),
+    )
+
+
 def build_report(i18n: I18n) -> DoctorReport:
     config = load_config()
     report = DoctorReport()
@@ -180,6 +228,8 @@ def build_report(i18n: I18n) -> DoctorReport:
     report.add(**check_model_backend(config, i18n).__dict__)
     report.add(**check_plugin_dependencies(i18n).__dict__)
     report.add(**check_directories(config, i18n).__dict__)
+    report.add(**check_cache(i18n).__dict__)
+    report.add(**check_observability(i18n).__dict__)
     return report
 
 

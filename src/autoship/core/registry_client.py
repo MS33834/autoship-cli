@@ -10,6 +10,7 @@ from typing import Any, cast
 
 import httpx
 
+from autoship.core.metrics import get_registry
 from autoship.models.config import AppConfig, RegistryConfig
 
 logger = logging.getLogger("autoship")
@@ -68,15 +69,24 @@ class RegistryClient:
             logger.warning("Failed to write registry cache: %s", exc)
 
     def _fetch_remote(self) -> dict[str, Any] | None:
+        registry = get_registry()
+        start = time.perf_counter()
         try:
             response = httpx.get(str(self.config.url), timeout=10.0)
             response.raise_for_status()
             data = cast(dict[str, Any], response.json())
             self._write_cache(data)
+            registry.inc("registry_sync_success", description="Successful registry syncs")
             return data
         except (httpx.HTTPError, json.JSONDecodeError) as exc:
             logger.warning("Failed to fetch remote registry index: %s", exc)
+            registry.inc("registry_sync_errors", description="Registry sync errors")
             return None
+        finally:
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            registry.record(
+                "registry_sync_latency_ms", elapsed_ms, description="Registry sync latency"
+            )
 
     def _bundled_index(self) -> dict[str, Any]:
         package_root = Path(__file__).resolve().parents[1]

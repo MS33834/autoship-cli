@@ -8,6 +8,7 @@ disabled by default and must be explicitly turned on via configuration.
 from __future__ import annotations
 
 import logging
+import time
 
 from autoship.adapters.model_gateway import ChatMessage
 from autoship.adapters.web_search import (
@@ -20,6 +21,7 @@ from autoship.adapters.web_search import (
 )
 from autoship.core.context import CommandContext
 from autoship.core.fix import FixSuggestion
+from autoship.core.metrics import get_registry
 from autoship.core.model_router import ModelRouter
 from autoship.exceptions import ModelGatewayError, VerifyError
 from autoship.hookspec import hookimpl
@@ -78,41 +80,57 @@ def _search(
     timeout: float,
 ) -> list[WebSearchResult]:
     """Route the search query to the configured provider implementation."""
-    if provider == WebSearchProvider.DUCKDUCKGO:
-        return WebSearchAdapter(timeout=timeout).search(query, max_results=max_results)
-    if provider == WebSearchProvider.BRAVE:
-        if not api_key:
-            raise ValueError(
-                "Brave web search provider requires an API key. "
-                "Set web_search.api_key in your configuration."
+    registry = get_registry()
+    registry.inc("web_search_requests", description="Total web search requests")
+    start = time.perf_counter()
+    try:
+        if provider == WebSearchProvider.DUCKDUCKGO:
+            results = WebSearchAdapter(timeout=timeout).search(query, max_results=max_results)
+        elif provider == WebSearchProvider.BRAVE:
+            if not api_key:
+                raise ValueError(
+                    "Brave web search provider requires an API key. "
+                    "Set web_search.api_key in your configuration."
+                )
+            results = BraveSearchAdapter(api_key=api_key, timeout=timeout).search(
+                query, max_results=max_results
             )
-        return BraveSearchAdapter(api_key=api_key, timeout=timeout).search(
-            query, max_results=max_results
-        )
-    if provider == WebSearchProvider.GOOGLE:
-        if not api_key:
-            raise ValueError(
-                "Google web search provider requires an API key. "
-                "Set web_search.api_key in your configuration."
+        elif provider == WebSearchProvider.GOOGLE:
+            if not api_key:
+                raise ValueError(
+                    "Google web search provider requires an API key. "
+                    "Set web_search.api_key in your configuration."
+                )
+            if not cx:
+                raise ValueError(
+                    "Google web search provider requires a search engine ID (cx). "
+                    "Set web_search.cx in your configuration."
+                )
+            results = GoogleSearchAdapter(api_key=api_key, cx=cx, timeout=timeout).search(
+                query, max_results=max_results
             )
-        if not cx:
-            raise ValueError(
-                "Google web search provider requires a search engine ID (cx). "
-                "Set web_search.cx in your configuration."
+        elif provider == WebSearchProvider.SEARXNG:
+            if not instance_url:
+                raise ValueError(
+                    "SearXNG web search provider requires an instance URL. "
+                    "Set web_search.instance_url in your configuration."
+                )
+            results = SearxngSearchAdapter(instance_url=instance_url, timeout=timeout).search(
+                query, max_results=max_results
             )
-        return GoogleSearchAdapter(api_key=api_key, cx=cx, timeout=timeout).search(
-            query, max_results=max_results
-        )
-    if provider == WebSearchProvider.SEARXNG:
-        if not instance_url:
-            raise ValueError(
-                "SearXNG web search provider requires an instance URL. "
-                "Set web_search.instance_url in your configuration."
-            )
-        return SearxngSearchAdapter(instance_url=instance_url, timeout=timeout).search(
-            query, max_results=max_results
-        )
-    raise NotImplementedError(f"Unsupported web search provider: {provider.value}")
+        else:
+            raise NotImplementedError(f"Unsupported web search provider: {provider.value}")
+    except Exception:
+        registry.inc("web_search_errors", description="Web search errors")
+        raise
+    finally:
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        registry.record("web_search_latency_ms", elapsed_ms, description="Web search latency")
+
+    registry.set(
+        "web_search_results_last", len(results), description="Last web search result count"
+    )
+    return results
 
 
 def _build_query(error: Exception) -> str:
