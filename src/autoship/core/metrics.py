@@ -22,12 +22,15 @@ class Counter:
     name: str
     description: str
     value: int = 0
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def inc(self, amount: int = 1) -> None:
-        self.value += amount
+        with self._lock:
+            self.value += amount
 
     def to_dict(self) -> dict[str, Any]:
-        return {"type": "counter", "value": self.value, "description": self.description}
+        with self._lock:
+            return {"type": "counter", "value": self.value, "description": self.description}
 
 
 @dataclass
@@ -58,10 +61,10 @@ class Histogram:
     name: str
     description: str
     max_samples: int = 1000
-    _values: deque[float] = field(default_factory=deque)
+    _values: deque[float] = field(default_factory=lambda: deque[float]())
 
     def __post_init__(self) -> None:
-        self._values = deque(maxlen=self.max_samples)
+        self._values = deque[float](maxlen=self.max_samples)
 
     def observe(self, value: float) -> None:
         self._values.append(float(value))

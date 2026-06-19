@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 
 import pytest
@@ -102,3 +103,18 @@ def test_histogram_respects_max_samples() -> None:
         hist.observe(float(value))
     assert hist.count == 5
     assert list(hist._values) == [5.0, 6.0, 7.0, 8.0, 9.0]
+
+
+def test_counter_concurrent_increments_are_accurate(registry: MetricsRegistry) -> None:
+    counter = registry.counter("concurrent_counter", "A test counter")
+
+    def _increment_many() -> None:
+        for _ in range(1000):
+            counter.inc()
+
+    threads = [threading.Thread(target=_increment_many) for _ in range(10)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert counter.value == 10000

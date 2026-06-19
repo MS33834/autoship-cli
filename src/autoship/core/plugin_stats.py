@@ -12,7 +12,7 @@ import logging
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from autoship.core.telemetry import TelemetryCollector
 
@@ -119,9 +119,21 @@ class PluginStats:
             logger.warning("Failed to load plugin stats: %s", exc)
             return
 
+        if not isinstance(raw, dict):
+            logger.warning("Plugin stats file is not a JSON object; ignoring")
+            return
+
+        raw = cast(dict[str, Any], raw)
         for name, data in raw.items():
+            if not isinstance(data, dict):
+                logger.warning("Skipping invalid plugin stat entry %s: not an object", name)
+                continue
+            data = cast(dict[str, Any], data)
             try:
                 rating_data = data.get("rating", {})
+                if not isinstance(rating_data, dict):
+                    rating_data = {}
+                rating_data = cast(dict[str, Any], rating_data)
                 self._stats[name] = PluginStat(
                     installs=int(data.get("installs", 0)),
                     uninstalls=int(data.get("uninstalls", 0)),

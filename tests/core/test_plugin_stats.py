@@ -59,3 +59,9 @@ def test_summary(stats_file: Path) -> None:
     summary = stats.summary()
     assert "a" in summary
     assert summary["a"]["installs"] == 1
+
+
+def test_load_ignores_non_object_json(stats_file: Path) -> None:
+    stats_file.write_text("[1, 2, 3]", encoding="utf-8")
+    stats = PluginStats(stats_file=stats_file)
+    assert stats.summary() == {}
