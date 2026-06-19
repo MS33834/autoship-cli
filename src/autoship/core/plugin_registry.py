@@ -42,6 +42,10 @@ class PluginSpec(BaseModel):
     hooks: list[str] = Field(default_factory=list)
     trust_level: TrustLevel = TrustLevel.COMMUNITY
     capabilities: CapabilityManifest = Field(default_factory=CapabilityManifest)
+    sha256: str | None = None
+    signature: str | None = None
+    maintainer: str | None = None
+    license: str | None = None
 
 
 class PluginRegistry:

@@ -35,6 +35,20 @@ uv run pytest
 3. 在 PR 描述中说明改动原因、影响范围与测试方式。
 4. 等待维护者 review，必要时进行修改。
 
+## 提交插件到 Registry
+
+我们欢迎第三方插件！请按以下流程提交：
+
+1. 使用 [`autoship-sdk`](https://pypi.org/project/autoship-sdk/) 创建插件项目并发布到 PyPI。
+2. 在 GitHub 上选择 **Plugin Submission** 模板创建 issue。
+3. 维护者会根据以下清单审核：
+   - 插件遵循 AutoShip hook spec，不执行未授权操作。
+   - 包含 README、开源许可证和基本测试。
+   - 名称不与现有插件冲突，符合 `autoship-*` 命名约定。
+   - 请求 `verified` 时需提供 SHA256 校验和或 GPG 签名。
+4. 审核通过后，插件会被加入 `src/autoship/registry/plugins.json`，
+   并自动出现在 [Plugin Registry Web UI](https://autoship-cli.github.io/autoship-registry/)。
+
 ## 许可证
 
 通过贡献代码，你同意所贡献的内容采用与项目一致的 [MIT](LICENSE) 许可证。

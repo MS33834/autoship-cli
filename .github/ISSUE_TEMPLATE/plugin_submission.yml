@@ -1,0 +1,86 @@
+name: Plugin Submission
+description: Submit a new plugin to the AutoShip registry.
+title: "[Plugin] "
+labels: ["plugin-submission", "needs-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing your plugin with the AutoShip community!
+        Please fill out the information below so we can review it.
+  - type: input
+    id: name
+    attributes:
+      label: Plugin name
+      description: Short, descriptive name used in `autoship plugin install <name>`.
+      placeholder: e.g. my-plugin
+    validations:
+      required: true
+  - type: input
+    id: package
+    attributes:
+      label: PyPI package name
+      description: The package to install from PyPI or a URL.
+      placeholder: e.g. autoship-my-plugin
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Initial version to list in the registry.
+      placeholder: e.g. 0.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What does the plugin do?
+      placeholder: One or two sentences describing the plugin.
+    validations:
+      required: true
+  - type: input
+    id: maintainer
+    attributes:
+      label: Maintainer
+      description: Name and contact (email or GitHub handle).
+      placeholder: e.g. Alice Chen <alice@example.com>
+    validations:
+      required: true
+  - type: input
+    id: license
+    attributes:
+      label: License
+      description: SPDX license identifier.
+      placeholder: e.g. MIT
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source repository
+      description: Link to the plugin source code.
+      placeholder: e.g. https://github.com/your-name/autoship-my-plugin
+    validations:
+      required: true
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Submission checklist
+      options:
+        - label: Plugin uses `autoship-sdk` or follows the hook spec.
+        - label: Includes a README with installation and usage instructions.
+        - label: Includes tests (strongly recommended).
+        - label: Uses a clear open-source license.
+        - label: Does not execute arbitrary shell commands without user consent.
+  - type: checkboxes
+    id: trust
+    attributes:
+      label: Requested trust level
+      description: |
+        `verified` requires a published checksum or GPG signature and a full review.
+        `community` is faster but shows a warning during installation.
+      options:
+        - label: community
+        - label: verified

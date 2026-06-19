@@ -80,7 +80,7 @@ def _has_gpu() -> bool:
     if shutil.which("nvidia-smi"):
         return True
     try:
-        import torch  # type: ignore[import-not-found]
+        import torch  # pyright: ignore[reportMissingImports]
 
         return cast(bool, torch.cuda.is_available())  # pyright: ignore[reportUnknownMemberType]
     except Exception:  # noqa: BLE001

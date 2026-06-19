@@ -1,36 +1,68 @@
 {
-  "version": 1,
-  "updated_at": "2026-06-18",
+  "version": 2,
+  "updated_at": "2026-06-19",
   "plugins": [
     {
       "name": "security-scan",
       "package": "autoship",
       "module": "autoship.plugins.security_scan",
-      "version": "0.2.0-beta.1",
+      "version": "1.0.0",
       "description": "提交前运行 bandit/gitleaks/osv-scanner 安全扫描。",
       "trust_level": "builtin",
       "entry_point": "autoship.plugins.security_scan",
-      "hooks": ["pre_commit"]
+      "hooks": ["pre_commit"],
+      "maintainer": "AutoShip Team",
+      "license": "MIT"
     },
     {
       "name": "docker-ship",
       "package": "autoship",
       "module": "autoship.plugins.docker_ship",
-      "version": "0.2.0-beta.1",
+      "version": "1.0.0",
       "description": "upload --target docker 时自动构建并推送 Docker 镜像。",
       "trust_level": "builtin",
       "entry_point": "autoship.plugins.docker_ship",
-      "hooks": ["pre_upload", "post_upload"]
+      "hooks": ["pre_upload", "post_upload"],
+      "maintainer": "AutoShip Team",
+      "license": "MIT"
     },
     {
       "name": "web-search",
       "package": "autoship",
       "module": "autoship.plugins.web_search",
-      "version": "0.2.0-beta.1",
+      "version": "1.0.0",
       "description": "verify --fix 失败时联网搜索错误上下文并给出修复建议。",
       "trust_level": "builtin",
       "entry_point": "autoship.plugins.web_search",
-      "hooks": ["on_error"]
+      "hooks": ["on_error"],
+      "maintainer": "AutoShip Team",
+      "license": "MIT"
+    },
+    {
+      "name": "commit-sign",
+      "package": "autoship-commit-sign",
+      "module": "autoship_commit_sign.plugin",
+      "version": "0.1.0",
+      "description": "自动为生成的 commit 添加 GPG 签名。",
+      "trust_level": "verified",
+      "entry_point": "autoship_commit_sign.plugin:CommitSignPlugin",
+      "hooks": ["pre_commit"],
+      "maintainer": "Alice Chen <alice@example.com>",
+      "license": "Apache-2.0",
+      "sha256": "a3f5c8e2b4d6f7a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5",
+      "signature": "-----BEGIN PGP SIGNATURE-----\n...\n-----END PGP SIGNATURE-----"
+    },
+    {
+      "name": "jira-link",
+      "package": "autoship-jira-link",
+      "module": "autoship_jira_link.plugin",
+      "version": "0.2.1",
+      "description": "从分支名提取 Jira Ticket 并写入 commit message。",
+      "trust_level": "community",
+      "entry_point": "autoship_jira_link.plugin:JiraLinkPlugin",
+      "hooks": ["pre_commit"],
+      "maintainer": "Community",
+      "license": "MIT"
     }
   ]
 }

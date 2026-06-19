@@ -5,6 +5,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -86,6 +87,7 @@ def install(
     trust: TrustLevel | None = typer.Option(None, "--trust", help="Initial trust level"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show actions without executing"),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmations"),
+    skip_trust_check: bool = typer.Option(False, "--skip-trust-check", help="Skip trust level warnings"),
 ) -> None:
     """Install a plugin package and register it locally."""
     i18n: I18n = get_i18n_from_ctx(ctx)
@@ -105,6 +107,9 @@ def install(
         plugin_version = version or "0.0.0"
         plugin_trust = trust or TrustLevel.COMMUNITY
         source_for_pip = source
+
+    if not dry_run:
+        _confirm_trust(i18n, plugin_name, plugin_trust, indexed, yes, skip_trust_check)
 
     if (
         not dry_run
@@ -141,9 +146,45 @@ def install(
             entry_point=indexed.get("entry_point") if indexed else None,
             hooks=indexed.get("hooks", []) if indexed else [],
             trust_level=plugin_trust,
+            sha256=indexed.get("sha256") if indexed else None,
+            signature=indexed.get("signature") if indexed else None,
+            maintainer=indexed.get("maintainer") if indexed else None,
+            license=indexed.get("license") if indexed else None,
         )
     )
     typer.echo(i18n._("plugin.installed", plugin_name=plugin_name))
+
+
+def _confirm_trust(
+    i18n: I18n,
+    plugin_name: str,
+    plugin_trust: TrustLevel,
+    indexed: dict[str, Any] | None,
+    yes: bool,
+    skip_trust_check: bool,
+) -> None:
+    """Prompt the user when installing plugins that are not fully trusted."""
+    if skip_trust_check or yes:
+        return
+
+    if plugin_trust in (TrustLevel.COMMUNITY, TrustLevel.UNTRUSTED):
+        message_key = (
+            "plugin.install_trust_warning_community"
+            if plugin_trust == TrustLevel.COMMUNITY
+            else "plugin.install_trust_warning_untrusted"
+        )
+        typer.echo(i18n._(message_key, plugin_name=plugin_name))
+        if not typer.confirm(i18n._("plugin.install_trust_confirm"), abort=False):
+            typer.echo(i18n._("common.aborted"))
+            raise typer.Exit(code=0)
+        return
+
+    if plugin_trust == TrustLevel.VERIFIED and indexed and not indexed.get("sha256") and not indexed.get("signature"):
+        typer.echo(i18n._("plugin.install_unverified_signature", plugin_name=plugin_name))
+        if not typer.confirm(i18n._("plugin.install_trust_confirm"), abort=False):
+            typer.echo(i18n._("common.aborted"))
+            raise typer.Exit(code=0)
+
 
 
 @app.command("uninstall")

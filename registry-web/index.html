@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoShip Plugin Registry</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- PLUGIN_DATA_PLACEHOLDER -->
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="https://autoship.dev" class="brand">AutoShip</a>
+      <nav>
+        <a href="https://docs.autoship.dev">Docs</a>
+        <a href="https://github.com/autoship-cli/autoship-cli">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>Plugin Registry</h1>
+      <p class="lead">Discover, install, and share AutoShip plugins.</p>
+    </section>
+
+    <section class="controls">
+      <input
+        id="search"
+        type="search"
+        placeholder="Search plugins..."
+        aria-label="Search plugins"
+      />
+      <select id="filter-trust" aria-label="Filter by trust level">
+        <option value="">All trust levels</option>
+        <option value="builtin">builtin</option>
+        <option value="verified">verified</option>
+        <option value="community">community</option>
+        <option value="untrusted">untrusted</option>
+      </select>
+    </section>
+
+    <section id="plugin-grid" class="plugin-grid"></section>
+
+    <section class="submit">
+      <h2>Submit a plugin</h2>
+      <p>
+        Have a plugin to share? Open a submission issue on
+        <a href="https://github.com/autoship-cli/autoship-cli/issues">GitHub</a>.
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>© 2026 AutoShip. Plugins listed are provided by their respective authors.</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

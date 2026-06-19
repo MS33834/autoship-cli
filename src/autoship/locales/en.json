@@ -58,8 +58,12 @@
   "plugin.trust_set": "Set trust level of {name} to {level}",
   "plugin.install_failed": "Failed to install plugin {plugin_name}: {exc}",
   "plugin.uninstall_failed": "Failed to uninstall plugin {name}: {exc}",
+  "plugin.install_trust_warning_community": "Warning: {plugin_name} is a community plugin and has not been verified by the AutoShip team.",
+  "plugin.install_trust_warning_untrusted": "Warning: {plugin_name} is marked as untrusted. Only install if you fully understand the source.",
+  "plugin.install_unverified_signature": "Warning: {plugin_name} is listed as verified but has no checksum or signature in the registry.",
+  "plugin.install_trust_confirm": "Do you want to continue with the installation?",
 
-  "doctor.help": "Diagnose the AutoShip environment and dependencies.",
+  "doctor.help": "Diagnose the environment and dependencies.",
   "doctor.option.json": "Output report as JSON",
   "doctor.title": "AutoShip Environment Diagnostics",
   "doctor.suggestion": "        -> {suggestion}",

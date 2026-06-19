@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 提问与讨论
-    url: https://github.com/your-org/autoship-cli/discussions
-    about: 如果您有使用问题、想法交流或一般性讨论，请前往 Discussions。
-  - name: 阅读文档
-    url: https://your-org.github.io/autoship-cli/
-    about: 在提交 issue 前，建议先查阅官方文档站点。
+  - name: Questions & Discussions
+    url: https://github.com/autoship-cli/autoship-cli/discussions
+    about: For usage questions, ideas, or general discussion, please use Discussions.
+  - name: Read the Docs
+    url: https://autoship-cli.github.io/autoship-cli/
+    about: Check the official documentation site before opening an issue.

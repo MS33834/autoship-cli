@@ -81,3 +81,42 @@ def test_plugin_install_pip_failure() -> None:
     assert result.exit_code != 0
     assert result.exception is not None
     assert "Failed to install plugin" in str(result.exception)
+
+
+def test_plugin_install_community_requires_confirmation() -> None:
+    result = runner.invoke(app, ["plugin", "install", "jira-link"], input="n\n")
+    assert result.exit_code == 0
+    assert "community plugin" in result.output
+
+
+def test_plugin_install_untrusted_requires_confirmation() -> None:
+    result = runner.invoke(
+        app, ["plugin", "install", "./local-plugin", "--trust", "untrusted"], input="n\n"
+    )
+    assert result.exit_code == 0
+    assert "untrusted" in result.output
+
+
+def test_plugin_install_skip_trust_check() -> None:
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = None
+        result = runner.invoke(
+            app, ["plugin", "install", "jira-link", "--skip-trust-check", "--yes"]
+        )
+    assert result.exit_code == 0
+    assert "Installed plugin: jira-link" in result.output
+
+
+def test_plugin_install_verified_without_signature_warns() -> None:
+    with patch("autoship.cli.commands.plugin.RegistryIndex") as mock_index:
+        mock_index.return_value.get.return_value = {
+            "name": "verified-no-sig",
+            "package": "verified-no-sig",
+            "version": "1.0.0",
+            "trust_level": "verified",
+            "entry_point": "verified_no_sig.plugin:Plugin",
+            "hooks": [],
+        }
+        result = runner.invoke(app, ["plugin", "install", "verified-no-sig"], input="n\n")
+    assert result.exit_code == 0
+    assert "no checksum or signature" in result.output

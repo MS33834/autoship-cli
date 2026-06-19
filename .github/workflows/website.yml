@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - "website/**"
+      - "registry-web/**"
+      - "src/autoship/registry/plugins.json"
   workflow_dispatch:
 
 permissions:

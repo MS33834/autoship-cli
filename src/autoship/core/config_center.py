@@ -12,9 +12,9 @@ from autoship.exceptions import ConfigError
 from autoship.models.config import AppConfig
 
 try:
-    import tomllib  # type: ignore[import-not-found]  # pyright: ignore[reportMissingTypeStubs]
+    import tomllib  # pyright: ignore[reportMissingTypeStubs]
 except ImportError:  # pragma: no cover
-    import tomli as tomllib  # pyright: ignore[reportMissingTypeStubs]
+    import tomli as tomllib  # pyright: ignore[reportMissingImports, reportMissingTypeStubs]
 
 
 DEFAULT_CONFIG_NAME = ".autoship.toml"
@@ -59,7 +59,7 @@ def _load_toml(path: Path) -> dict[str, Any]:
         with path.open("rb") as f:
             loader: Any = tomllib
             return cast(dict[str, Any], loader.load(f))
-    except (OSError, tomllib.TOMLDecodeError) as exc:  # pyright: ignore[reportUnknownVariableType]
+    except (OSError, tomllib.TOMLDecodeError) as exc:  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
         raise ConfigError(f"Failed to load config from {path}: {exc}") from exc
 
 
