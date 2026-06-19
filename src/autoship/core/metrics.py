@@ -58,7 +58,10 @@ class Histogram:
     name: str
     description: str
     max_samples: int = 1000
-    _values: deque[float] = field(default_factory=lambda: deque(maxlen=1000))
+    _values: deque[float] = field(default_factory=deque)
+
+    def __post_init__(self) -> None:
+        self._values = deque(maxlen=self.max_samples)
 
     def observe(self, value: float) -> None:
         self._values.append(float(value))

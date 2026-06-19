@@ -94,3 +94,11 @@ def test_histogram_to_dict_empty() -> None:
     hist = Histogram("h", "d")
     assert hist.to_dict()["count"] == 0
     assert hist.to_dict()["mean"] == 0.0
+
+
+def test_histogram_respects_max_samples() -> None:
+    hist = Histogram("h", "d", max_samples=5)
+    for value in range(10):
+        hist.observe(float(value))
+    assert hist.count == 5
+    assert list(hist._values) == [5.0, 6.0, 7.0, 8.0, 9.0]
