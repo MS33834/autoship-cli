@@ -6,7 +6,9 @@ from unittest.mock import patch
 
 from typer.testing import CliRunner
 
+from autoship.cli.commands.doctor import CheckResult, Status, check_directories
 from autoship.cli.main import app
+from autoship.models.config import AppConfig
 
 runner = CliRunner()
 
@@ -33,8 +35,6 @@ def test_doctor_detects_missing_git() -> None:
 
 
 def test_doctor_detects_old_python() -> None:
-    from autoship.cli.commands.doctor import CheckResult, Status
-
     with patch("autoship.cli.commands.doctor.check_python", return_value=CheckResult(
         name="python",
         status=Status.ERROR,
@@ -44,3 +44,25 @@ def test_doctor_detects_old_python() -> None:
         result = runner.invoke(app, ["doctor"])
     assert result.exit_code == 1
     assert "Python 3.9" in result.output
+
+
+def test_check_directories_writable(i18n, tmp_path) -> None:
+    config = AppConfig(project_root=tmp_path)
+    result = check_directories(config, i18n)
+    assert result.status == Status.OK
+    assert "accessible" in result.message
+
+
+def test_check_directories_not_writable(i18n, tmp_path) -> None:
+    config = AppConfig(project_root=tmp_path)
+    with patch("autoship.cli.commands.doctor.os.access", return_value=False):
+        result = check_directories(config, i18n)
+    assert result.status == Status.WARNING
+    assert "not writable" in result.message
+
+
+def test_check_directories_missing(i18n, tmp_path) -> None:
+    config = AppConfig(project_root=tmp_path / "does" / "not" / "exist")
+    result = check_directories(config, i18n)
+    assert result.status == Status.WARNING
+    assert "Cannot access" in result.message

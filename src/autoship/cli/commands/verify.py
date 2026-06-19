@@ -83,8 +83,9 @@ def verify(
             cwd=config.project_root,
             capture_output=True,
             text=True,
+            check=False,
         )
-    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
+    except (FileNotFoundError, OSError) as exc:
         audit.record("verify.error", {"command": command, "error": str(exc)})
         _handle_error(context, exc, audit, i18n)
         raise VerifyError(i18n._("verify.run_failed", exc=exc)) from exc
@@ -106,7 +107,11 @@ def verify(
             },
         )
         error = VerifyError(
-            i18n._("verify.failed", code=result.returncode),
+            i18n._(
+                "verify.failed",
+                code=result.returncode,
+                command=command,
+            ),
             details={"command": command, "stdout": result.stdout, "stderr": result.stderr},
         )
         _handle_error(context, error, audit, i18n)

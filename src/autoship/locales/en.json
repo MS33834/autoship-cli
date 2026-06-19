@@ -117,6 +117,8 @@
   "doctor.plugin_ok": "Optional plugin tools available",
   "doctor.dirs_bad": "Cannot access: {paths}",
   "doctor.dirs_suggestion": "Ensure HOME is set and writable.",
+  "doctor.dirs_not_writable": "Directories not writable: {paths}",
+  "doctor.dirs_writable_suggestion": "Ensure the directories are writable by the current user.",
   "doctor.dirs_ok": "Config and data directories accessible",
 
   "upload.help": "Upload artifacts to a configured target.",
@@ -135,7 +137,7 @@
   "verify.dry_run": "[dry-run] Would run: {command}",
   "verify.verified": "Verified: {command}",
   "verify.command_not_found": "Verification command not found on PATH: {cmd}",
-  "verify.failed": "Verification failed with exit code {code}",
+  "verify.failed": "Verification failed with exit code {code} for command: {command}",
   "verify.run_failed": "Failed to run verification command: {exc}",
   "verify.suggested_fix": "Suggested fix {index}:",
   "verify.proposed_patch": "Proposed patch:",

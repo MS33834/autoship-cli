@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -130,8 +131,21 @@ def check_plugin_dependencies(i18n: I18n) -> CheckResult:
     return CheckResult("plugin-dependencies", Status.OK, i18n._("doctor.plugin_ok"))
 
 
-def check_directories(i18n: I18n) -> CheckResult:
-    paths = [Path.home() / ".config" / "autoship", Path.home() / ".autoship"]
+def _resolve_directory_paths(config: AppConfig) -> list[Path]:
+    from autoship.core.registry_client import DEFAULT_CACHE_DIR
+
+    audit_dir = config.audit_log_dir or config.audit.log_dir or (Path.home() / ".autoship" / "logs")
+    return [config.project_root, audit_dir, DEFAULT_CACHE_DIR]
+
+
+def _is_writable(path: Path) -> bool:
+    if path.exists():
+        return os.access(path, os.W_OK)
+    return path.parent.exists() and os.access(path.parent, os.W_OK)
+
+
+def check_directories(config: AppConfig, i18n: I18n) -> CheckResult:
+    paths = _resolve_directory_paths(config)
     bad = [str(p) for p in paths if not (p.exists() or p.parent.exists())]
     if bad:
         return CheckResult(
@@ -139,6 +153,15 @@ def check_directories(i18n: I18n) -> CheckResult:
             Status.WARNING,
             i18n._("doctor.dirs_bad", paths=", ".join(bad)),
             i18n._("doctor.dirs_suggestion"),
+        )
+
+    not_writable = [str(p) for p in paths if not _is_writable(p)]
+    if not_writable:
+        return CheckResult(
+            "directories",
+            Status.WARNING,
+            i18n._("doctor.dirs_not_writable", paths=", ".join(not_writable)),
+            i18n._("doctor.dirs_writable_suggestion"),
         )
     return CheckResult("directories", Status.OK, i18n._("doctor.dirs_ok"))
 
@@ -151,7 +174,7 @@ def build_report(i18n: I18n) -> DoctorReport:
     report.add(**check_clean_toolchain(i18n).__dict__)
     report.add(**check_model_backend(config, i18n).__dict__)
     report.add(**check_plugin_dependencies(i18n).__dict__)
-    report.add(**check_directories(i18n).__dict__)
+    report.add(**check_directories(config, i18n).__dict__)
     return report
 
 

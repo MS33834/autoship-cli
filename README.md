@@ -8,9 +8,14 @@
 [![CI](https://github.com/autoship-cli/autoship-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/autoship-cli/autoship-cli/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-docs.autoship.dev-blue)](https://docs.autoship.dev)
 
-<!-- 演示占位：在 docs/demo.gif 处放置 30 秒快速演示 GIF，或替换为 [asciinema](https://asciinema.org) 链接 -->
+![Demo](docs/demo.svg) <!-- TODO: 替换为真实 asciinema/gif -->
 
-> 快速演示：30 秒 AutoShip 工作流 GIF / asciinema 录制（待补充）。
+> 快速演示：30 秒 AutoShip 工作流 asciinema 录制（待补充）。
+> 可使用以下命令在本地录制：
+>
+> ```bash
+> asciinema rec docs/demo.cast --command "autoship init && autoship clean && autoship commit"
+> ```
 >
 > 官方网站：[autoship.dev](https://autoship.dev)
 
@@ -39,11 +44,11 @@ uv run autoship --help
 
 ### 二进制下载
 
-各平台预编译二进制可在 GitHub Release 下载：
+各平台预编译二进制可在 GitHub Releases 下载：
 
-- [Linux x86_64](https://github.com/autoship-cli/autoship-cli/releases#placeholder)
-- [macOS Universal](https://github.com/autoship-cli/autoship-cli/releases#placeholder)
-- [Windows x86_64](https://github.com/autoship-cli/autoship-cli/releases#placeholder)
+- [下载最新版本](https://github.com/autoship-cli/autoship-cli/releases/latest)
+
+> 二进制由 CI 自动发布。
 
 ## 快速开始
 

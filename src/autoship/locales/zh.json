@@ -117,6 +117,8 @@
   "doctor.plugin_ok": "可选插件工具可用",
   "doctor.dirs_bad": "无法访问：{paths}",
   "doctor.dirs_suggestion": "确保 HOME 已设置且可写。",
+  "doctor.dirs_not_writable": "目录不可写：{paths}",
+  "doctor.dirs_writable_suggestion": "确保当前用户对这些目录有写入权限。",
   "doctor.dirs_ok": "配置和数据目录可访问",
 
   "upload.help": "将产物上传到已配置的目标。",
@@ -135,7 +137,7 @@
   "verify.dry_run": "[dry-run] 将运行：{command}",
   "verify.verified": "已验证：{command}",
   "verify.command_not_found": "PATH 上找不到验证命令：{cmd}",
-  "verify.failed": "验证失败，退出代码 {code}",
+  "verify.failed": "验证失败，退出代码 {code}，命令：{command}",
   "verify.run_failed": "运行验证命令失败：{exc}",
   "verify.suggested_fix": "建议修复 {index}：",
   "verify.proposed_patch": "建议补丁：",

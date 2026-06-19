@@ -5,7 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AutoShip Plugin Registry Dashboard</title>
   <link rel="stylesheet" href="styles.css" />
-  <!-- PLUGIN_DATA_PLACEHOLDER -->
+  <script id="plugin-data-loader" data-app-script="dashboard.js">
+    (function () {
+      function loadScript(src) {
+        var script = document.createElement("script");
+        script.src = src;
+        document.body.appendChild(script);
+      }
+      function loadData() {
+        return fetch("../registry/plugins.json")
+          .then(function (response) {
+            if (!response.ok) throw new Error("Failed to load plugin registry: " + response.status);
+            return response.json();
+          })
+          .then(function (data) {
+            window.PLUGIN_REGISTRY = data;
+          })
+          .catch(function (error) {
+            console.error(error);
+            window.PLUGIN_REGISTRY = { version: 1, plugins: [] };
+          });
+      }
+      var appScript = document.currentScript.dataset.appScript || "dashboard.js";
+      if (typeof window.PLUGIN_REGISTRY !== "undefined") {
+        loadScript(appScript);
+      } else {
+        loadData().then(function () { loadScript(appScript); });
+      }
+    })();
+  </script>
 </head>
 <body>
   <header class="site-header">
@@ -67,6 +95,5 @@
     </div>
   </footer>
 
-  <script src="dashboard.js"></script>
 </body>
 </html>

@@ -17,7 +17,10 @@ class BuiltinPlugins:
 
     @hookimpl
     def pre_commit(self, context: CommandContext) -> None:
-        """Placeholder: will eventually run gitleaks / bandit checks."""
+        """Run security scans by delegating to the security-scan plugin."""
+        from autoship.plugins import security_scan
+
+        security_scan.plugin.pre_commit(context)
 
     @hookimpl
     def on_error(self, context: CommandContext, error: Exception) -> FixSuggestion | None:

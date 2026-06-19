@@ -75,8 +75,25 @@ def test_verify_failure(project_root, app_config: AppConfig) -> None:
         mock_run.return_value.returncode = 1
         mock_run.return_value.stdout = ""
         mock_run.return_value.stderr = "FAILED"
-        with pytest.raises(VerifyError):
+        with pytest.raises(VerifyError, match="exit code 1") as exc:
             verify.verify(ctx, command="false")
+    assert "false" in str(exc.value)
+
+
+def test_verify_os_error(project_root, app_config: AppConfig) -> None:
+    ctx = MagicMock()
+    ctx.obj = {
+        "config": app_config,
+        "audit_logger": MagicMock(),
+        "dry_run": False,
+        "yes": True,
+        "verbose": False,
+    }
+    with (
+        patch("subprocess.run", side_effect=OSError("permission denied")),
+        pytest.raises(VerifyError, match="permission denied"),
+    ):
+        verify.verify(ctx, command="false")
 
 
 def test_verify_dry_run(project_root, app_config: AppConfig) -> None:

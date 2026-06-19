@@ -2,8 +2,14 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
+import pytest
+
+from autoship.core.context import CommandContext
 from autoship.core.fix import FixSuggestion
-from autoship.plugins.defaults import _parse_suggestion
+from autoship.exceptions import SecurityScanError
+from autoship.plugins.defaults import _parse_suggestion, plugin
 
 
 def test_parse_suggestion_without_patch() -> None:
@@ -27,3 +33,22 @@ def test_parse_suggestion_with_patch() -> None:
     assert suggestion.description == "Add the missing import."
     assert "--- a/src/example.py" in suggestion.patch
     assert "```" not in suggestion.patch
+
+
+def test_pre_commit_delegates_to_security_scan(command_context: CommandContext) -> None:
+    """Builtin pre_commit should forward to the real security-scan plugin."""
+    with patch("autoship.plugins.security_scan.plugin.pre_commit") as mock_pre_commit:
+        plugin.pre_commit(command_context)
+    mock_pre_commit.assert_called_once_with(command_context)
+
+
+def test_pre_commit_propagates_security_scan_error(command_context: CommandContext) -> None:
+    """Exceptions raised by the security-scan plugin should bubble up."""
+    with (
+        patch(
+            "autoship.plugins.security_scan.plugin.pre_commit",
+            side_effect=SecurityScanError("scan failed"),
+        ),
+        pytest.raises(SecurityScanError, match="scan failed"),
+    ):
+        plugin.pre_commit(command_context)
