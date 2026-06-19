@@ -119,9 +119,7 @@ def test_community_plugin_runs_in_sandbox(
     assert results == ["sandboxed"]
 
 
-def test_verified_plugin_runs_directly(
-    dispatcher: HookDispatcher, context: CommandContext
-) -> None:
+def test_verified_plugin_runs_directly(dispatcher: HookDispatcher, context: CommandContext) -> None:
     dispatcher.registry.add(
         PluginSpec(
             name="verified_stub",

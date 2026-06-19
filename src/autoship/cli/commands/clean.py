@@ -25,9 +25,7 @@ def register(parent: typer.Typer) -> None:
 def clean(
     ctx: typer.Context,
     paths: list[Path] = typer.Argument(default_factory=lambda: [Path(".")]),
-    check: bool = typer.Option(
-        False, "--check", help="Exit with error if changes are needed"
-    ),
+    check: bool = typer.Option(False, "--check", help="Exit with error if changes are needed"),
 ) -> None:
     """Clean and format the project code."""
     config = ctx.obj["config"]

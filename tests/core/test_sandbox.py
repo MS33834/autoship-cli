@@ -19,7 +19,9 @@ def test_sandbox_runs_command() -> None:
 
 def test_sandbox_env_isolation() -> None:
     runner = SandboxRunner(network=True, env_whitelist=["PATH"])
-    result = runner.run(["python", "-c", "import os; print(os.environ.get('AUTOSHIP_TEST', 'missing'))"])
+    result = runner.run(
+        ["python", "-c", "import os; print(os.environ.get('AUTOSHIP_TEST', 'missing'))"]
+    )
     assert result.returncode == 0
     assert "missing" in result.stdout
 

@@ -88,7 +88,9 @@ def _osv_payload(severity_value: object) -> str:
 def test_osv_scanner_detects_vulnerability(security_context: CommandContext) -> None:
     security_context.config.security.tools = ["osv-scanner"]
     # Real CVSS v3.1 vector that computes to a CRITICAL base score.
-    payload = _osv_payload([{"type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}])
+    payload = _osv_payload(
+        [{"type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}]
+    )
     with (
         patch("shutil.which", return_value="/usr/bin/osv-scanner"),
         patch("subprocess.run") as mock_run,

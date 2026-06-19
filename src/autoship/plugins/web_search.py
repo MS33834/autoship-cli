@@ -12,6 +12,8 @@ import logging
 from autoship.adapters.model_gateway import ChatMessage
 from autoship.adapters.web_search import (
     BraveSearchAdapter,
+    GoogleSearchAdapter,
+    SearxngSearchAdapter,
     WebSearchAdapter,
     WebSearchResult,
     format_results,
@@ -48,6 +50,8 @@ class WebSearchPlugin:
                 query,
                 config.provider,
                 api_key=config.api_key,
+                cx=config.cx,
+                instance_url=config.instance_url,
                 max_results=config.max_results,
                 timeout=config.timeout,
             )
@@ -68,6 +72,8 @@ def _search(
     provider: WebSearchProvider,
     *,
     api_key: str | None,
+    cx: str | None,
+    instance_url: str | None,
     max_results: int,
     timeout: float,
 ) -> list[WebSearchResult]:
@@ -81,6 +87,29 @@ def _search(
                 "Set web_search.api_key in your configuration."
             )
         return BraveSearchAdapter(api_key=api_key, timeout=timeout).search(
+            query, max_results=max_results
+        )
+    if provider == WebSearchProvider.GOOGLE:
+        if not api_key:
+            raise ValueError(
+                "Google web search provider requires an API key. "
+                "Set web_search.api_key in your configuration."
+            )
+        if not cx:
+            raise ValueError(
+                "Google web search provider requires a search engine ID (cx). "
+                "Set web_search.cx in your configuration."
+            )
+        return GoogleSearchAdapter(api_key=api_key, cx=cx, timeout=timeout).search(
+            query, max_results=max_results
+        )
+    if provider == WebSearchProvider.SEARXNG:
+        if not instance_url:
+            raise ValueError(
+                "SearXNG web search provider requires an instance URL. "
+                "Set web_search.instance_url in your configuration."
+            )
+        return SearxngSearchAdapter(instance_url=instance_url, timeout=timeout).search(
             query, max_results=max_results
         )
     raise NotImplementedError(f"Unsupported web search provider: {provider.value}")

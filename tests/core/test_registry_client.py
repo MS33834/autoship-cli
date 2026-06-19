@@ -43,7 +43,9 @@ def test_falls_back_to_stale_cache_on_remote_failure(tmp_path: Path) -> None:
     cache.write_text(json.dumps(stale_data), encoding="utf-8")
 
     config = RegistryConfig(cache_enabled=True, cache_ttl_seconds=0)
-    with patch("autoship.core.registry_client.httpx.get", side_effect=httpx.ConnectError("offline")):
+    with patch(
+        "autoship.core.registry_client.httpx.get", side_effect=httpx.ConnectError("offline")
+    ):
         client = RegistryClient(config=config, cache_file=cache)
         result = client.get()
 

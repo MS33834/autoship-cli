@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import json
 import logging
 from typing import Any
 
 import httpx
 
+from autoship.core.cache import DiskCache
 from autoship.exceptions import ModelGatewayError
 from autoship.models.config import LlmConfig, LlmProvider
 
@@ -20,11 +23,12 @@ PROVIDER_URLS: dict[LlmProvider, str] = {
 }
 
 
-class LlmClient:
-    """Call an LLM with a prompt and return the generated text."""
+class AsyncLlmClient:
+    """Asynchronous LLM client using ``httpx.AsyncClient``."""
 
-    def __init__(self, config: LlmConfig) -> None:
+    def __init__(self, config: LlmConfig, cache: DiskCache | None = None) -> None:
         self.config = config
+        self.cache = cache
 
     def _base_url(self) -> str:
         if self.config.base_url:
@@ -62,36 +66,89 @@ class LlmClient:
             return ""
         return str(choices[0].get("message", {}).get("content", ""))
 
-    def chat(self, system_prompt: str, user_prompt: str) -> str:
-        """Send a chat request and return the assistant's reply."""
+    def _cache_key(self, messages: list[dict[str, str]]) -> str:
+        payload = json.dumps(
+            {
+                "provider": self.config.provider.value,
+                "model": self.config.model,
+                "messages": messages,
+            },
+            sort_keys=True,
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    async def chat(self, system_prompt: str, user_prompt: str) -> str:
+        """Send a chat request asynchronously and return the assistant's reply."""
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
-        try:
-            response = httpx.post(
-                self._base_url(),
-                headers=self._headers(),
-                json=self._payload(messages),
-                timeout=self.config.timeout,
-            )
-            response.raise_for_status()
-        except httpx.HTTPError as exc:
-            raise ModelGatewayError(f"LLM request failed: {exc}") from exc
+        cache_key = self._cache_key(messages)
+        if self.cache is not None:
+            cached = self.cache.get(cache_key)
+            if cached is not None:
+                return str(cached)
+
+        async with httpx.AsyncClient(
+            headers=self._headers(), timeout=self.config.timeout
+        ) as client:
+            try:
+                response = await client.post(
+                    self._base_url(),
+                    json=self._payload(messages),
+                )
+                response.raise_for_status()
+            except httpx.HTTPError as exc:
+                raise ModelGatewayError(f"LLM request failed: {exc}") from exc
 
         try:
             data = response.json()
         except json.JSONDecodeError as exc:
             raise ModelGatewayError(f"Invalid LLM response: {exc}") from exc
 
-        return self._parse_response(data)
+        result = self._parse_response(data)
+        if self.cache is not None:
+            self.cache.set(cache_key, result)
+        return result
 
-    def health(self) -> bool:
-        """Best-effort health check. Only Ollama exposes a simple endpoint."""
+    async def health(self) -> bool:
+        """Best-effort async health check. Only Ollama exposes a simple endpoint."""
         if self.config.provider != LlmProvider.OLLAMA:
             return True
-        try:
-            response = httpx.get("http://localhost:11434", timeout=2.0)
-            return int(response.status_code) == 200
-        except httpx.HTTPError:
-            return False
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            try:
+                response = await client.get("http://localhost:11434")
+                return int(response.status_code) == 200
+            except httpx.HTTPError:
+                return False
+
+
+class LlmClient:
+    """Synchronous wrapper around :class:`AsyncLlmClient`."""
+
+    def __init__(self, config: LlmConfig, cache: DiskCache | None = None) -> None:
+        self._async = AsyncLlmClient(config, cache=cache)
+
+    @property
+    def config(self) -> LlmConfig:
+        return self._async.config
+
+    def _base_url(self) -> str:
+        return self._async._base_url()  # pyright: ignore[reportPrivateUsage]
+
+    def _headers(self) -> dict[str, str]:
+        return self._async._headers()  # pyright: ignore[reportPrivateUsage]
+
+    def _payload(self, messages: list[dict[str, str]]) -> dict[str, Any]:
+        return self._async._payload(messages)  # pyright: ignore[reportPrivateUsage]
+
+    def _parse_response(self, data: dict[str, Any]) -> str:
+        return self._async._parse_response(data)  # pyright: ignore[reportPrivateUsage]
+
+    def chat(self, system_prompt: str, user_prompt: str) -> str:
+        """Send a chat request and return the assistant's reply."""
+        return asyncio.run(self._async.chat(system_prompt, user_prompt))
+
+    def health(self) -> bool:
+        """Best-effort health check."""
+        return asyncio.run(self._async.health())

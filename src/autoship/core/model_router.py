@@ -6,9 +6,12 @@ import httpx
 
 from autoship.adapters.model_gateway import ChatCompletionRequest, ChatMessage, ModelGateway
 from autoship.adapters.providers import (
+    AzureOpenAIGateway,
     LlamaCppGateway,
     LmStudioGateway,
     OllamaGateway,
+    OpenAIGateway,
+    OpenRouterGateway,
     VllmGateway,
 )
 from autoship.exceptions import ModelGatewayError
@@ -19,6 +22,9 @@ _PROVIDER_GATEWAYS: dict[Provider, type[ModelGateway]] = {
     Provider.LM_STUDIO: LmStudioGateway,
     Provider.LLAMA_CPP: LlamaCppGateway,
     Provider.VLLM: VllmGateway,
+    Provider.OPENAI: OpenAIGateway,
+    Provider.AZURE_OPENAI: AzureOpenAIGateway,
+    Provider.OPENROUTER: OpenRouterGateway,
 }
 
 

@@ -50,7 +50,12 @@ def _run_cmd(cmd: list[str]) -> tuple[bool, str]:
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=10.0)
         return True, result.stdout.strip()
-    except (subprocess.CalledProcessError, FileNotFoundError, OSError, subprocess.TimeoutExpired) as exc:
+    except (
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        OSError,
+        subprocess.TimeoutExpired,
+    ) as exc:
         return False, str(exc)
 
 
@@ -197,7 +202,12 @@ def doctor(
         data = {
             "summary": {"ok": ok, "warning": warnings, "error": errors},
             "checks": [
-                {"name": c.name, "status": c.status.value, "message": c.message, "suggestion": c.suggestion}
+                {
+                    "name": c.name,
+                    "status": c.status.value,
+                    "message": c.message,
+                    "suggestion": c.suggestion,
+                }
                 for c in report.checks
             ],
         }

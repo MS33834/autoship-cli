@@ -10,12 +10,15 @@ from pydantic import BaseModel, Field, HttpUrl
 
 
 class Provider(str, Enum):
-    """Supported local model backend providers."""
+    """Supported model backend providers."""
 
     LM_STUDIO = "lm_studio"
     OLLAMA = "ollama"
     LLAMA_CPP = "llama_cpp"
     VLLM = "vllm"
+    OPENAI = "openai"
+    AZURE_OPENAI = "azure_openai"
+    OPENROUTER = "openrouter"
 
 
 class ModelBackendConfig(BaseModel):
@@ -24,6 +27,7 @@ class ModelBackendConfig(BaseModel):
     provider: Provider
     base_url: HttpUrl
     api_key: str | None = Field(default=None, repr=False)
+    api_version: str | None = None
     model: str | None = None
     timeout: float = 30.0
     concurrency: int = 2
@@ -70,6 +74,8 @@ class WebSearchProvider(str, Enum):
 
     DUCKDUCKGO = "duckduckgo"
     BRAVE = "brave"
+    GOOGLE = "google"
+    SEARXNG = "searxng"
 
 
 class AuditConfig(BaseModel):
@@ -98,6 +104,8 @@ class WebSearchConfig(BaseModel):
     enabled: bool = False
     provider: WebSearchProvider = WebSearchProvider.DUCKDUCKGO
     api_key: str | None = Field(default=None, repr=False)
+    cx: str | None = Field(default=None, repr=False)
+    instance_url: str | None = None
     max_results: int = 3
     timeout: float = 10.0
 
@@ -123,7 +131,10 @@ class ModelConfig(BaseModel):
 class RegistryConfig(BaseModel):
     """Configuration for the plugin registry client."""
 
-    url: HttpUrl = cast(HttpUrl, "https://raw.githubusercontent.com/autoship-cli/autoship-cli/main/registry/plugins.json")
+    url: HttpUrl = cast(
+        HttpUrl,
+        "https://raw.githubusercontent.com/autoship-cli/autoship-cli/main/registry/plugins.json",
+    )
     cache_enabled: bool = True
     cache_ttl_seconds: int = 3600
 
@@ -142,9 +153,18 @@ class LlmConfig(BaseModel):
     provider: LlmProvider = LlmProvider.OPENAI
     model: str = "gpt-4o-mini"
     api_key: str | None = Field(default=None, repr=False)
+    api_version: str | None = None
     base_url: HttpUrl | None = None
     timeout: float = 60.0
     max_tokens: int = 2048
+
+
+class CacheConfig(BaseModel):
+    """Configuration for the local disk cache."""
+
+    enabled: bool = True
+    ttl: int = 3600
+    dir: Path | None = None
 
 
 class AppConfig(BaseModel):
@@ -166,3 +186,4 @@ class AppConfig(BaseModel):
     model: ModelConfig = Field(default_factory=ModelConfig)
     registry: RegistryConfig = Field(default_factory=RegistryConfig)
     llm: LlmConfig = Field(default_factory=LlmConfig)
+    cache: CacheConfig = Field(default_factory=CacheConfig)

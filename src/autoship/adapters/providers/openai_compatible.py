@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 from typing import Any, ClassVar, cast
 
@@ -62,8 +63,7 @@ class OpenAIGateway(ModelGateway):
         models = cast(list[Any], data["data"])
         return [m["id"] for m in models if isinstance(m, dict) and "id" in m]
 
-    def chat(self, req: ChatCompletionRequest) -> ChatCompletionResponse:
-        start = time.time()
+    def _build_payload(self, req: ChatCompletionRequest) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "model": self.cfg.model,
             "messages": [{"role": m.role, "content": m.content} for m in req.messages],
@@ -73,34 +73,49 @@ class OpenAIGateway(ModelGateway):
             payload["max_tokens"] = req.max_tokens
         if req.temperature is not None:
             payload["temperature"] = req.temperature
+        return payload
 
-        try:
-            resp = self.client.post("chat/completions", json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-        except httpx.HTTPStatusError as exc:
-            raise ModelGatewayError(
-                f"{self.PROVIDER_NAME} returned HTTP {exc.response.status_code}"
-            ) from exc
-        except httpx.RequestError as exc:
-            if isinstance(exc, httpx.TimeoutException):
-                msg = f"{self.PROVIDER_NAME} request timed out"
-            else:
-                msg = f"{self.PROVIDER_NAME} request failed: {exc}"
-            raise ModelGatewayError(msg) from exc
-        except ValueError as exc:
-            raise ModelGatewayError(f"{self.PROVIDER_NAME} returned invalid JSON") from exc
+    async def achat(self, req: ChatCompletionRequest) -> ChatCompletionResponse:
+        """Send a chat completion request asynchronously and return the response."""
+        start = time.time()
+        payload = self._build_payload(req)
 
-        try:
-            content = data["choices"][0]["message"]["content"]
-        except (KeyError, IndexError, TypeError) as exc:
-            raise ModelGatewayError(
-                f"Unexpected response structure from {self.PROVIDER_NAME}"
-            ) from exc
+        async with httpx.AsyncClient(
+            base_url=self.client.base_url,
+            timeout=self.cfg.timeout,
+            headers=self.client.headers,
+        ) as client:
+            try:
+                resp = await client.post("chat/completions", json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+            except httpx.HTTPStatusError as exc:
+                raise ModelGatewayError(
+                    f"{self.PROVIDER_NAME} returned HTTP {exc.response.status_code}"
+                ) from exc
+            except httpx.RequestError as exc:
+                if isinstance(exc, httpx.TimeoutException):
+                    msg = f"{self.PROVIDER_NAME} request timed out"
+                else:
+                    msg = f"{self.PROVIDER_NAME} request failed: {exc}"
+                raise ModelGatewayError(msg) from exc
+            except ValueError as exc:
+                raise ModelGatewayError(f"{self.PROVIDER_NAME} returned invalid JSON") from exc
 
-        return ChatCompletionResponse(
-            content=content,
-            model=data.get("model", self.cfg.model or ""),
-            usage=data.get("usage"),
-            latency_ms=(time.time() - start) * 1000,
-        )
+            try:
+                content = data["choices"][0]["message"]["content"]
+            except (KeyError, IndexError, TypeError) as exc:
+                raise ModelGatewayError(
+                    f"Unexpected response structure from {self.PROVIDER_NAME}"
+                ) from exc
+
+            return ChatCompletionResponse(
+                content=content,
+                model=data.get("model", self.cfg.model or ""),
+                usage=data.get("usage"),
+                latency_ms=(time.time() - start) * 1000,
+            )
+
+    def chat(self, req: ChatCompletionRequest) -> ChatCompletionResponse:
+        """Send a chat completion request and return the response."""
+        return asyncio.run(self.achat(req))

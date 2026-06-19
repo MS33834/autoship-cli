@@ -113,6 +113,17 @@ class RegistryClient:
         except OSError as exc:
             logger.warning("Failed to clear registry cache: %s", exc)
 
+    def fetch_index(self, *, force: bool = False) -> dict[str, Any] | None:
+        """Fetch the registry index from the remote URL.
+
+        This bypasses the freshness check and always contacts the remote.
+        If ``force`` is True, the local cache is cleared first so a stale
+        cached index cannot be returned.
+        """
+        if force:
+            self.clear_cache()
+        return self._fetch_remote()
+
 
 def get_registry_client(config: AppConfig | None = None) -> RegistryClient:
     """Factory for the default registry client."""

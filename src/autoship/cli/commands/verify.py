@@ -27,6 +27,7 @@ def _write_error_log(stdout: str, stderr: str) -> None:
     except OSError:
         pass
 
+
 app = typer.Typer()
 
 
@@ -122,7 +123,9 @@ def verify(
     typer.echo(i18n._("verify.verified", command=command))
 
 
-def _handle_error(context: CommandContext, error: Exception, audit: AuditLogger, i18n: I18n) -> None:
+def _handle_error(
+    context: CommandContext, error: Exception, audit: AuditLogger, i18n: I18n
+) -> None:
     """Invoke ``on_error`` hooks and optionally apply fix patches."""
     hook_results = plugin_manager.call("on_error", context=context, error=error, fail_fast=False)
 

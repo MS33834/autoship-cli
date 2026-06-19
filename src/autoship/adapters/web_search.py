@@ -7,13 +7,17 @@ and must be explicitly enabled via configuration.
 
 from __future__ import annotations
 
+import hashlib
 import html
+import json
 import re
 from dataclasses import dataclass
 from typing import Any, TypedDict, cast
 from urllib.parse import quote_plus
 
 import httpx
+
+from autoship.core.cache import DiskCache
 
 
 @dataclass
@@ -27,6 +31,38 @@ class WebSearchResult:
 
 class WebSearchError(Exception):
     """Raised when a web search request fails."""
+
+
+def _search_cache_key(provider: str, query: str, max_results: int) -> str:
+    """Return a SHA256 cache key for a search query."""
+    payload = json.dumps(
+        {"provider": provider, "query": query, "max_results": max_results},
+        sort_keys=True,
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _result_to_dict(result: WebSearchResult) -> dict[str, str]:
+    return {
+        "title": result.title,
+        "url": result.url,
+        "snippet": result.snippet,
+    }
+
+
+def _results_to_dicts(results: list[WebSearchResult]) -> list[dict[str, str]]:
+    return [_result_to_dict(result) for result in results]
+
+
+def _dicts_to_results(dicts: Any) -> list[WebSearchResult]:
+    return [
+        WebSearchResult(
+            title=item.get("title", ""),
+            url=item.get("url", ""),
+            snippet=item.get("snippet", ""),
+        )
+        for item in dicts
+    ]
 
 
 class _BraveWebResult(TypedDict, total=False):
@@ -44,16 +80,47 @@ class _BraveSearchResponse(TypedDict, total=False):
     web: _BraveWebSection
 
 
+class _GoogleSearchItem(TypedDict, total=False):
+    title: str
+    link: str
+    snippet: str
+
+
+class _GoogleSearchResponse(TypedDict, total=False):
+    items: list[_GoogleSearchItem]
+
+
+class _SearxngSearchResult(TypedDict, total=False):
+    title: str
+    url: str
+    content: str
+
+
+class _SearxngSearchResponse(TypedDict, total=False):
+    results: list[_SearxngSearchResult]
+
+
 class WebSearchAdapter:
     """Search the web and return a list of results."""
 
     _DUCKDUCKGO_LITE = "https://html.duckduckgo.com/html/"
+    _PROVIDER = "duckduckgo"
 
-    def __init__(self, timeout: float = 10.0) -> None:
+    def __init__(self, timeout: float = 10.0, cache: DiskCache | None = None) -> None:
         self.timeout = timeout
+        self.cache = cache
+
+    def _cache_key(self, query: str, max_results: int) -> str:
+        return _search_cache_key(self._PROVIDER, query, max_results)
 
     def search(self, query: str, max_results: int = 3) -> list[WebSearchResult]:
         """Search for ``query`` and return up to ``max_results`` items."""
+        cache_key = self._cache_key(query, max_results)
+        if self.cache is not None:
+            cached = self.cache.get(cache_key)
+            if cached is not None:
+                return _dicts_to_results(cached)
+
         url = f"{self._DUCKDUCKGO_LITE}?q={quote_plus(query)}"
         try:
             response = httpx.get(url, timeout=self.timeout, follow_redirects=True)
@@ -61,7 +128,10 @@ class WebSearchAdapter:
         except httpx.HTTPError as exc:
             raise WebSearchError(f"Web search request failed: {exc}") from exc
 
-        return self._parse_duckduckgo(response.text, max_results)
+        results = self._parse_duckduckgo(response.text, max_results)
+        if self.cache is not None:
+            self.cache.set(cache_key, _results_to_dicts(results))
+        return results
 
     def _parse_duckduckgo(self, html_text: str, max_results: int) -> list[WebSearchResult]:
         """Parse DuckDuckGo Lite HTML results."""
@@ -104,13 +174,24 @@ class BraveSearchAdapter:
     """Search the web using the Brave Search API."""
 
     _BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
+    _PROVIDER = "brave"
 
-    def __init__(self, api_key: str, timeout: float = 10.0) -> None:
+    def __init__(self, api_key: str, timeout: float = 10.0, cache: DiskCache | None = None) -> None:
         self.api_key = api_key
         self.timeout = timeout
+        self.cache = cache
+
+    def _cache_key(self, query: str, max_results: int) -> str:
+        return _search_cache_key(self._PROVIDER, query, max_results)
 
     def search(self, query: str, max_results: int = 3) -> list[WebSearchResult]:
         """Search for ``query`` via Brave and return up to ``max_results`` items."""
+        cache_key = self._cache_key(query, max_results)
+        if self.cache is not None:
+            cached = self.cache.get(cache_key)
+            if cached is not None:
+                return _dicts_to_results(cached)
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Accept": "application/json",
@@ -129,7 +210,10 @@ class BraveSearchAdapter:
             raise WebSearchError(f"Brave search request failed: {exc}") from exc
 
         payload = cast(_BraveSearchResponse, response.json())
-        return self._parse_brave(payload, max_results)
+        results = self._parse_brave(payload, max_results)
+        if self.cache is not None:
+            self.cache.set(cache_key, _results_to_dicts(results))
+        return results
 
     def _parse_brave(
         self, payload: _BraveSearchResponse, max_results: int
@@ -150,6 +234,120 @@ class BraveSearchAdapter:
             title = item.get("title")
             url = item.get("url")
             snippet = item.get("description")
+            if title and url:
+                results.append(
+                    WebSearchResult(
+                        title=title,
+                        url=url,
+                        snippet=snippet or "",
+                    )
+                )
+
+        return results
+
+
+class GoogleSearchAdapter:
+    """Search the web using the Google Custom Search JSON API."""
+
+    _GOOGLE_SEARCH_URL = "https://www.googleapis.com/customsearch/v1"
+
+    def __init__(self, api_key: str, cx: str, timeout: float = 10.0) -> None:
+        self.api_key = api_key
+        self.cx = cx
+        self.timeout = timeout
+
+    def search(self, query: str, max_results: int = 3) -> list[WebSearchResult]:
+        """Search for ``query`` via Google and return up to ``max_results`` items."""
+        params: dict[str, str | int] = {
+            "key": self.api_key,
+            "cx": self.cx,
+            "q": query,
+            "num": max_results,
+        }
+        try:
+            response = httpx.get(
+                self._GOOGLE_SEARCH_URL,
+                params=params,
+                timeout=self.timeout,
+                follow_redirects=True,
+            )
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise WebSearchError(f"Google search request failed: {exc}") from exc
+
+        payload = cast(_GoogleSearchResponse, response.json())
+        return self._parse_google(payload, max_results)
+
+    def _parse_google(
+        self, payload: _GoogleSearchResponse, max_results: int
+    ) -> list[WebSearchResult]:
+        """Parse Google Custom Search JSON response."""
+        results: list[WebSearchResult] = []
+        items = payload.get("items")
+        if items is None:
+            return results
+
+        for item in items:
+            if len(results) >= max_results:
+                break
+            title = item.get("title")
+            url = item.get("link")
+            snippet = item.get("snippet")
+            if title and url:
+                results.append(
+                    WebSearchResult(
+                        title=title,
+                        url=url,
+                        snippet=snippet or "",
+                    )
+                )
+
+        return results
+
+
+class SearxngSearchAdapter:
+    """Search the web using a SearXNG instance."""
+
+    def __init__(self, instance_url: str, timeout: float = 10.0) -> None:
+        self.instance_url = instance_url.rstrip("/")
+        self.timeout = timeout
+
+    def search(self, query: str, max_results: int = 3) -> list[WebSearchResult]:
+        """Search for ``query`` via SearXNG and return up to ``max_results`` items."""
+        params: dict[str, str | int] = {
+            "q": query,
+            "format": "json",
+            "pageno": 1,
+        }
+        try:
+            response = httpx.get(
+                f"{self.instance_url}/search",
+                params=params,
+                timeout=self.timeout,
+                follow_redirects=True,
+            )
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise WebSearchError(f"SearXNG search request failed: {exc}") from exc
+
+        payload = cast(_SearxngSearchResponse, response.json())
+        return self._parse_searxng(payload, max_results)
+
+    def _parse_searxng(
+        self, payload: _SearxngSearchResponse, max_results: int
+    ) -> list[WebSearchResult]:
+        """Parse SearXNG JSON response."""
+        results: list[WebSearchResult] = []
+        items = payload.get("results")
+        if items is None:
+            return results
+
+        for item in items:
+            if len(results) >= max_results:
+                break
+            title = item.get("title")
+            url = item.get("url")
+            snippet = item.get("content")
             if title and url:
                 results.append(
                     WebSearchResult(

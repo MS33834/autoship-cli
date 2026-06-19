@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import json
-from unittest.mock import MagicMock, patch
-
 import httpx
 import pytest
+import respx
 
-from autoship.core.llm_client import LlmClient
+from autoship.core.llm_client import AsyncLlmClient, LlmClient
 from autoship.exceptions import ModelGatewayError
 from autoship.models.config import LlmConfig, LlmProvider
 
@@ -85,38 +83,35 @@ def test_parse_response_ollama() -> None:
     assert client._parse_response({"message": {"content": "hi"}}) == "hi"
 
 
-@patch("autoship.core.llm_client.httpx.post")
-def test_chat_success(mock_post: MagicMock) -> None:
-    mock_response = MagicMock()
-    mock_response.json.return_value = {"choices": [{"message": {"content": "fix"}}]}
-    mock_post.return_value = mock_response
-
-    config = LlmConfig(provider=LlmProvider.OPENAI, api_key="key")
-    client = LlmClient(config)
-    assert client.chat("system", "user") == "fix"
-    mock_post.assert_called_once()
-
-
-@patch("autoship.core.llm_client.httpx.post")
-def test_chat_http_error(mock_post: MagicMock) -> None:
-    mock_post.side_effect = httpx.ConnectError("offline")
-
-    config = LlmConfig(provider=LlmProvider.OPENAI, api_key="key")
-    client = LlmClient(config)
-    with pytest.raises(ModelGatewayError, match="LLM request failed"):
-        client.chat("system", "user")
+def test_chat_success() -> None:
+    with respx.mock:
+        route = respx.post("https://api.openai.com/v1/chat/completions").respond(
+            200, json={"choices": [{"message": {"content": "fix"}}]}
+        )
+        config = LlmConfig(provider=LlmProvider.OPENAI, api_key="key")
+        client = LlmClient(config)
+        assert client.chat("system", "user") == "fix"
+        assert route.called
 
 
-@patch("autoship.core.llm_client.httpx.post")
-def test_chat_invalid_json(mock_post: MagicMock) -> None:
-    mock_response = MagicMock()
-    mock_response.json.side_effect = json.JSONDecodeError("bad json", "", 0)
-    mock_post.return_value = mock_response
+def test_chat_http_error() -> None:
+    with respx.mock:
+        respx.post("https://api.openai.com/v1/chat/completions").mock(
+            side_effect=httpx.ConnectError("offline")
+        )
+        config = LlmConfig(provider=LlmProvider.OPENAI, api_key="key")
+        client = LlmClient(config)
+        with pytest.raises(ModelGatewayError, match="LLM request failed"):
+            client.chat("system", "user")
 
-    config = LlmConfig(provider=LlmProvider.OPENAI, api_key="key")
-    client = LlmClient(config)
-    with pytest.raises(ModelGatewayError, match="Invalid LLM response"):
-        client.chat("system", "user")
+
+def test_chat_invalid_json() -> None:
+    with respx.mock:
+        respx.post("https://api.openai.com/v1/chat/completions").respond(200, text="not json")
+        config = LlmConfig(provider=LlmProvider.OPENAI, api_key="key")
+        client = LlmClient(config)
+        with pytest.raises(ModelGatewayError, match="Invalid LLM response"):
+            client.chat("system", "user")
 
 
 def test_health_non_ollama() -> None:
@@ -125,21 +120,30 @@ def test_health_non_ollama() -> None:
     assert client.health() is True
 
 
-@patch("autoship.core.llm_client.httpx.get")
-def test_health_ollama_ok(mock_get: MagicMock) -> None:
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_get.return_value = mock_response
-
-    config = LlmConfig(provider=LlmProvider.OLLAMA)
-    client = LlmClient(config)
-    assert client.health() is True
+def test_health_ollama_ok() -> None:
+    with respx.mock:
+        route = respx.get("http://localhost:11434").respond(200)
+        config = LlmConfig(provider=LlmProvider.OLLAMA)
+        client = LlmClient(config)
+        assert client.health() is True
+        assert route.called
 
 
-@patch("autoship.core.llm_client.httpx.get")
-def test_health_ollama_error(mock_get: MagicMock) -> None:
-    mock_get.side_effect = httpx.ConnectError("offline")
+def test_health_ollama_error() -> None:
+    with respx.mock:
+        respx.get("http://localhost:11434").mock(side_effect=httpx.ConnectError("offline"))
+        config = LlmConfig(provider=LlmProvider.OLLAMA)
+        client = LlmClient(config)
+        assert client.health() is False
 
-    config = LlmConfig(provider=LlmProvider.OLLAMA)
-    client = LlmClient(config)
-    assert client.health() is False
+
+@pytest.mark.asyncio
+async def test_async_chat_success() -> None:
+    with respx.mock:
+        route = respx.post("https://api.openai.com/v1/chat/completions").respond(
+            200, json={"choices": [{"message": {"content": "async fix"}}]}
+        )
+        config = LlmConfig(provider=LlmProvider.OPENAI, api_key="key")
+        client = AsyncLlmClient(config)
+        assert await client.chat("system", "user") == "async fix"
+        assert route.called

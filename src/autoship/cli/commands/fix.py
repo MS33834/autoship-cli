@@ -30,8 +30,12 @@ def register(parent: typer.Typer) -> None:
 @app.command(name="fix")
 def fix(
     ctx: typer.Context,
-    error_file: Path | None = typer.Argument(None, help="Path to error log (defaults to last verify output)"),
-    apply: bool = typer.Option(False, "--apply", help="Apply the generated patch without prompting"),
+    error_file: Path | None = typer.Argument(
+        None, help="Path to error log (defaults to last verify output)"
+    ),
+    apply: bool = typer.Option(
+        False, "--apply", help="Apply the generated patch without prompting"
+    ),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmations"),
 ) -> None:
     """Ask an LLM to propose a fix for the last verification failure."""
@@ -83,7 +87,11 @@ def _collect_relevant_files(project_root: Path, error_context: str) -> dict[str,
         path = Path(token)
         if not path.is_absolute():
             path = project_root / path
-        if path.exists() and path.is_file() and path.suffix in {".py", ".toml", ".cfg", ".ini", ".yaml", ".yml"}:
+        if (
+            path.exists()
+            and path.is_file()
+            and path.suffix in {".py", ".toml", ".cfg", ".ini", ".yaml", ".yml"}
+        ):
             try:
                 rel = path.relative_to(project_root)
                 files[str(rel)] = path.read_text(encoding="utf-8")
@@ -105,8 +113,8 @@ def _extract_patch(response: str) -> str | None:
 
     end = response.find("```", start + 7)
     if end == -1:
-        return response[start + 7:].strip()
-    return response[start + 7:end].strip()
+        return response[start + 7 :].strip()
+    return response[start + 7 : end].strip()
 
 
 def _apply_patch(project_root: Path, patch: str, i18n: I18n) -> None:
@@ -132,9 +140,17 @@ def _apply_patch(project_root: Path, patch: str, i18n: I18n) -> None:
             if apply.returncode == 0:
                 typer.echo(i18n._("fix.patch_applied"))
                 return
-            typer.secho(i18n._("fix.patch_failed", reason=apply.stderr.strip()), fg=typer.colors.YELLOW, err=True)
+            typer.secho(
+                i18n._("fix.patch_failed", reason=apply.stderr.strip()),
+                fg=typer.colors.YELLOW,
+                err=True,
+            )
             return
-        typer.secho(i18n._("fix.patch_failed", reason=check.stderr.strip()), fg=typer.colors.YELLOW, err=True)
+        typer.secho(
+            i18n._("fix.patch_failed", reason=check.stderr.strip()),
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
         return
 
     if shutil.which("patch"):
@@ -148,7 +164,9 @@ def _apply_patch(project_root: Path, patch: str, i18n: I18n) -> None:
         if proc.returncode == 0:
             typer.echo(i18n._("fix.patch_applied"))
             return
-        typer.secho(i18n._("fix.patch_failed", reason=proc.stderr.strip()), fg=typer.colors.YELLOW, err=True)
+        typer.secho(
+            i18n._("fix.patch_failed", reason=proc.stderr.strip()), fg=typer.colors.YELLOW, err=True
+        )
         return
 
     typer.secho(i18n._("fix.patch_no_tool"), fg=typer.colors.YELLOW, err=True)

@@ -186,3 +186,19 @@ def test_list_models_raises_on_invalid_structure() -> None:
         respx.get(f"{BASE_URL}/models").respond(200, json={"models": []})
         with pytest.raises(ModelGatewayError, match="Unexpected response structure"):
             _gateway().list_models()
+
+
+@pytest.mark.asyncio
+async def test_achat() -> None:
+    with respx.mock:
+        respx.post(f"{BASE_URL}/chat/completions").respond(
+            200,
+            json={
+                "model": "qwen2.5:7b",
+                "choices": [{"message": {"content": "hello async"}}],
+            },
+        )
+        req = ChatCompletionRequest(messages=[ChatMessage(role="user", content="hi")])
+        resp = await _gateway().achat(req)
+    assert resp.content == "hello async"
+    assert resp.model == "qwen2.5:7b"

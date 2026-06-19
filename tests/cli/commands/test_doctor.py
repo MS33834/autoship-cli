@@ -35,12 +35,15 @@ def test_doctor_detects_missing_git() -> None:
 
 
 def test_doctor_detects_old_python() -> None:
-    with patch("autoship.cli.commands.doctor.check_python", return_value=CheckResult(
-        name="python",
-        status=Status.ERROR,
-        message="Python 3.9.0",
-        suggestion="Upgrade to Python 3.10 or later.",
-    )):
+    with patch(
+        "autoship.cli.commands.doctor.check_python",
+        return_value=CheckResult(
+            name="python",
+            status=Status.ERROR,
+            message="Python 3.9.0",
+            suggestion="Upgrade to Python 3.10 or later.",
+        ),
+    ):
         result = runner.invoke(app, ["doctor"])
     assert result.exit_code == 1
     assert "Python 3.9" in result.output

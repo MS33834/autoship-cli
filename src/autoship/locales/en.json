@@ -85,6 +85,10 @@
 
   "registry.dashboard_title": "AutoShip Plugin Registry Dashboard",
   "registry.empty": "No plugins found in the registry.",
+  "registry.sync_help": "Sync the plugin registry index from the remote source.",
+  "registry.sync_failed": "Failed to sync registry index from remote source.",
+  "registry.sync_dry_run": "[dry-run] {count} registry changes would be synced.",
+  "registry.sync_done": "Synced {count} registry changes to {output}.",
 
   "fix.help": "Ask an LLM to propose a fix for the last verification failure.",
   "fix.missing_api_key": "LLM provider '{provider}' requires an API key. Set it in config or via AUTOSHIP_LLM__API_KEY.",

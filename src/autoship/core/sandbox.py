@@ -104,11 +104,7 @@ class SandboxRunner:
         except (OSError, FileNotFoundError) as exc:
             return SandboxResult(returncode=-1, stdout="", stderr=str(exc))
 
-        if (
-            wrapped != command
-            and proc.returncode != 0
-            and self._is_tool_failure(proc.stderr)
-        ):
+        if wrapped != command and proc.returncode != 0 and self._is_tool_failure(proc.stderr):
             logger.warning(
                 "Network sandbox tool failed (%s); retrying without network isolation",
                 proc.stderr.strip(),
@@ -163,8 +159,7 @@ class SandboxRunner:
 
         if self.required:
             raise SandboxError(
-                "Sandbox is required but no network isolation tool is available "
-                "(unshare/firejail)"
+                "Sandbox is required but no network isolation tool is available (unshare/firejail)"
             )
 
         logger.warning("No network sandbox tool available (unshare/firejail); network not blocked")

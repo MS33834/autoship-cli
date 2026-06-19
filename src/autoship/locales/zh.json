@@ -85,6 +85,10 @@
 
   "registry.dashboard_title": "AutoShip 插件 Registry 看板",
   "registry.empty": "Registry 中没有找到插件。",
+  "registry.sync_help": "从远程源同步插件注册表索引。",
+  "registry.sync_failed": "从远程源同步注册表索引失败。",
+  "registry.sync_dry_run": "[dry-run] 将同步 {count} 条注册表变更。",
+  "registry.sync_done": "已同步 {count} 条注册表变更到 {output}。",
 
   "fix.help": "让 LLM 为上一次的验证失败提供修复建议。",
   "fix.missing_api_key": "LLM provider '{provider}' 需要 API key。请在配置中设置，或通过 AUTOSHIP_LLM__API_KEY 传入。",

@@ -27,7 +27,6 @@ class I18n:
         return template
 
 
-
 def _locales_dir() -> Path:
     return Path(__file__).resolve().parent.parent / "locales"
 

@@ -141,7 +141,9 @@ def test_plugin_update_no_updates() -> None:
     with (
         patch("autoship.cli.commands.plugin.PluginRegistry") as mock_reg,
         patch("autoship.cli.commands.plugin.RegistryIndex") as mock_index,
-        patch("autoship.cli.commands.plugin._installed_version", return_value=parse_version("1.0.0")),
+        patch(
+            "autoship.cli.commands.plugin._installed_version", return_value=parse_version("1.0.0")
+        ),
     ):
         mock_reg.return_value.list.return_value = plugins
         mock_reg.return_value.get.return_value = plugins[0]
@@ -158,7 +160,9 @@ def test_plugin_update_dry_run() -> None:
     with (
         patch("autoship.cli.commands.plugin.PluginRegistry") as mock_reg,
         patch("autoship.cli.commands.plugin.RegistryIndex") as mock_index,
-        patch("autoship.cli.commands.plugin._installed_version", return_value=parse_version("1.0.0")),
+        patch(
+            "autoship.cli.commands.plugin._installed_version", return_value=parse_version("1.0.0")
+        ),
     ):
         mock_reg.return_value.list.return_value = plugins
         mock_reg.return_value.get.return_value = plugins[0]
@@ -170,12 +174,16 @@ def test_plugin_update_dry_run() -> None:
 
 def test_plugin_update_skips_builtin() -> None:
     plugins = [
-        PluginSpec(name="security-scan", version="1.0.0", source="autoship", trust_level=TrustLevel.BUILTIN),
+        PluginSpec(
+            name="security-scan", version="1.0.0", source="autoship", trust_level=TrustLevel.BUILTIN
+        ),
     ]
     with (
         patch("autoship.cli.commands.plugin.PluginRegistry") as mock_reg,
         patch("autoship.cli.commands.plugin.RegistryIndex") as mock_index,
-        patch("autoship.cli.commands.plugin._installed_version", return_value=parse_version("1.0.0")),
+        patch(
+            "autoship.cli.commands.plugin._installed_version", return_value=parse_version("1.0.0")
+        ),
     ):
         mock_reg.return_value.list.return_value = plugins
         mock_index.return_value.get.return_value = {"version": "2.0.0"}
@@ -191,7 +199,9 @@ def test_plugin_update_upgrades_plugin() -> None:
     with (
         patch("autoship.cli.commands.plugin.PluginRegistry") as mock_reg,
         patch("autoship.cli.commands.plugin.RegistryIndex") as mock_index,
-        patch("autoship.cli.commands.plugin._installed_version", return_value=parse_version("1.0.0")),
+        patch(
+            "autoship.cli.commands.plugin._installed_version", return_value=parse_version("1.0.0")
+        ),
         patch("subprocess.run") as mock_run,
     ):
         mock_run.return_value = subprocess.CompletedProcess(
@@ -247,7 +257,11 @@ def test_plugin_info_shows_details() -> None:
             "version": "0.1.0",
             "trust_level": "verified",
             "description": "Sign commits",
-            "publisher": {"id": "alice-chen", "verified": True, "url": "https://github.com/alice-chen"},
+            "publisher": {
+                "id": "alice-chen",
+                "verified": True,
+                "url": "https://github.com/alice-chen",
+            },
             "maintainer": "Alice Chen",
             "license": "Apache-2.0",
             "downloads": 42,

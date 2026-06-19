@@ -232,9 +232,10 @@ def _cvss_v3_base_score(vector: str) -> float | None:
 
     iss = Decimal("1") - (Decimal("1") - c) * (Decimal("1") - i) * (Decimal("1") - a)
     if scope_changed:
-        impact = Decimal("7.52") * (iss - Decimal("0.029")) - Decimal("3.25") * (
-            iss - Decimal("0.02")
-        ) ** 15
+        impact = (
+            Decimal("7.52") * (iss - Decimal("0.029"))
+            - Decimal("3.25") * (iss - Decimal("0.02")) ** 15
+        )
     else:
         impact = Decimal("6.42") * iss
 

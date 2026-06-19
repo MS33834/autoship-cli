@@ -9,8 +9,11 @@ import pytest
 
 from autoship.adapters.model_gateway import ChatCompletionResponse, ChatMessage
 from autoship.adapters.providers import (
+    AzureOpenAIGateway,
     LlamaCppGateway,
     LmStudioGateway,
+    OpenAIGateway,
+    OpenRouterGateway,
     VllmGateway,
 )
 from autoship.core.model_router import ModelRouter
@@ -112,12 +115,76 @@ def test_router_instantiates_vllm_backend(project_root: Path) -> None:
     assert isinstance(gateways[0], VllmGateway)
 
 
+def test_router_instantiates_openai_backend(project_root: Path) -> None:
+    config = AppConfig(
+        project_root=project_root,
+        model={
+            "backends": [
+                ModelBackendConfig(
+                    provider=Provider.OPENAI,
+                    base_url="https://api.openai.com/v1",
+                    api_key="sk-test",
+                    model="gpt-4o-mini",
+                )
+            ]
+        },
+    )
+    router = ModelRouter(config)
+    gateways = router._gateways()
+    assert len(gateways) == 1
+    assert isinstance(gateways[0], OpenAIGateway)
+
+
+def test_router_instantiates_azure_openai_backend(project_root: Path) -> None:
+    config = AppConfig(
+        project_root=project_root,
+        model={
+            "backends": [
+                ModelBackendConfig(
+                    provider=Provider.AZURE_OPENAI,
+                    base_url="https://my-resource.openai.azure.com/openai/deployments/d",
+                    api_key="azure-test",
+                    api_version="2024-02-01",
+                    model="gpt-4o",
+                )
+            ]
+        },
+    )
+    router = ModelRouter(config)
+    gateways = router._gateways()
+    assert len(gateways) == 1
+    assert isinstance(gateways[0], AzureOpenAIGateway)
+
+
+def test_router_instantiates_openrouter_backend(project_root: Path) -> None:
+    config = AppConfig(
+        project_root=project_root,
+        model={
+            "backends": [
+                ModelBackendConfig(
+                    provider=Provider.OPENROUTER,
+                    base_url="https://openrouter.ai/api/v1",
+                    api_key="sk-or-test",
+                    model="anthropic/claude-3.5-sonnet",
+                )
+            ]
+        },
+    )
+    router = ModelRouter(config)
+    gateways = router._gateways()
+    assert len(gateways) == 1
+    assert isinstance(gateways[0], OpenRouterGateway)
+
+
 def test_router_raises_for_unsupported_provider(project_root: Path) -> None:
     config = AppConfig(project_root=project_root, model={"backends": [_backend()]})
     router = ModelRouter(config)
-    with patch.dict(
-        "autoship.core.model_router._PROVIDER_GATEWAYS",
-        {},
-        clear=True,
-    ), pytest.raises(ModelGatewayError, match="Unsupported model backend provider"):
+    with (
+        patch.dict(
+            "autoship.core.model_router._PROVIDER_GATEWAYS",
+            {},
+            clear=True,
+        ),
+        pytest.raises(ModelGatewayError, match="Unsupported model backend provider"),
+    ):
         router._gateways()

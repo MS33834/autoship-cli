@@ -26,7 +26,7 @@ from autoship.hookspec import AutoShipHookSpec
 
 logger = logging.getLogger("autoship")
 
-_SANDBOX_SCRIPT = r'''
+_SANDBOX_SCRIPT = r"""
 import json
 import os
 import sys
@@ -93,7 +93,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-'''
+"""
 
 
 class HookDispatcher:
@@ -123,7 +123,12 @@ class HookDispatcher:
         """Load built-in plugins."""
         from autoship.plugins import defaults, docker_ship, security_scan, web_search
 
-        for plugin in (defaults.plugin, security_scan.plugin, web_search.plugin, docker_ship.plugin):
+        for plugin in (
+            defaults.plugin,
+            security_scan.plugin,
+            web_search.plugin,
+            docker_ship.plugin,
+        ):
             self.pm.register(plugin)
             name = self.pm.get_name(plugin)
             if name:
@@ -257,10 +262,7 @@ class HookDispatcher:
             trust = self._trust_level_for(plugin_name)
 
             try:
-                if (
-                    not self._no_sandbox
-                    and trust in (TrustLevel.COMMUNITY, TrustLevel.UNTRUSTED)
-                ):
+                if not self._no_sandbox and trust in (TrustLevel.COMMUNITY, TrustLevel.UNTRUSTED):
                     result = self._call_in_sandbox(plugin_name, hook_name, context, kwargs)
                 else:
                     result = impl.function(context=context, **kwargs)

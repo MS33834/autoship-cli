@@ -96,8 +96,6 @@ def _open_editor(i18n: I18n, initial: str) -> str:
         subprocess.run([*shlex.split(editor), str(path)], check=True)
         return path.read_text(encoding="utf-8").strip()
     except subprocess.CalledProcessError as exc:
-        raise GitError(
-            i18n._("commit.editor_error", code=exc.returncode)
-        ) from exc
+        raise GitError(i18n._("commit.editor_error", code=exc.returncode)) from exc
     finally:
         path.unlink(missing_ok=True)
