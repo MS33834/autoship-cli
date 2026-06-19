@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shlex
 import shutil
 import subprocess
@@ -14,10 +15,14 @@ from autoship.core.context import CommandContext
 from autoship.core.fix import FixSuggestion
 from autoship.core.i18n import I18n, get_i18n_from_ctx
 from autoship.exceptions import VerifyError
+from autoship.models.config import VerifyConfig
 from autoship.plugin_manager import manager as plugin_manager
 
 ERROR_LOG_DIR = Path.home() / ".local" / "state" / "autoship"
 ERROR_LOG_PATH = ERROR_LOG_DIR / "last_error.txt"
+
+# Shell metacharacters that are never allowed in a verification command string.
+_FORBIDDEN_SHELL_CHARS = re.compile(r"[;|&$`<>\n]")
 
 
 def _write_error_log(stdout: str, stderr: str) -> None:
@@ -26,6 +31,46 @@ def _write_error_log(stdout: str, stderr: str) -> None:
         ERROR_LOG_PATH.write_text(f"STDOUT:\n{stdout}\n\nSTDERR:\n{stderr}", encoding="utf-8")
     except OSError:
         pass
+
+
+def _validate_verify_command(
+    command: str, verify_config: VerifyConfig, i18n: I18n
+) -> list[str]:
+    """Validate ``command`` against the configured allowlist.
+
+    Returns the split command list on success, or raises ``VerifyError`` if the
+    command contains shell metacharacters or the executable is not in the
+    configured allowlist.
+    """
+    if _FORBIDDEN_SHELL_CHARS.search(command):
+        raise VerifyError(
+            i18n._("verify.command_disallowed", command=command),
+            details={"command": command, "reason": "shell_metacharacters"},
+        )
+
+    try:
+        cmd_parts = shlex.split(command)
+    except ValueError as exc:
+        raise VerifyError(
+            i18n._("verify.command_disallowed", command=command),
+            details={"command": command, "reason": str(exc)},
+        ) from exc
+
+    if not cmd_parts:
+        raise VerifyError(
+            i18n._("verify.command_disallowed", command=command),
+            details={"command": command, "reason": "empty_command"},
+        )
+
+    executable_name = Path(cmd_parts[0]).name
+    allowed = verify_config.allowed_commands
+    if executable_name not in allowed:
+        raise VerifyError(
+            i18n._("verify.command_disallowed", command=command),
+            details={"command": command, "executable": executable_name, "allowed": allowed},
+        )
+
+    return cmd_parts
 
 
 app = typer.Typer()
@@ -68,7 +113,7 @@ def verify(
         plugin_manager.call("post_verify", context=context, fail_fast=False)
         raise typer.Exit(code=0)
 
-    cmd_parts = shlex.split(command)
+    cmd_parts = _validate_verify_command(command, config.verify, i18n)
     executable = shutil.which(cmd_parts[0])
     if executable is None:
         error = VerifyError(

@@ -47,6 +47,7 @@ def _make_context(
 
 
 def test_verify_success(project_root, app_config: AppConfig) -> None:
+    app_config.verify.allowed_commands = ["echo"]
     ctx = MagicMock()
     ctx.obj = {
         "config": app_config,
@@ -63,6 +64,7 @@ def test_verify_success(project_root, app_config: AppConfig) -> None:
 
 
 def test_verify_failure(project_root, app_config: AppConfig) -> None:
+    app_config.verify.allowed_commands = ["false"]
     ctx = MagicMock()
     ctx.obj = {
         "config": app_config,
@@ -81,6 +83,7 @@ def test_verify_failure(project_root, app_config: AppConfig) -> None:
 
 
 def test_verify_os_error(project_root, app_config: AppConfig) -> None:
+    app_config.verify.allowed_commands = ["false"]
     ctx = MagicMock()
     ctx.obj = {
         "config": app_config,
@@ -97,6 +100,7 @@ def test_verify_os_error(project_root, app_config: AppConfig) -> None:
 
 
 def test_verify_dry_run(project_root, app_config: AppConfig) -> None:
+    app_config.verify.allowed_commands = ["echo"]
     ctx = MagicMock()
     ctx.obj = {
         "config": app_config,
@@ -111,6 +115,7 @@ def test_verify_dry_run(project_root, app_config: AppConfig) -> None:
 
 
 def test_verify_on_error_suggestion_no_patch(fix_plugin, app_config: AppConfig) -> None:
+    app_config.verify.allowed_commands = ["false"]
     fix_plugin.suggestion = FixSuggestion(description="Try increasing the timeout.")
     ctx = _make_context(app_config, fix=True, yes=True)
 
@@ -128,6 +133,7 @@ def test_verify_on_error_suggestion_no_patch(fix_plugin, app_config: AppConfig) 
 
 
 def test_verify_on_error_patch_auto_apply(fix_plugin, app_config: AppConfig) -> None:
+    app_config.verify.allowed_commands = ["false"]
     fix_plugin.suggestion = FixSuggestion(
         description="Add a newline.",
         patch="diff content",
@@ -152,6 +158,7 @@ def test_verify_on_error_patch_auto_apply(fix_plugin, app_config: AppConfig) -> 
 
 
 def test_verify_on_error_patch_declined(fix_plugin, app_config: AppConfig) -> None:
+    app_config.verify.allowed_commands = ["false"]
     fix_plugin.suggestion = FixSuggestion(description="Add a newline.", patch="diff content")
     ctx = _make_context(app_config, fix=True, yes=False)
 
@@ -167,6 +174,28 @@ def test_verify_on_error_patch_declined(fix_plugin, app_config: AppConfig) -> No
 
     audit = ctx.obj["audit_logger"]
     audit.record.assert_any_call("verify.fix.declined", {"description": "Add a newline."})
+
+
+def test_verify_rejects_shell_metacharacters(app_config: AppConfig, i18n) -> None:
+    with pytest.raises(VerifyError, match="not allowed"):
+        verify._validate_verify_command("pytest; rm -rf /", app_config.verify, i18n)
+
+
+def test_verify_accepts_command_with_parentheses(app_config: AppConfig, i18n) -> None:
+    cmd_parts = verify._validate_verify_command(
+        "python -c \"print('ok')\"", app_config.verify, i18n
+    )
+    assert cmd_parts == ["python", "-c", "print('ok')"]
+
+
+def test_verify_rejects_disallowed_executable(app_config: AppConfig, i18n) -> None:
+    with pytest.raises(VerifyError, match="not allowed"):
+        verify._validate_verify_command("curl https://example.com", app_config.verify, i18n)
+
+
+def test_verify_accepts_allowed_command(app_config: AppConfig, i18n) -> None:
+    cmd_parts = verify._validate_verify_command("pytest -x", app_config.verify, i18n)
+    assert cmd_parts == ["pytest", "-x"]
 
 
 def test_present_suggestion_dry_run(app_config: AppConfig, i18n) -> None:

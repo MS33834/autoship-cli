@@ -99,6 +99,7 @@
   "fix.patch_applied": "Patch applied successfully.",
   "fix.patch_failed": "Failed to apply patch: {reason}",
   "fix.patch_no_tool": "Neither git nor patch is available to apply the suggestion.",
+  "fix.patch_unsafe_paths": "Patch contains unsafe file paths and will not be applied.",
 
   "doctor.help": "Diagnose the environment and dependencies.",
   "doctor.option.json": "Output report as JSON",
@@ -150,6 +151,7 @@
   "verify.option.fix": "Ask the model to suggest fixes on failure",
   "verify.dry_run": "[dry-run] Would run: {command}",
   "verify.verified": "Verified: {command}",
+  "verify.command_disallowed": "Verification command is not allowed: {command}",
   "verify.command_not_found": "Verification command not found on PATH: {cmd}",
   "verify.failed": "Verification failed with exit code {code} for command: {command}",
   "verify.run_failed": "Failed to run verification command: {exc}",

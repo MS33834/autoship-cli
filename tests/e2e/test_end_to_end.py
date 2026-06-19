@@ -41,7 +41,7 @@ def test_clean_dry_run(tmp_path: Path) -> None:
 def test_verify_runs_command(tmp_path: Path) -> None:
     result = runner.invoke(
         app,
-        ["--yes", "verify", "echo ok"],
+        ["--yes", "verify", "python -c \"print('ok')\""],
     )
     assert result.exit_code == 0
     assert "Verified" in result.output

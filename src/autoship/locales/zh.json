@@ -99,6 +99,7 @@
   "fix.patch_applied": "补丁应用成功。",
   "fix.patch_failed": "应用补丁失败：{reason}",
   "fix.patch_no_tool": "当前环境没有 git 或 patch 工具来应用补丁。",
+  "fix.patch_unsafe_paths": "补丁包含不安全的文件路径，将不会应用。",
 
   "doctor.help": "诊断 AutoShip 环境和依赖。",
   "doctor.option.json": "以 JSON 格式输出报告",
@@ -150,6 +151,7 @@
   "verify.option.fix": "失败时请求模型建议修复",
   "verify.dry_run": "[dry-run] 将运行：{command}",
   "verify.verified": "已验证：{command}",
+  "verify.command_disallowed": "不允许的验证命令：{command}",
   "verify.command_not_found": "PATH 上找不到验证命令：{cmd}",
   "verify.failed": "验证失败，退出代码 {code}，命令：{command}",
   "verify.run_failed": "运行验证命令失败：{exc}",

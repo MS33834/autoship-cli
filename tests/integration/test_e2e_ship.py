@@ -91,7 +91,7 @@ def test_e2e_init_clean_verify_commit(tmp_path: Path, monkeypatch) -> None:
         # 3. verify: run a mocked external verification command.
         verify_result = runner.invoke(
             app,
-            ["--yes", "verify", "echo ok"],
+            ["--yes", "verify", "python -c \"print('ok')\""],
         )
         assert verify_result.exit_code == 0
         assert "Verified" in verify_result.output
