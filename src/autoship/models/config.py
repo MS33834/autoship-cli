@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -112,6 +112,33 @@ class ModelConfig(BaseModel):
     backends: list[ModelBackendConfig] = Field(default_factory=lambda: list[ModelBackendConfig]())
 
 
+class RegistryConfig(BaseModel):
+    """Configuration for the plugin registry client."""
+
+    url: HttpUrl = cast(HttpUrl, "https://raw.githubusercontent.com/autoship-cli/autoship-cli/main/registry/plugins.json")
+    cache_enabled: bool = True
+    cache_ttl_seconds: int = 3600
+
+
+class LlmProvider(str, Enum):
+    """Supported LLM providers for the fix command."""
+
+    OPENAI = "openai"
+    OPENROUTER = "openrouter"
+    OLLAMA = "ollama"
+
+
+class LlmConfig(BaseModel):
+    """Configuration for the LLM-powered fix command."""
+
+    provider: LlmProvider = LlmProvider.OPENAI
+    model: str = "gpt-4o-mini"
+    api_key: str | None = Field(default=None, repr=False)
+    base_url: HttpUrl | None = None
+    timeout: float = 60.0
+    max_tokens: int = 2048
+
+
 class AppConfig(BaseModel):
     """Top-level application configuration."""
 
@@ -128,3 +155,5 @@ class AppConfig(BaseModel):
     web_search: WebSearchConfig = Field(default_factory=WebSearchConfig)
     docker_ship: DockerShipConfig = Field(default_factory=DockerShipConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)
+    registry: RegistryConfig = Field(default_factory=RegistryConfig)
+    llm: LlmConfig = Field(default_factory=LlmConfig)

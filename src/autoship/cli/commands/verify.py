@@ -16,6 +16,17 @@ from autoship.core.i18n import I18n, get_i18n_from_ctx
 from autoship.exceptions import VerifyError
 from autoship.plugin_manager import manager as plugin_manager
 
+ERROR_LOG_DIR = Path.home() / ".local" / "state" / "autoship"
+ERROR_LOG_PATH = ERROR_LOG_DIR / "last_error.txt"
+
+
+def _write_error_log(stdout: str, stderr: str) -> None:
+    try:
+        ERROR_LOG_DIR.mkdir(parents=True, exist_ok=True)
+        ERROR_LOG_PATH.write_text(f"STDOUT:\n{stdout}\n\nSTDERR:\n{stderr}", encoding="utf-8")
+    except OSError:
+        pass
+
 app = typer.Typer()
 
 
@@ -84,6 +95,7 @@ def verify(
         typer.secho(result.stderr, fg=typer.colors.YELLOW, err=True)
 
     if result.returncode != 0:
+        _write_error_log(result.stdout, result.stderr)
         audit.record(
             "verify.failure",
             {

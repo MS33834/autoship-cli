@@ -78,6 +78,15 @@ def list_plugins(
         )
 
 
+def _publisher_badge(plugin: dict[str, Any]) -> str:
+    publisher = plugin.get("publisher")
+    if not publisher:
+        return ""
+    verified = publisher.get("verified")
+    badge = "✓ verified" if verified else "unverified"
+    return f"{publisher.get('id', '?')} ({badge})"
+
+
 @app.command("search")
 def search_plugins(
     ctx: typer.Context,
@@ -85,7 +94,7 @@ def search_plugins(
 ) -> None:
     """Search the official plugin registry index."""
     i18n: I18n = get_i18n_from_ctx(ctx)
-    index = RegistryIndex()
+    index = RegistryIndex(ctx.obj.get("config"))
     plugins = index.search(keyword)
     if not plugins:
         typer.echo(i18n._("plugin.no_matches"))
@@ -104,6 +113,37 @@ def search_plugins(
         )
 
 
+@app.command("info")
+def info(
+    ctx: typer.Context,
+    name: str = typer.Argument(..., help="Plugin name"),
+) -> None:
+    """Show detailed information about a plugin in the registry."""
+    i18n: I18n = get_i18n_from_ctx(ctx)
+    index = RegistryIndex(ctx.obj.get("config"))
+    plugin = index.get(name)
+    if plugin is None:
+        raise PluginError(i18n._("plugin.not_found_in_registry", name=name))
+
+    typer.echo(f"Name:        {plugin['name']}")
+    typer.echo(f"Version:     {plugin.get('version', '?')}")
+    typer.echo(f"Trust:       {plugin.get('trust_level', 'community')}")
+    typer.echo(f"Publisher:   {_publisher_badge(plugin) or 'Unknown'}")
+    typer.echo(f"Maintainer:  {plugin.get('maintainer', 'Unknown')}")
+    typer.echo(f"License:     {plugin.get('license', 'Unknown')}")
+    typer.echo(f"Categories:  {', '.join(plugin.get('categories', [])) or '—'}")
+    typer.echo(f"Tags:        {', '.join(plugin.get('tags', [])) or '—'}")
+    typer.echo(f"Downloads:   {plugin.get('downloads', 0)}")
+    rating = plugin.get("rating")
+    rating_str = f"{rating['score']:.1f} / 5 ({rating['count']})" if rating and rating.get("count") else "—"
+    typer.echo(f"Rating:      {rating_str}")
+    if plugin.get("homepage"):
+        typer.echo(f"Homepage:    {plugin['homepage']}")
+    if plugin.get("source_url"):
+        typer.echo(f"Source:      {plugin['source_url']}")
+    typer.echo(f"Install:     autoship plugin install {plugin['name']}")
+
+
 @app.command("install")
 def install(
     ctx: typer.Context,
@@ -118,7 +158,7 @@ def install(
     """Install a plugin package and register it locally."""
     i18n: I18n = get_i18n_from_ctx(ctx)
     registry = PluginRegistry()
-    index = RegistryIndex()
+    index = RegistryIndex(ctx.obj.get("config"))
     indexed = index.get(source)
 
     if indexed:
@@ -127,6 +167,9 @@ def install(
         plugin_version = version or indexed.get("version", "0.0.0")
         plugin_trust = trust or TrustLevel(indexed.get("trust_level", "verified"))
         source_for_pip = package
+        publisher = _publisher_badge(indexed)
+        if publisher:
+            typer.echo(f"Publisher: {publisher}")
     else:
         plugin_name = name or Path(source).name
         package = source
@@ -318,7 +361,7 @@ def update(
     """Check for and install plugin updates."""
     i18n: I18n = get_i18n_from_ctx(ctx)
     registry = PluginRegistry()
-    index = RegistryIndex()
+    index = RegistryIndex(ctx.obj.get("config"))
 
     plugins = registry.list()
     if name:

@@ -4,12 +4,20 @@ const path = require("path");
 const rootDir = path.resolve(__dirname, "..");
 const distDir = path.join(rootDir, "dist");
 const registryPath = path.join(rootDir, "..", "src", "autoship", "registry", "plugins.json");
-const indexPath = path.join(rootDir, "index.html");
-const distIndexPath = path.join(distDir, "index.html");
 
 function copyFile(src, dest) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
+}
+
+function buildHtml(inputPath, outputPath, registry) {
+  let html = fs.readFileSync(inputPath, "utf-8");
+  html = html.replace(
+    "<!-- PLUGIN_DATA_PLACEHOLDER -->",
+    `<script>window.PLUGIN_REGISTRY = ${JSON.stringify(registry)};</script>`
+  );
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, html, "utf-8");
 }
 
 function main() {
@@ -20,16 +28,12 @@ function main() {
 
   const registry = JSON.parse(fs.readFileSync(registryPath, "utf-8"));
 
-  let html = fs.readFileSync(indexPath, "utf-8");
-  html = html.replace(
-    "<!-- PLUGIN_DATA_PLACEHOLDER -->",
-    `<script>window.PLUGIN_REGISTRY = ${JSON.stringify(registry)};</script>`
-  );
+  buildHtml(path.join(rootDir, "index.html"), path.join(distDir, "index.html"), registry);
+  buildHtml(path.join(rootDir, "dashboard.html"), path.join(distDir, "dashboard.html"), registry);
 
-  fs.mkdirSync(distDir, { recursive: true });
-  fs.writeFileSync(distIndexPath, html, "utf-8");
   copyFile(path.join(rootDir, "styles.css"), path.join(distDir, "styles.css"));
   copyFile(path.join(rootDir, "app.js"), path.join(distDir, "app.js"));
+  copyFile(path.join(rootDir, "dashboard.js"), path.join(distDir, "dashboard.js"));
 
   console.log(`Built registry web UI with ${registry.plugins.length} plugins.`);
 }

@@ -35,7 +35,7 @@ VALID_LICENSES = {
 }
 
 TRUST_LEVELS = {"builtin", "verified", "community", "untrusted"}
-REQUIRED_FIELDS = {"name", "package", "version", "description", "trust_level", "entry_point", "maintainer", "license"}
+REQUIRED_FIELDS = {"name", "package", "version", "description", "trust_level", "entry_point", "maintainer", "license", "publisher"}
 
 
 def _error(message: str) -> None:
@@ -94,10 +94,22 @@ def validate_plugin(plugin: dict, index: int, names: set[str]) -> int:
             errors += 1
 
     rating = plugin.get("rating")
-    if rating is not None:
-        if not isinstance(rating, dict) or "score" not in rating or "count" not in rating:
-            _error(f"{prefix} 'rating' must be an object with 'score' and 'count'")
+    if rating is not None and (
+        not isinstance(rating, dict) or "score" not in rating or "count" not in rating
+    ):
+        _error(f"{prefix} 'rating' must be an object with 'score' and 'count'")
+        errors += 1
+
+    publisher = plugin.get("publisher")
+    if publisher is not None:
+        if not isinstance(publisher, dict):
+            _error(f"{prefix} 'publisher' must be an object")
             errors += 1
+        else:
+            for key in ("id", "verified"):
+                if key not in publisher:
+                    _error(f"{prefix} 'publisher' missing required field '{key}'")
+                    errors += 1
 
     return errors
 

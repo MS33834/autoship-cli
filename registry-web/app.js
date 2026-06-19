@@ -11,6 +11,14 @@ function formatRating(rating) {
   return `${rating.score.toFixed(1)} / 5 (${rating.count} ratings)`;
 }
 
+function publisherBadge(plugin) {
+  const publisher = plugin.publisher;
+  if (!publisher) return "";
+  const verifiedClass = publisher.verified ? "verified" : "unverified";
+  const label = publisher.verified ? "verified" : "unverified";
+  return `<span class="publisher-badge ${verifiedClass}">${escapeHtml(publisher.id)} (${label})</span>`;
+}
+
 function renderTags(tags) {
   if (!Array.isArray(tags) || tags.length === 0) return "";
   return tags
@@ -44,6 +52,9 @@ function renderPlugins(plugins) {
       </div>
       <p class="version">v${escapeHtml(plugin.version || "?")}</p>
       <p class="description">${escapeHtml(plugin.description || "")}</p>
+      <div class="card-meta">
+        ${publisherBadge(plugin)}
+      </div>
       <div class="card-meta">
         ${renderCategories(plugin.categories)}
       </div>
@@ -79,6 +90,7 @@ function openModal(plugin) {
     </div>
     <p class="modal-description">${escapeHtml(plugin.description || "")}</p>
     <dl class="modal-details">
+      <dt>Publisher</dt><dd>${publisherBadge(plugin) || "Unknown"}</dd>
       <dt>Maintainer</dt><dd>${escapeHtml(plugin.maintainer || "Unknown")}</dd>
       <dt>License</dt><dd>${escapeHtml(plugin.license || "Unknown")}</dd>
       <dt>Categories</dt><dd>${renderCategories(plugin.categories) || "—"}</dd>

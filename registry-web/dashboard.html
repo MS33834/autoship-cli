@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoShip Plugin Registry Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- PLUGIN_DATA_PLACEHOLDER -->
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="https://autoship.dev" class="brand">AutoShip</a>
+      <nav>
+        <a href="index.html">Plugins</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="https://docs.autoship.dev">Docs</a>
+        <a href="https://github.com/autoship-cli/autoship-cli">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>Registry Dashboard</h1>
+      <p class="lead">Ecosystem metrics and top plugins.</p>
+    </section>
+
+    <section class="metrics">
+      <article class="metric-card">
+        <h3>Total plugins</h3>
+        <p id="metric-total" class="metric-value">—</p>
+      </article>
+      <article class="metric-card">
+        <h3>Verified publishers</h3>
+        <p id="metric-verified-publishers" class="metric-value">—</p>
+      </article>
+      <article class="metric-card">
+        <h3>Total downloads</h3>
+        <p id="metric-downloads" class="metric-value">—</p>
+      </article>
+    </section>
+
+    <section class="dashboard-grid">
+      <div class="dashboard-panel">
+        <h2>By trust level</h2>
+        <ul id="trust-distribution"></ul>
+      </div>
+      <div class="dashboard-panel">
+        <h2>By category</h2>
+        <ul id="category-distribution"></ul>
+      </div>
+      <div class="dashboard-panel">
+        <h2>Top downloads</h2>
+        <ol id="top-downloads"></ol>
+      </div>
+      <div class="dashboard-panel">
+        <h2>Top rated</h2>
+        <ol id="top-rated"></ol>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>© 2026 AutoShip. Plugins listed are provided by their respective authors.</p>
+    </div>
+  </footer>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

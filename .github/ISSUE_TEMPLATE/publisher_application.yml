@@ -1,0 +1,59 @@
+name: Verified Publisher Application
+about: Apply to become a verified AutoShip plugin publisher
+title: "[Publisher] "
+labels: ["publisher-application", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to apply for the **Verified Publisher** badge.
+        Verified publishers are vetted by the AutoShip team and their plugins
+        display a verified badge in the CLI and Registry Web UI.
+
+  - type: input
+    id: publisher_id
+    attributes:
+      label: Publisher ID
+      description: Short unique identifier, used in `publisher.id`.
+      placeholder: e.g. alice-chen
+    validations:
+      required: true
+
+  - type: input
+    id: display_name
+    attributes:
+      label: Display name
+      description: Name shown to users.
+      placeholder: e.g. Alice Chen
+    validations:
+      required: true
+
+  - type: input
+    id: url
+    attributes:
+      label: Publisher URL
+      description: Homepage, GitHub profile, or organization site.
+      placeholder: https://github.com/alice-chen
+    validations:
+      required: true
+
+  - type: textarea
+    id: plugins
+    attributes:
+      label: Plugins you maintain
+      description: List the plugin names already in the registry or planned for submission.
+      placeholder: |
+        - commit-sign
+        - changelog-gen
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Publisher checklist
+      options:
+        - label: I have read and agree to follow the AutoShip code of conduct.
+        - label: I maintain at least one plugin already accepted into the registry.
+        - label: I use a stable public source repository for each plugin.
+        - label: I am willing to respond to security issues within 14 days.

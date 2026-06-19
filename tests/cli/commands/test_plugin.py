@@ -231,3 +231,22 @@ def test_plugin_stats_shows_summary() -> None:
     assert result.exit_code == 0
     assert "a" in result.output
     assert "4.5 (2)" in result.output
+
+
+def test_plugin_info_shows_details() -> None:
+    with patch("autoship.cli.commands.plugin.RegistryIndex") as mock_index:
+        mock_index.return_value.get.return_value = {
+            "name": "commit-sign",
+            "version": "0.1.0",
+            "trust_level": "verified",
+            "description": "Sign commits",
+            "publisher": {"id": "alice-chen", "verified": True, "url": "https://github.com/alice-chen"},
+            "maintainer": "Alice Chen",
+            "license": "Apache-2.0",
+            "downloads": 42,
+        }
+        result = runner.invoke(app, ["plugin", "info", "commit-sign"])
+    assert result.exit_code == 0
+    assert "commit-sign" in result.output
+    assert "alice-chen" in result.output
+    assert "42" in result.output
