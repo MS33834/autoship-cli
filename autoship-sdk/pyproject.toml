@@ -8,7 +8,7 @@ include = ["src/autoship_sdk/templates/**/*"]
 
 [project]
 name = "autoship-sdk"
-version = "0.1.0-beta.1"
+version = "1.0.0-rc.1"
 description = "AutoShip plugin development SDK"
 readme = "README.md"
 license = { text = "MIT" }
@@ -17,7 +17,7 @@ authors = [
     { name = "AutoShip Team", email = "team@autoship.dev" },
 ]
 dependencies = [
-    "autoship>=0.2.0b1",
+    "autoship>=1.0.0rc1",
 ]
 
 [project.optional-dependencies]

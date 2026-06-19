@@ -8,7 +8,7 @@ include = ["src/autoship/locales/*.json"]
 
 [project]
 name = "autoship"
-version = "0.2.0-beta.1"
+version = "1.0.0-rc.1"
 description = "AutoShip-CLI: local-first intelligent delivery assistant"
 readme = "README.md"
 license = { text = "MIT" }

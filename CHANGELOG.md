@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-rc.1] - 2026-06-19
+
+### Added
+
+- CLI internationalization (i18n) with English and Chinese locales.
+  - Use `--lang zh|en` or set `locale = "zh"` in `.autoship.toml`.
+  - Auto-detection of system locale with fallback to English.
+- `autoship doctor` diagnostic command: checks Python, Git, model backends,
+  clean toolchain, plugin dependencies, and audit/telemetry directory permissions.
+- `autoship audit export` and `autoship audit cleanup` commands for structured
+  audit log export and retention management.
+- Official plugin registry index at `src/autoship/registry/plugins.json` with
+  `autoship plugin search` and `autoship plugin install` support.
+- `autoship-sdk` plugin development kit under `autoship-sdk/`:
+  - `Plugin` base class and `hook` decorator.
+  - `PluginTestHarness` for isolated hook testing.
+  - `create_plugin` scaffold for new plugin projects.
+- Static official website at `website/` with GitHub Pages deployment workflow.
+- Team-level configuration support via `.autoship.team.toml`.
+- Environment variable overrides for all config keys using `AUTOSHIP_*` prefix.
+
+### Changed
+
+- `autoship` version bumped to `1.0.0-rc.1`.
+- `autoship-sdk` version bumped to `1.0.0-rc.1` and depends on `autoship>=1.0.0rc1`.
+
+### Fixed
+
+- mypy/pyright compatibility issues in `ollama.py`, `registry_index.py`,
+  `config_center.py`, `hardware_profiler.py`, and `hook_dispatcher.py`.
+
 ## [0.2.0-beta.1] - 2026-06-18
 
 ### Added

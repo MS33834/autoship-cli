@@ -126,3 +126,43 @@ autoship plugin uninstall my-plugin
 | `trust NAME LEVEL` | 修改插件信任等级 |
 
 信任等级：`builtin`、`verified`、`community`、`untrusted`。
+
+## `autoship doctor`
+
+诊断当前环境是否满足 AutoShip 运行要求。
+
+```bash
+autoship doctor
+autoship doctor --json
+```
+
+| 选项 | 说明 |
+|---|---|
+| `--json` | 以 JSON 格式输出诊断报告 |
+
+检查项包括：Python 版本、Git 配置、模型后端连通性、clean 工具链、
+插件外部依赖、审计/遥测目录权限等。输出分级为 OK / WARNING / ERROR。
+
+## `autoship audit`
+
+导出或清理审计日志。
+
+```bash
+# 导出最近 30 天的审计记录
+autoship audit export --since 30d
+
+# 导出到指定文件
+autoship audit export --since 2025-01-01 --output ./audit.jsonl
+
+# 清理 90 天前的日志
+autoship audit cleanup --retention 90
+```
+
+| 子命令 | 说明 |
+|---|---|
+| `export` | 将审计记录导出为 JSON Lines 文件 |
+| `cleanup` | 删除超过保留期的审计日志 |
+
+`export` 的 `--since` 支持 ISO 日期或相对天数（如 `1d`、`7d`、`30d`）。
+审计日志默认存放在项目根目录的 `.autoship/audit/` 下，可通过配置或
+环境变量调整。

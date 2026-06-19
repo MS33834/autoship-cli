@@ -2,6 +2,69 @@
 
 AutoShip-CLI 的插件系统基于 [pluggy](https://pluggy.readthedocs.io/)。你只需实现 `autoship.hookspec.AutoShipHookSpec` 中定义的钩子，并将插件对象注册到 `autoship.plugins` entry point。
 
+> 推荐使用 [`autoship-sdk`](https://pypi.org/project/autoship-sdk/) 简化插件开发，
+> 它提供了基类、装饰器和测试工具。
+
+## 使用 autoship-sdk（推荐）
+
+安装 SDK：
+
+```bash
+pip install autoship-sdk
+```
+
+最小插件示例：
+
+```python
+from autoship_sdk import Plugin, hook
+from autoship.core.context import CommandContext
+
+
+class MyPlugin(Plugin):
+    @hook
+    def pre_commit(self, context: CommandContext) -> None:
+        print(f"About to commit in {context.project_root}")
+```
+
+通过 `pyproject.toml` 注册：
+
+```toml
+[project.entry-points."autoship.plugins"]
+my_plugin = "my_plugin.plugin:MyPlugin"
+```
+
+### 测试插件
+
+`PluginTestHarness` 提供隔离的 Hook 调用环境：
+
+```python
+from autoship_sdk.testing import PluginTestHarness
+from my_plugin.plugin import MyPlugin
+
+
+def test_pre_commit():
+    harness = PluginTestHarness()
+    harness.register(MyPlugin())
+    ctx = harness.make_context("commit")
+    results = harness.call("pre_commit", ctx)
+    assert results == [None]
+```
+
+### 项目脚手架
+
+```python
+from autoship_sdk import create_plugin
+from pathlib import Path
+
+create_plugin(
+    target_dir=Path("./autoship-my-plugin"),
+    plugin_name="my-plugin",
+    description="My first AutoShip plugin",
+)
+```
+
+这会生成包含 `pyproject.toml`、`README.md`、插件源码和测试结构的完整项目。
+
 ## CommandContext
 
 所有钩子都接收一个不可变的 `CommandContext`：

@@ -11,6 +11,8 @@
 <!-- 演示占位：在 docs/demo.gif 处放置 30 秒快速演示 GIF，或替换为 [asciinema](https://asciinema.org) 链接 -->
 
 > 快速演示：30 秒 AutoShip 工作流 GIF / asciinema 录制（待补充）。
+>
+> 官方网站：[autoship.dev](https://autoship.dev)
 
 ## 安装
 
@@ -66,9 +68,12 @@ autoship upload --target docker --image myapp --tag latest
 
 - **本地优先**：默认使用本地 AI 模型与本地工具链，代码无需上传云端。
 - **插件化**：基于 [pluggy](https://pluggy.readthedocs.io/) 的 Hook 系统，可自由扩展清理、验证、上传等阶段。
+- **插件开发 SDK**：[`autoship-sdk`](https://pypi.org/project/autoship-sdk/) 提供基类、Hook 装饰器、测试脚手架，降低插件开发门槛。
 - **模型分级**：根据硬件配置与任务类型自动路由到不同层级模型，平衡速度与效果。
 - **安全扫描**：提交前运行依赖漏洞与代码安全扫描，拦截潜在风险。
-- **审计日志**：完整记录命令执行、模型调用与配置变更，便于追溯。
+- **审计日志**：完整记录命令执行、模型调用与配置变更，支持结构化导出与自动清理。
+- **环境诊断**：`autoship doctor` 一键检查 Python、Git、模型后端、工具链与目录权限。
+- **多语言 CLI**：内置中英文支持，`--lang zh|en` 或配置 `locale` 即可切换。
 - **遥测默认关闭**：匿名使用数据仅在显式开启后才会上报，尊重隐私。
 
 ## 文档
