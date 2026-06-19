@@ -1,4 +1,4 @@
-"""Example AutoShip-CLI plugin.
+"""Example AutoShip-CLI plugin built with autoship-sdk.
 
 This plugin demonstrates two common extension points:
 
@@ -8,23 +8,24 @@ This plugin demonstrates two common extension points:
 
 from __future__ import annotations
 
+from autoship_sdk import Plugin, hook
+
 from autoship.core.context import CommandContext
 from autoship.core.fix import FixSuggestion
 from autoship.exceptions import VerifyError
-from autoship.hookspec import hookimpl
 
 
-class CustomPlugin:
+class CustomPlugin(Plugin):
     """A sample plugin that warns about TODO files and suggests fixes."""
 
-    @hookimpl
+    @hook
     def pre_commit(self, context: CommandContext) -> None:
         """Warn if a TODO file exists in the project root."""
         todo_file = context.project_root / "TODO"
         if todo_file.exists():
             print(f"[custom-plugin] Warning: {todo_file} exists.")
 
-    @hookimpl
+    @hook
     def on_error(self, context: CommandContext, error: Exception) -> FixSuggestion | None:
         """Suggest a fix when a verification command fails and --fix is set."""
         if not context.extras.get("fix"):

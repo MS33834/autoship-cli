@@ -8,7 +8,8 @@ version = "0.1.0"
 description = "Example AutoShip-CLI plugin"
 requires-python = ">=3.10"
 dependencies = [
-    "autoship>=0.1.0",
+    "autoship>=0.2.0b1",
+    "autoship-sdk>=0.1.0b1",
 ]
 
 [project.entry-points."autoship.plugins"]

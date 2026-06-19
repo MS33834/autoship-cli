@@ -13,6 +13,7 @@ import typer
 from autoship.adapters.git_adapter import GitAdapter
 from autoship.core.audit_logger import AuditLogger
 from autoship.core.context import CommandContext
+from autoship.core.i18n import I18n, get_i18n_from_ctx
 from autoship.core.model_router import ModelRouter
 from autoship.exceptions import GitError, ModelGatewayError
 from autoship.plugin_manager import manager as plugin_manager
@@ -32,6 +33,7 @@ def commit(
 ) -> None:
     """Generate a commit message and commit staged/unstaged changes."""
     config = ctx.obj["config"]
+    i18n: I18n = get_i18n_from_ctx(ctx)
     audit: AuditLogger = ctx.obj["audit_logger"]
     dry_run: bool = ctx.obj.get("dry_run", False)
     yes: bool = ctx.obj.get("yes", False)
@@ -40,7 +42,7 @@ def commit(
     git = GitAdapter(config.project_root)
 
     if not git.has_changes():
-        typer.echo("Nothing to commit.")
+        typer.echo(i18n._("commit.nothing"))
         return
 
     context = CommandContext(
@@ -65,14 +67,14 @@ def commit(
             final_message = router.generate_commit_message(diff=diff, stats=stats)
         except ModelGatewayError as exc:
             if verbose:
-                typer.echo(f"Model message generation failed: {exc}", err=True)
+                typer.echo(i18n._("commit.model_failed", exc=exc), err=True)
             final_message = "Update files"
 
     if edit and not yes:
-        final_message = _open_editor(final_message)
+        final_message = _open_editor(i18n, final_message)
 
     if dry_run:
-        typer.echo(f"[dry-run] Would commit with message:\n{final_message}")
+        typer.echo(i18n._("commit.dry_run", message=final_message))
         audit.record("commit.dry_run", {"message": final_message})
         return
 
@@ -80,10 +82,10 @@ def commit(
 
     audit.record("commit.done", {"message": final_message})
     plugin_manager.call("post_commit", context=context, fail_fast=False)
-    typer.echo(f"Committed: {final_message}")
+    typer.echo(i18n._("commit.done", message=final_message))
 
 
-def _open_editor(initial: str) -> str:
+def _open_editor(i18n: I18n, initial: str) -> str:
     """Open the user's preferred editor to review/modify a commit message."""
     editor = os.environ.get("EDITOR", "vim")
     with tempfile.NamedTemporaryFile(mode="w+", suffix=".txt", delete=False) as f:
@@ -95,7 +97,7 @@ def _open_editor(initial: str) -> str:
         return path.read_text(encoding="utf-8").strip()
     except subprocess.CalledProcessError as exc:
         raise GitError(
-            f"Editor exited with code {exc.returncode}; commit message was not saved."
+            i18n._("commit.editor_error", code=exc.returncode)
         ) from exc
     finally:
         path.unlink(missing_ok=True)

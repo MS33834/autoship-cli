@@ -12,6 +12,7 @@ import typer
 from autoship.cli import commands
 from autoship.core.audit_logger import AuditLogger
 from autoship.core.config_center import load_config
+from autoship.core.i18n import get_i18n
 from autoship.core.telemetry import TelemetryCollector
 from autoship.exceptions import AutoShipError, ExitCode
 
@@ -30,15 +31,21 @@ def main_callback(
     dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Show actions without executing"),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip interactive confirmations"),
     config_path: Path | None = typer.Option(None, "--config", "-c", help="Path to config file"),
+    lang: str | None = typer.Option(
+        None, "--lang", help="Output language (en, zh, auto)", show_default=False
+    ),
 ) -> None:
     """AutoShip global options."""
     ctx.ensure_object(dict)
 
     config = load_config(config_path=config_path)
+    selected_lang = lang if isinstance(lang, str) and lang.lower() != "auto" else config.locale
+    i18n = get_i18n(selected_lang)
     audit_logger = AuditLogger(config)
     audit_logger.record("cli.invoked", {"config_path": str(config_path) if config_path else None})
 
     ctx.obj["config"] = config
+    ctx.obj["i18n"] = i18n
     ctx.obj["audit_logger"] = audit_logger
     ctx.obj["verbose"] = verbose
     ctx.obj["dry_run"] = dry_run
@@ -59,6 +66,7 @@ def cli_entrypoint() -> None:
     """Top-level entry point used by ``autoship`` console script."""
     logger = structlog.get_logger()
     config = load_config()
+    i18n = get_i18n(config.locale)
     telemetry = TelemetryCollector(enabled=config.telemetry_enabled)
     start = time.perf_counter()
     command = _guess_command()
@@ -73,13 +81,13 @@ def cli_entrypoint() -> None:
     except AutoShipError as exc:
         exit_code = exc.code
         exc_record = exc
-        typer.secho(f"Error: {exc}", fg=typer.colors.RED, err=True)
+        typer.secho(i18n._("error.prefix", exc=exc), fg=typer.colors.RED, err=True)
         raise typer.Exit(code=exc.code) from exc
     except Exception as exc:
         exit_code = ExitCode.USAGE_ERROR
         exc_record = exc
         logger.exception("Unhandled exception")
-        typer.secho(f"Unexpected error: {exc}", fg=typer.colors.RED, err=True)
+        typer.secho(i18n._("unexpected_error.prefix", exc=exc), fg=typer.colors.RED, err=True)
         raise typer.Exit(code=ExitCode.USAGE_ERROR) from exc
     finally:
         telemetry.record(command, start, exit_code, exc=exc_record)

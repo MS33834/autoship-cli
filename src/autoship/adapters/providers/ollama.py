@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -39,7 +39,8 @@ class OllamaGateway(ModelGateway):
         data = resp.json()
         if not isinstance(data, dict) or "data" not in data:
             raise ModelGatewayError("Unexpected response structure from Ollama: missing 'data'")
-        return [m["id"] for m in data["data"] if isinstance(m, dict) and "id" in m]  # type: ignore[misc]
+        models = cast(list[Any], data["data"])
+        return [m["id"] for m in models if isinstance(m, dict) and "id" in m]
 
     def chat(self, req: ChatCompletionRequest) -> ChatCompletionResponse:
         start = time.time()

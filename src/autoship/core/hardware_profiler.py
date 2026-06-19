@@ -82,6 +82,6 @@ def _has_gpu() -> bool:
     try:
         import torch  # type: ignore[import-not-found]
 
-        return cast(bool, torch.cuda.is_available())  # type: ignore[reportUnknownMemberType]
+        return cast(bool, torch.cuda.is_available())  # pyright: ignore[reportUnknownMemberType]
     except Exception:  # noqa: BLE001
         return False

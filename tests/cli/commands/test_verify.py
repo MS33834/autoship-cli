@@ -152,7 +152,7 @@ def test_verify_on_error_patch_declined(fix_plugin, app_config: AppConfig) -> No
     audit.record.assert_any_call("verify.fix.declined", {"description": "Add a newline."})
 
 
-def test_present_suggestion_dry_run(app_config: AppConfig) -> None:
+def test_present_suggestion_dry_run(app_config: AppConfig, i18n) -> None:
     ctx = CommandContext(
         command="verify",
         project_root=app_config.project_root,
@@ -163,7 +163,7 @@ def test_present_suggestion_dry_run(app_config: AppConfig) -> None:
     audit = MagicMock()
     suggestion = FixSuggestion(description="Add a newline.", patch="diff content")
 
-    verify._present_suggestion(ctx, suggestion, 1, audit)
+    verify._present_suggestion(ctx, suggestion, 1, audit, i18n)
 
     audit.record.assert_any_call(
         "verify.fix.dry_run",

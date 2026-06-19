@@ -9,7 +9,14 @@ import pytest
 
 from autoship.core.audit_logger import AuditLogger
 from autoship.core.context import CommandContext
+from autoship.core.i18n import get_i18n
 from autoship.models.config import AppConfig
+
+
+@pytest.fixture
+def i18n():
+    """Return an English I18n instance for tests."""
+    return get_i18n("en")
 
 
 @pytest.fixture
@@ -55,11 +62,12 @@ def mock_config(project_root: Path) -> AppConfig:
 
 
 @pytest.fixture
-def typer_context(app_config: AppConfig, audit_logger: AuditLogger) -> MagicMock:
+def typer_context(app_config: AppConfig, audit_logger: AuditLogger, i18n) -> MagicMock:
     """Return a mocked typer.Context with AutoShip state."""
     ctx = MagicMock()
     ctx.obj = {
         "config": app_config,
+        "i18n": i18n,
         "audit_logger": audit_logger,
         "dry_run": False,
         "yes": False,

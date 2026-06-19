@@ -41,10 +41,30 @@ def test_plugin_trust() -> None:
     assert "Set trust level of a to verified" in result.output
 
 
+def test_plugin_search_shows_indexed_plugins() -> None:
+    result = runner.invoke(app, ["plugin", "search"])
+    assert result.exit_code == 0
+    assert "security-scan" in result.output
+
+
+def test_plugin_search_filters_by_keyword() -> None:
+    result = runner.invoke(app, ["plugin", "search", "docker"])
+    assert result.exit_code == 0
+    assert "docker-ship" in result.output
+    assert "web-search" not in result.output
+
+
 def test_plugin_install_dry_run() -> None:
     result = runner.invoke(app, ["plugin", "install", "my-plugin", "--dry-run"])
     assert result.exit_code == 0
     assert "[dry-run] Would install my-plugin" in result.output
+
+
+def test_plugin_install_from_registry_dry_run() -> None:
+    result = runner.invoke(app, ["plugin", "install", "security-scan", "--dry-run"])
+    assert result.exit_code == 0
+    assert "[dry-run] Would install security-scan" in result.output
+    assert "autoship" in result.output
 
 
 def test_plugin_uninstall_dry_run() -> None:

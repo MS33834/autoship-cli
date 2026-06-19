@@ -47,6 +47,16 @@ class ModelRouter:
             raise ModelGatewayError(f"All model backends unhealthy: {last_error}") from last_error
         raise ModelGatewayError("All model backends are unhealthy")
 
+    def select_backend(self, tier: int | None = None) -> OllamaGateway | None:
+        """Return the first healthy configured backend, or None if all are unhealthy."""
+        for gateway in self._gateways():
+            try:
+                if gateway.health():
+                    return gateway
+            except (ModelGatewayError, httpx.RequestError, httpx.TimeoutException):
+                continue
+        return None
+
     def chat(self, messages: list[ChatMessage], task_type: str) -> str:
         """Send a chat request and return the model's response text."""
         return self._chat(messages, task_type)

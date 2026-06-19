@@ -1,0 +1,199 @@
+"""The ``autoship doctor`` command."""
+
+from __future__ import annotations
+
+import shutil
+import subprocess
+import sys
+from dataclasses import dataclass, field
+from enum import Enum
+from pathlib import Path
+
+import typer
+
+from autoship.core.config_center import load_config
+from autoship.core.i18n import I18n, get_i18n_from_ctx
+from autoship.core.model_router import ModelRouter
+from autoship.models.config import AppConfig
+
+
+class Status(str, Enum):
+    OK = "OK"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+
+
+@dataclass
+class CheckResult:
+    name: str
+    status: Status
+    message: str
+    suggestion: str = ""
+
+
+@dataclass
+class DoctorReport:
+    checks: list[CheckResult] = field(default_factory=lambda: list[CheckResult]())
+
+    def add(self, name: str, status: Status, message: str, suggestion: str = "") -> None:
+        self.checks.append(CheckResult(name, status, message, suggestion))
+
+    def summary(self) -> tuple[int, int, int]:
+        ok = sum(1 for c in self.checks if c.status == Status.OK)
+        warnings = sum(1 for c in self.checks if c.status == Status.WARNING)
+        errors = sum(1 for c in self.checks if c.status == Status.ERROR)
+        return ok, warnings, errors
+
+
+def _run_cmd(cmd: list[str]) -> tuple[bool, str]:
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=10.0)
+        return True, result.stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError, subprocess.TimeoutExpired) as exc:
+        return False, str(exc)
+
+
+def check_python(i18n: I18n) -> CheckResult:
+    version = sys.version_info
+    version_str = f"Python {version.major}.{version.minor}.{version.micro}"
+    if version < (3, 10):
+        return CheckResult(
+            "python",
+            Status.ERROR,
+            version_str,
+            i18n._("doctor.python_old"),
+        )
+    return CheckResult("python", Status.OK, version_str)
+
+
+def check_git(i18n: I18n) -> CheckResult:
+    ok, output = _run_cmd(["git", "--version"])
+    if not ok:
+        return CheckResult(
+            "git", Status.ERROR, i18n._("doctor.git_missing"), i18n._("doctor.git_suggestion")
+        )
+    return CheckResult("git", Status.OK, output)
+
+
+def check_clean_toolchain(i18n: I18n) -> CheckResult:
+    tools = ["autoflake", "black", "isort"]
+    missing = [tool for tool in tools if shutil.which(tool) is None]
+    if missing:
+        return CheckResult(
+            "clean-toolchain",
+            Status.WARNING,
+            i18n._("doctor.clean_missing", tools=", ".join(missing)),
+            i18n._("doctor.clean_suggestion"),
+        )
+    return CheckResult("clean-toolchain", Status.OK, i18n._("doctor.clean_ok"))
+
+
+def check_model_backend(config: AppConfig, i18n: I18n) -> CheckResult:
+    if not config.model.backends:
+        return CheckResult(
+            "model-backend",
+            Status.WARNING,
+            i18n._("doctor.model_none"),
+            i18n._("doctor.model_suggestion"),
+        )
+    router = ModelRouter(config)
+    healthy = router.select_backend(tier=config.model.default_tier)
+    if healthy is None:
+        return CheckResult(
+            "model-backend",
+            Status.ERROR,
+            i18n._("doctor.model_unreachable"),
+            i18n._("doctor.model_start"),
+        )
+    return CheckResult(
+        "model-backend",
+        Status.OK,
+        i18n._("doctor.model_ok", model=healthy.cfg.model or healthy.cfg.provider.value),
+    )
+
+
+def check_plugin_dependencies(i18n: I18n) -> CheckResult:
+    optional = {
+        "bandit": "security-scan plugin",
+        "docker": "docker-ship plugin",
+        "gitleaks": "security-scan plugin",
+    }
+    missing = {tool: reason for tool, reason in optional.items() if shutil.which(tool) is None}
+    if missing:
+        details = "; ".join(f"{tool} ({reason})" for tool, reason in missing.items())
+        return CheckResult(
+            "plugin-dependencies",
+            Status.WARNING,
+            i18n._("doctor.plugin_missing", details=details),
+            i18n._("doctor.plugin_suggestion"),
+        )
+    return CheckResult("plugin-dependencies", Status.OK, i18n._("doctor.plugin_ok"))
+
+
+def check_directories(i18n: I18n) -> CheckResult:
+    paths = [Path.home() / ".config" / "autoship", Path.home() / ".autoship"]
+    bad = [str(p) for p in paths if not (p.exists() or p.parent.exists())]
+    if bad:
+        return CheckResult(
+            "directories",
+            Status.WARNING,
+            i18n._("doctor.dirs_bad", paths=", ".join(bad)),
+            i18n._("doctor.dirs_suggestion"),
+        )
+    return CheckResult("directories", Status.OK, i18n._("doctor.dirs_ok"))
+
+
+def build_report(i18n: I18n) -> DoctorReport:
+    config = load_config()
+    report = DoctorReport()
+    report.add(**check_python(i18n).__dict__)
+    report.add(**check_git(i18n).__dict__)
+    report.add(**check_clean_toolchain(i18n).__dict__)
+    report.add(**check_model_backend(config, i18n).__dict__)
+    report.add(**check_plugin_dependencies(i18n).__dict__)
+    report.add(**check_directories(i18n).__dict__)
+    return report
+
+
+def register(parent: typer.Typer) -> None:
+    parent.command(name="doctor")(doctor)
+
+
+def doctor(
+    ctx: typer.Context,
+    json_output: bool = typer.Option(False, "--json", help="Output report as JSON"),
+) -> None:
+    """Diagnose the AutoShip environment and dependencies."""
+    i18n: I18n = get_i18n_from_ctx(ctx)
+    report = build_report(i18n)
+    ok, warnings, errors = report.summary()
+
+    if json_output:
+        import json as _json
+
+        data = {
+            "summary": {"ok": ok, "warning": warnings, "error": errors},
+            "checks": [
+                {"name": c.name, "status": c.status.value, "message": c.message, "suggestion": c.suggestion}
+                for c in report.checks
+            ],
+        }
+        typer.echo(_json.dumps(data, indent=2, ensure_ascii=False))
+        raise typer.Exit(code=1 if errors else 0)
+
+    typer.echo(i18n._("doctor.title"))
+    typer.echo("-" * 60)
+    for check in report.checks:
+        status_color = {
+            Status.OK: typer.colors.GREEN,
+            Status.WARNING: typer.colors.YELLOW,
+            Status.ERROR: typer.colors.RED,
+        }[check.status]
+        typer.secho(f"[{check.status.value}] {check.name:<20} {check.message}", fg=status_color)
+        if check.suggestion:
+            typer.echo(i18n._("doctor.suggestion", suggestion=check.suggestion))
+
+    typer.echo("-" * 60)
+    typer.echo(i18n._("doctor.summary", ok=ok, warnings=warnings, errors=errors))
+    if errors:
+        raise typer.Exit(code=1)

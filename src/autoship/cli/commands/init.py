@@ -9,6 +9,7 @@ import typer
 from autoship.core.audit_logger import AuditLogger
 from autoship.core.context import CommandContext
 from autoship.core.hardware_profiler import detect_hardware
+from autoship.core.i18n import I18n, get_i18n_from_ctx
 from autoship.models.config import AppConfig
 from autoship.plugin_manager import manager as plugin_manager
 from autoship.utils.project_detector import detect_project_type
@@ -29,6 +30,7 @@ def init(
 ) -> None:
     """Initialize an AutoShip configuration file for the current project."""
     config: AppConfig = ctx.obj["config"]
+    i18n: I18n = get_i18n_from_ctx(ctx)
     audit: AuditLogger = ctx.obj["audit_logger"]
     dry_run: bool = ctx.obj.get("dry_run", False)
     yes: bool = ctx.obj.get("yes", False)
@@ -54,20 +56,20 @@ def init(
     )
     plugin_manager.call("pre_init", context=context, fail_fast=False)
 
-    if output.exists() and not yes and not typer.confirm(f"{output} already exists. Overwrite?"):
-        typer.echo("Aborted.")
+    if output.exists() and not yes and not typer.confirm(i18n._("init.overwrite", output=output)):
+        typer.echo(i18n._("init.aborted"))
         audit.record("init.aborted", {"reason": "overwrite_declined"})
         raise typer.Exit(code=0)
 
     rendered = render_default_config(detected, default_tier=hardware.recommended_tier)
 
     if dry_run:
-        typer.echo(f"[dry-run] Would write config to: {output}")
+        typer.echo(i18n._("init.dry_run", output=output))
         typer.echo(rendered)
         audit.record("init.dry_run", {"output": str(output), "project_type": detected})
     else:
         output.write_text(rendered, encoding="utf-8")
         audit.record("init.done", {"output": str(output), "project_type": detected})
-        typer.echo(f"Created {output}")
+        typer.echo(i18n._("init.created", output=output))
 
     plugin_manager.call("post_init", context=context, fail_fast=False)

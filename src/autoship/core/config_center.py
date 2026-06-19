@@ -12,12 +12,14 @@ from autoship.exceptions import ConfigError
 from autoship.models.config import AppConfig
 
 try:
-    import tomllib  # type: ignore[import-not-found]
+    import tomllib  # type: ignore[import-not-found]  # pyright: ignore[reportMissingTypeStubs]
 except ImportError:  # pragma: no cover
-    import tomli as tomllib  # type: ignore[import-not-found]
+    import tomli as tomllib  # pyright: ignore[reportMissingTypeStubs]
 
 
 DEFAULT_CONFIG_NAME = ".autoship.toml"
+TEAM_CONFIG_NAME = ".autoship.team.toml"
+SYSTEM_CONFIG_FILE = Path("/etc/autoship.toml")
 GLOBAL_CONFIG_DIR = Path.home() / ".config" / "autoship"
 GLOBAL_CONFIG_FILE = GLOBAL_CONFIG_DIR / "config.toml"
 ENV_PREFIX = "AUTOSHIP_"
@@ -57,7 +59,7 @@ def _load_toml(path: Path) -> dict[str, Any]:
         with path.open("rb") as f:
             loader: Any = tomllib
             return cast(dict[str, Any], loader.load(f))
-    except (OSError, tomllib.TOMLDecodeError) as exc:  # type: ignore[attr-defined]
+    except (OSError, tomllib.TOMLDecodeError) as exc:  # pyright: ignore[reportUnknownVariableType]
         raise ConfigError(f"Failed to load config from {path}: {exc}") from exc
 
 
@@ -114,7 +116,7 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
     merged = dict(base)
     for key, value in override.items():
         if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
-            merged[key] = _deep_merge(merged[key], value)  # type: ignore[arg-type]
+            merged[key] = _deep_merge(merged[key], value)  # pyright: ignore[reportUnknownArgumentType]
         else:
             merged[key] = value
     return merged
@@ -139,21 +141,35 @@ def load_config(
         1. CLI overrides
         2. Environment variables (AUTOSHIP_*)
         3. Project-level ``.autoship.toml``
-        4. Global ``~/.config/autoship/config.toml``
-        5. Built-in defaults
+        4. Team-level ``.autoship.team.toml``
+        5. Global ``~/.config/autoship/config.toml``
+        6. System ``/etc/autoship.toml``
+        7. Built-in defaults
     """
     base = _default_config()
 
+    # System config
+    system_cfg = _load_toml(SYSTEM_CONFIG_FILE)
+    merged = _deep_merge(base, system_cfg)
+
     # Global config
     global_cfg = _load_toml(GLOBAL_CONFIG_FILE)
-    merged = _deep_merge(base, global_cfg)
+    merged = _deep_merge(merged, global_cfg)
+
+    # Resolve project root early so team config is looked up there
+    if config_path is not None:
+        project_root = config_path.parent
+    else:
+        project_root = project_root or _find_project_root()
+
+    # Team config
+    team_cfg = _load_toml(project_root / TEAM_CONFIG_NAME)
+    merged = _deep_merge(merged, team_cfg)
 
     # Project config
     if config_path is not None:
         project_cfg = _load_toml(config_path)
-        project_root = config_path.parent
     else:
-        project_root = project_root or _find_project_root()
         project_cfg = _load_toml(project_root / DEFAULT_CONFIG_NAME)
 
     merged = _deep_merge(merged, project_cfg)

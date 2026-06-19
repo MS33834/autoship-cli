@@ -12,6 +12,7 @@ import typer
 from autoship.core.audit_logger import AuditLogger
 from autoship.core.context import CommandContext
 from autoship.core.fix import FixSuggestion
+from autoship.core.i18n import I18n, get_i18n_from_ctx
 from autoship.exceptions import VerifyError
 from autoship.plugin_manager import manager as plugin_manager
 
@@ -30,6 +31,7 @@ def verify(
 ) -> None:
     """Run a verification command and capture errors for AI-assisted fixing."""
     config = ctx.obj["config"]
+    i18n: I18n = get_i18n_from_ctx(ctx)
     audit: AuditLogger = ctx.obj["audit_logger"]
     dry_run: bool = ctx.obj.get("dry_run", False)
     yes: bool = ctx.obj.get("yes", False)
@@ -49,7 +51,7 @@ def verify(
     plugin_manager.call("pre_verify", context=context, fail_fast=False)
 
     if dry_run:
-        typer.echo(f"[dry-run] Would run: {command}")
+        typer.echo(i18n._("verify.dry_run", command=command))
         audit.record("verify.dry_run", {"command": command})
         plugin_manager.call("post_verify", context=context, fail_fast=False)
         raise typer.Exit(code=0)
@@ -58,7 +60,7 @@ def verify(
     executable = shutil.which(cmd_parts[0])
     if executable is None:
         error = VerifyError(
-            f"Verification command not found on PATH: {cmd_parts[0]}",
+            i18n._("verify.command_not_found", cmd=cmd_parts[0]),
             details={"command": command},
         )
         audit.record("verify.error", {"command": command, "error": str(error)})
@@ -73,8 +75,8 @@ def verify(
         )
     except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
         audit.record("verify.error", {"command": command, "error": str(exc)})
-        _handle_error(context, exc, audit)
-        raise VerifyError(f"Failed to run verification command: {exc}") from exc
+        _handle_error(context, exc, audit, i18n)
+        raise VerifyError(i18n._("verify.run_failed", exc=exc)) from exc
 
     if verbose:
         typer.echo(result.stdout)
@@ -92,18 +94,18 @@ def verify(
             },
         )
         error = VerifyError(
-            f"Verification failed with exit code {result.returncode}",
+            i18n._("verify.failed", code=result.returncode),
             details={"command": command, "stdout": result.stdout, "stderr": result.stderr},
         )
-        _handle_error(context, error, audit)
+        _handle_error(context, error, audit, i18n)
         raise error
 
     audit.record("verify.done", {"command": command})
     plugin_manager.call("post_verify", context=context, fail_fast=False)
-    typer.echo(f"Verified: {command}")
+    typer.echo(i18n._("verify.verified", command=command))
 
 
-def _handle_error(context: CommandContext, error: Exception, audit: AuditLogger) -> None:
+def _handle_error(context: CommandContext, error: Exception, audit: AuditLogger, i18n: I18n) -> None:
     """Invoke ``on_error`` hooks and optionally apply fix patches."""
     hook_results = plugin_manager.call("on_error", context=context, error=error, fail_fast=False)
 
@@ -115,7 +117,7 @@ def _handle_error(context: CommandContext, error: Exception, audit: AuditLogger)
     ]
 
     for index, suggestion in enumerate(suggestions, start=1):
-        _present_suggestion(context, suggestion, index, audit)
+        _present_suggestion(context, suggestion, index, audit, i18n)
 
 
 def _present_suggestion(
@@ -123,16 +125,17 @@ def _present_suggestion(
     suggestion: FixSuggestion,
     index: int,
     audit: AuditLogger,
+    i18n: I18n,
 ) -> None:
     """Display a fix suggestion and apply its patch if the user confirms."""
-    typer.secho(f"\nSuggested fix {index}:", fg=typer.colors.CYAN)
+    typer.secho(f"\n{i18n._('verify.suggested_fix', index=index)}", fg=typer.colors.CYAN)
     typer.echo(suggestion.description)
 
     if not suggestion.patch:
         audit.record("verify.fix.suggestion", {"description": suggestion.description})
         return
 
-    typer.secho("\nProposed patch:", fg=typer.colors.CYAN)
+    typer.secho(f"\n{i18n._('verify.proposed_patch')}", fg=typer.colors.CYAN)
     typer.echo(suggestion.patch)
 
     if context.dry_run:
@@ -140,15 +143,15 @@ def _present_suggestion(
             "verify.fix.dry_run",
             {"description": suggestion.description, "patch": suggestion.patch},
         )
-        typer.echo("[dry-run] Patch not applied.")
+        typer.echo(i18n._("verify.patch_dry_run"))
         return
 
-    if not context.yes and not typer.confirm("Apply this patch?"):
+    if not context.yes and not typer.confirm(i18n._("verify.apply_patch")):
         audit.record(
             "verify.fix.declined",
             {"description": suggestion.description},
         )
-        typer.echo("Patch not applied.")
+        typer.echo(i18n._("verify.patch_not_applied"))
         return
 
     applied, reason = _apply_patch(context.project_root, suggestion.patch)
@@ -157,13 +160,13 @@ def _present_suggestion(
             "verify.fix.applied",
             {"description": suggestion.description, "patch": suggestion.patch},
         )
-        typer.echo("Patch applied.")
+        typer.echo(i18n._("verify.patch_applied"))
     else:
         audit.record(
             "verify.fix.failed",
             {"description": suggestion.description, "patch": suggestion.patch, "reason": reason},
         )
-        typer.secho(f"Failed to apply patch: {reason}", fg=typer.colors.YELLOW, err=True)
+        typer.secho(i18n._("verify.patch_failed", reason=reason), fg=typer.colors.YELLOW, err=True)
 
 
 def _apply_patch(project_root: Path, patch: str) -> tuple[bool, str | None]:

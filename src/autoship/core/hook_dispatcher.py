@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 import logging
+from collections.abc import Sequence
 from importlib.metadata import entry_points
 from typing import Any
 
@@ -38,7 +39,7 @@ class HookDispatcher:
         """Discover and register external plugins via ``autoship.plugins`` entry points."""
         try:
             eps = entry_points()
-            group = (
+            group: Sequence[Any] = (
                 eps.select(group="autoship.plugins")
                 if hasattr(eps, "select")
                 else eps.get("autoship.plugins", [])

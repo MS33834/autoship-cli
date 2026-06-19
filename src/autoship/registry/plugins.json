@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "updated_at": "2026-06-18",
+  "plugins": [
+    {
+      "name": "security-scan",
+      "package": "autoship",
+      "module": "autoship.plugins.security_scan",
+      "version": "0.2.0-beta.1",
+      "description": "提交前运行 bandit/gitleaks/osv-scanner 安全扫描。",
+      "trust_level": "builtin",
+      "entry_point": "autoship.plugins.security_scan",
+      "hooks": ["pre_commit"]
+    },
+    {
+      "name": "docker-ship",
+      "package": "autoship",
+      "module": "autoship.plugins.docker_ship",
+      "version": "0.2.0-beta.1",
+      "description": "upload --target docker 时自动构建并推送 Docker 镜像。",
+      "trust_level": "builtin",
+      "entry_point": "autoship.plugins.docker_ship",
+      "hooks": ["pre_upload", "post_upload"]
+    },
+    {
+      "name": "web-search",
+      "package": "autoship",
+      "module": "autoship.plugins.web_search",
+      "version": "0.2.0-beta.1",
+      "description": "verify --fix 失败时联网搜索错误上下文并给出修复建议。",
+      "trust_level": "builtin",
+      "entry_point": "autoship.plugins.web_search",
+      "hooks": ["on_error"]
+    }
+  ]
+}
