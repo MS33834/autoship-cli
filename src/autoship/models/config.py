@@ -29,6 +29,7 @@ class ModelBackendConfig(BaseModel):
     api_key: str | None = Field(default=None, repr=False)
     api_version: str | None = None
     model: str | None = None
+    tier: Literal[1, 2, 3] = 2
     timeout: float = 30.0
     concurrency: int = 2
     priority: int = 0

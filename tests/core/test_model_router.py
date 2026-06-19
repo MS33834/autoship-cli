@@ -188,3 +188,53 @@ def test_router_raises_for_unsupported_provider(project_root: Path) -> None:
         pytest.raises(ModelGatewayError, match="Unsupported model backend provider"),
     ):
         router._gateways()
+
+
+def test_select_backend_returns_first_healthy_backend(project_root: Path) -> None:
+    config = AppConfig(project_root=project_root, model={"backends": [_backend()]})
+    router = ModelRouter(config)
+    gateway = MagicMock()
+    gateway.health.return_value = True
+    with patch.object(router, "_gateways", return_value=[gateway]):
+        result = router.select_backend()
+    assert result is gateway
+
+
+def test_select_backend_filters_by_tier(project_root: Path) -> None:
+    config = AppConfig(project_root=project_root, model={"backends": [_backend()]})
+    router = ModelRouter(config)
+    low = MagicMock()
+    low.cfg.tier = 1
+    low.health.return_value = True
+    high = MagicMock()
+    high.cfg.tier = 3
+    high.health.return_value = True
+    with patch.object(router, "_gateways", return_value=[low, high]):
+        assert router.select_backend(tier=3) is high
+        assert router.select_backend(tier=1) is low
+
+
+def test_select_backend_falls_back_to_other_tiers(project_root: Path) -> None:
+    config = AppConfig(project_root=project_root, model={"backends": [_backend()]})
+    router = ModelRouter(config)
+    low = MagicMock()
+    low.cfg.tier = 1
+    low.health.return_value = False
+    high = MagicMock()
+    high.cfg.tier = 3
+    high.health.return_value = True
+    with patch.object(router, "_gateways", return_value=[low, high]):
+        assert router.select_backend(tier=1) is high
+
+
+def test_select_backend_honors_fallback_disabled(project_root: Path) -> None:
+    config = AppConfig(project_root=project_root, model={"backends": [_backend()], "fallback": False})
+    router = ModelRouter(config)
+    low = MagicMock()
+    low.cfg.tier = 1
+    low.health.return_value = False
+    high = MagicMock()
+    high.cfg.tier = 3
+    high.health.return_value = True
+    with patch.object(router, "_gateways", return_value=[low, high]):
+        assert router.select_backend(tier=1) is None

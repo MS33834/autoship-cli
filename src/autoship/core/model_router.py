@@ -87,8 +87,26 @@ class ModelRouter:
         raise ModelGatewayError("All model backends are unhealthy")
 
     def select_backend(self, tier: int | None = None) -> ModelGateway | None:
-        """Return the first healthy configured backend, or None if all are unhealthy."""
-        for gateway in self._gateways():
+        """Return the first healthy configured backend, or None if all are unhealthy.
+
+        When ``tier`` is provided, backends are filtered by their configured tier
+        before health checks. If no backend in the requested tier is healthy and
+        fallback is enabled, lower/higher tiers are considered.
+        """
+        gateways = self._gateways()
+        if tier is not None:
+            tier_gateways = [g for g in gateways if g.cfg.tier == tier]
+            for gateway in tier_gateways:
+                try:
+                    if gateway.health():
+                        return gateway
+                except (ModelGatewayError, httpx.RequestError, httpx.TimeoutException):
+                    continue
+            if not self.config.model.fallback:
+                return None
+            # Fallback to other tiers.
+            gateways = [g for g in gateways if g.cfg.tier != tier]
+        for gateway in gateways:
             try:
                 if gateway.health():
                     return gateway
