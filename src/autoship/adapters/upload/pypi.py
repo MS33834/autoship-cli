@@ -42,7 +42,12 @@ class PyPIUploader(UploadAdapter):
                 cwd=self.project_root,
                 check=True,
             )
-            cmd = ["twine", "upload", "--repository", self.repository, "dist/*"]
+            dist_dir = self.project_root / "dist"
+            artifacts = sorted(dist_dir.glob("*"))
+            if not artifacts:
+                raise UploadError("No distribution artifacts found in dist/")
+            cmd = ["twine", "upload", "--repository", self.repository]
+            cmd.extend(str(path) for path in artifacts)
             if verbose:
                 print(f"[exec] {' '.join(cmd)}")
             subprocess.run(cmd, cwd=self.project_root, check=True, shell=False)

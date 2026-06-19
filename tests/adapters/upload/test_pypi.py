@@ -65,13 +65,14 @@ def test_pypi_upload_success(tmp_path: Path) -> None:
     assert build_call.args[0] == ["python", "-m", "build", "--sdist", "--wheel"]
     assert build_call.kwargs["cwd"] == tmp_path
     assert build_call.kwargs["check"] is True
-    assert upload_call.args[0] == [
+    assert upload_call.args[0][:4] == [
         "twine",
         "upload",
         "--repository",
         "pypi",
-        "dist/*",
     ]
+    assert len(upload_call.args[0]) == 6
+    assert all(str(tmp_path / "dist") in arg for arg in upload_call.args[0][4:])
     assert upload_call.kwargs["cwd"] == tmp_path
     assert upload_call.kwargs["check"] is True
     assert upload_call.kwargs["shell"] is False
@@ -102,5 +103,6 @@ def test_pypi_upload_verbose_prints_command(tmp_path: Path, capsys) -> None:
         uploader.upload(verbose=True)
 
     captured = capsys.readouterr()
-    assert "twine upload --repository testpypi dist/*" in captured.out
+    assert "twine upload --repository testpypi" in captured.out
+    assert "dist" in captured.out
     assert mock_run.call_count == 2
