@@ -14,6 +14,7 @@ app = typer.Typer()
 
 ERROR_LOG_PATH = Path.home() / ".local" / "state" / "autoship" / "last_error.txt"
 
+
 SYSTEM_PROMPT = (
     "You are an expert software engineer. A verification command failed. "
     "Analyze the error output and project context, then propose a concrete fix. "
@@ -32,9 +33,6 @@ def fix(
     ctx: typer.Context,
     error_file: Path | None = typer.Argument(
         None, help="Path to error log (defaults to last verify output)"
-    ),
-    apply: bool = typer.Option(
-        False, "--apply", help="Apply the generated patch without prompting"
     ),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmations"),
 ) -> None:
@@ -65,7 +63,7 @@ def fix(
     typer.echo("\n" + response)
 
     patch = _extract_patch(response)
-    if patch and (apply or yes or typer.confirm(i18n._("fix.apply_patch"))):
+    if patch and (yes or typer.confirm(i18n._("fix.apply_patch"))):
         _apply_patch(config.project_root, patch, i18n)
 
 
@@ -117,9 +115,45 @@ def _extract_patch(response: str) -> str | None:
     return response[start + 7 : end].strip()
 
 
+def _collect_patch_paths(patch: str) -> set[str]:
+    """Return the file paths referenced in a unified diff."""
+    paths: set[str] = set()
+    for line in patch.splitlines():
+        if line.startswith("--- ") or line.startswith("+++ "):
+            # Strip the optional timestamp suffix that ``git diff`` appends.
+            raw = line[4:].split("\t", 1)[0].strip()
+            if raw in ("/dev/null", "dev/null"):
+                continue
+            # Unified diffs prefix old paths with ``a/`` and new paths with ``b/``.
+            if raw.startswith("a/") or raw.startswith("b/"):
+                raw = raw[2:]
+            paths.add(raw)
+    return paths
+
+
+def _patch_paths_are_safe(project_root: Path, patch: str) -> bool:
+    """Return True when every path in ``patch`` stays inside ``project_root``."""
+    root = project_root.resolve()
+    for raw in _collect_patch_paths(patch):
+        # Reject absolute paths and path traversal attempts outright.
+        if Path(raw).is_absolute() or ".." in Path(raw).parts:
+            return False
+        if not (root / raw).resolve().is_relative_to(root):
+            return False
+    return True
+
+
 def _apply_patch(project_root: Path, patch: str, i18n: I18n) -> None:
     import shutil
     import subprocess
+
+    if not _patch_paths_are_safe(project_root, patch):
+        typer.secho(
+            i18n._("fix.patch_unsafe_paths"),
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+        return
 
     if shutil.which("git"):
         check = subprocess.run(

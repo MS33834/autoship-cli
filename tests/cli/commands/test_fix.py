@@ -52,7 +52,7 @@ def test_fix_calls_llm_and_shows_suggestion(tmp_path: Path) -> None:
     assert "Add `x = 0`" in result.output
 
 
-def test_fix_apply_flag(tmp_path: Path) -> None:
+def test_fix_yes_flag_applies_patch(tmp_path: Path) -> None:
     error_log = tmp_path / "error.txt"
     error_log.write_text("error", encoding="utf-8")
 
@@ -64,7 +64,7 @@ def test_fix_apply_flag(tmp_path: Path) -> None:
         patch("autoship.cli.commands.fix._apply_patch") as mock_apply,
     ):
         mock_client.return_value.chat.return_value = f"```diff\n{patch_text}\n```"
-        result = runner.invoke(app, ["fix", str(error_log), "--apply"])
+        result = runner.invoke(app, ["fix", str(error_log), "--yes"])
 
     assert result.exit_code == 0
     mock_apply.assert_called_once()
@@ -133,3 +133,18 @@ def test_apply_patch_no_tool(tmp_path: Path) -> None:
 
     with patch("shutil.which", return_value=None):
         fix_module._apply_patch(tmp_path, patch_text, i18n_mock)
+
+
+def test_patch_paths_are_safe_accepts_relative_paths(tmp_path: Path) -> None:
+    patch = "--- a/src/foo.py\n+++ b/src/foo.py\n@@ -1 +1 @@\n-old\n+new"
+    assert fix_module._patch_paths_are_safe(tmp_path, patch) is True
+
+
+def test_patch_paths_are_safe_rejects_absolute_paths(tmp_path: Path) -> None:
+    patch = "--- /etc/passwd\n+++ /etc/passwd\n@@ -1 +1 @@\n-old\n+new"
+    assert fix_module._patch_paths_are_safe(tmp_path, patch) is False
+
+
+def test_patch_paths_are_safe_rejects_traversal(tmp_path: Path) -> None:
+    patch = "--- a/../etc/passwd\n+++ b/../etc/passwd\n@@ -1 +1 @@\n-old\n+new"
+    assert fix_module._patch_paths_are_safe(tmp_path, patch) is False
