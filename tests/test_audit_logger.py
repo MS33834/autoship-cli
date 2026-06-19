@@ -43,6 +43,37 @@ def test_audit_logger_bind_context_returns_self(app_config: AppConfig) -> None:
     assert bound is audit
 
 
+def test_audit_logger_bind_context_merges_into_records(
+    project_root, app_config: AppConfig, monkeypatch
+) -> None:
+    log_dir = project_root / "logs"
+
+    def _init(self: AuditLogger, config: AppConfig) -> None:
+        self.config = config
+        self.trace_id = "trace-bind"
+        self.log_dir = log_dir
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.log_file = self.log_dir / "audit.test.jsonl"
+        self._siem_client = None
+        self._context = {}
+
+    monkeypatch.setattr(AuditLogger, "__init__", _init)
+    audit = AuditLogger(app_config)
+    audit.bind_context(user="alice", env="prod")
+    audit.record("test.bound", {"action": "deploy"})
+    audit.record("test.override", {"action": "verify", "user": "bob"})
+
+    lines = audit.log_file.read_text().strip().splitlines()
+    assert len(lines) == 2
+    bound_entry = json.loads(lines[0])
+    assert bound_entry["payload"]["user"] == "alice"
+    assert bound_entry["payload"]["env"] == "prod"
+    assert bound_entry["payload"]["action"] == "deploy"
+    override_entry = json.loads(lines[1])
+    assert override_entry["payload"]["user"] == "bob"
+    assert override_entry["payload"]["env"] == "prod"
+
+
 def test_audit_logger_export_filters_by_since(
     project_root: Path, app_config: AppConfig, monkeypatch
 ) -> None:

@@ -50,6 +50,7 @@ class AuditLogger:
         self._ensure_log_dir()
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         self.log_file = self.log_dir / f"audit.{today}.jsonl"
+        self._context: dict[str, Any] = {}
         self._siem_client: httpx.Client | None = None
         if config.audit.siem_enabled and config.audit.siem_url:
             headers: dict[str, str] = {}
@@ -82,11 +83,13 @@ class AuditLogger:
         IO failures are logged but never propagated so that audit issues do
         not break user commands.
         """
+        context = getattr(self, "_context", {})
+        merged_payload = {**context, **(payload or {})}
         entry = {
             "ts": datetime.now(timezone.utc).isoformat(),
             "trace_id": self.trace_id,
             "event": event,
-            "payload": self._redact(payload or {}),
+            "payload": self._redact(merged_payload),
         }
         try:
             with self.log_file.open("a", encoding="utf-8") as f:
@@ -171,8 +174,11 @@ class AuditLogger:
     def bind_context(self, **kwargs: Any) -> AuditLogger:
         """Bind extra context to future records.
 
-        This is a no-op placeholder that returns ``self`` for compatibility.
+        Bound values are merged into every subsequent audit record's payload.
+        Explicit payload keys passed to ``record`` take precedence over bound
+        context values. The logger instance is returned to allow chaining.
         """
+        self._context.update(kwargs)
         return self
 
     def _redact(self, value: Any) -> Any:
