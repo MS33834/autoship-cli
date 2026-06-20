@@ -8,9 +8,15 @@
 ## 如何阅读本清单
 
 - **优先级**：P1 > P2，建议按编号顺序处理。
-- **验收标准**：每项包含 "完成标准"，修复后需通过 `ruff check src tests`、`pyright src`、`pytest tests -q`。
+- **验收标准**：每项包含 "完成标准"，修复后需在本地通过 `uv run ruff check src tests`、`uv run pyright`、`uv run pytest`。
+- **安全扫描**：修复完成后运行 `uv run bandit -r src -ll`。
 - **测试要求**：新增/修改的漏洞修复必须附带对应单元测试或集成测试。
-- **同步要求**：每项合并后仍需同步推送到 `github` 与 `gitcode` 两个远程仓库。
+- **提交流程**：
+  1. 从最新 `main` 切出特性分支：`git switch -c feat/P1-X-short-desc`。
+  2. 将分支推送到 **GitHub 主仓**（GitCode 仅作为镜像，不接受 Issue/PR）。
+  3. 在 GitHub 创建 Pull Request，按 `.github/PULL_REQUEST_TEMPLATE.md` 填写说明。
+  4. 等待 CI 全部通过 + review 通过后再合并。
+  5. 合并后 GitCode 镜像会自动同步，无需再向 `gitcode/main` 直接推送。
 
 ---
 
@@ -171,5 +177,7 @@
   4. `fix(fix): remove --apply flag and validate patch paths before applying`
   5. `fix(i18n): guard against formatting exceptions`
   6. `fix(metrics): make Counter increments thread-safe and harden plugin stats loading`
-- 运行质量门禁：`ruff check src tests`、`pyright src`、`pytest tests -q`。
+- 本地质量门禁：`uv run ruff check src tests`、`uv run pyright`、`uv run pytest`。
+- 安全扫描：`uv run bandit -r src -ll`。
 - 未跟踪的 `*_report.md` 为审计/性能/质量报告，团队决定是否纳入版本控制。
+- 提交修复请走 **GitHub Pull Request**，不要在 GitCode 发起 PR。
