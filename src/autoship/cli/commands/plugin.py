@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import re
 import shutil
 import subprocess
@@ -13,6 +14,11 @@ from packaging.version import Version
 from packaging.version import parse as parse_version
 
 from autoship.core.i18n import I18n, get_i18n_from_ctx
+from autoship.core.package_verifier import (
+    PackageDownloadError,
+    PackageVerificationError,
+    download_and_verify,
+)
 from autoship.core.plugin_registry import CapabilityManifest, PluginRegistry, PluginSpec, TrustLevel
 from autoship.core.plugin_stats import PluginStats
 from autoship.core.registry_index import RegistryIndex
@@ -80,6 +86,66 @@ def _installed_version(package: str) -> Version | None:
         return parse_version(match.group(1))
     except Exception:  # noqa: BLE001
         return None
+
+
+def _public_key_b64(config: Any) -> str | None:
+    """Return the configured registry public key, if any."""
+    return config.registry.public_key if config and getattr(config, "registry", None) else None
+
+
+def _resolve_install_source(
+    source_for_pip: str,
+    indexed: dict[str, Any] | None,
+    config: Any,
+    i18n: I18n,
+    plugin_name: str,
+    operation: str = "install",
+) -> tuple[str, Path | None]:
+    """Download and verify a package when the registry provides a checksum.
+
+    Returns the pip install spec and an optional downloaded file that the
+    caller must clean up after installation.
+    """
+    sha256_hex = indexed.get("sha256") if indexed else None
+    signature_b64 = indexed.get("signature") if indexed else None
+    public_key_b64 = _public_key_b64(config)
+
+    if sha256_hex is None:
+        return source_for_pip, None
+
+    try:
+        downloaded = download_and_verify(
+            source_for_pip,
+            sha256_hex=sha256_hex,
+            signature_b64=signature_b64,
+            public_key_b64=public_key_b64,
+        )
+    except PackageVerificationError as exc:
+        raise PluginError(
+            i18n._(
+                f"plugin.{operation}_verify_failed",
+                plugin_name=plugin_name,
+                exc=exc,
+            )
+        ) from exc
+    except PackageDownloadError as exc:
+        raise PluginError(
+            i18n._(
+                f"plugin.{operation}_download_failed",
+                plugin_name=plugin_name,
+                exc=exc,
+            )
+        ) from exc
+
+    return str(downloaded), downloaded
+
+
+def _cleanup_downloaded(path: Path | None) -> None:
+    """Remove a temporary downloaded package, ignoring errors."""
+    if path is None:
+        return
+    with contextlib.suppress(OSError):
+        path.unlink()
 
 
 def register(parent: typer.Typer) -> None:
@@ -264,10 +330,14 @@ def install(
     use_sandbox = not no_sandbox and plugin_trust in (TrustLevel.COMMUNITY, TrustLevel.UNTRUSTED)
 
     pip_cmd = _pip_cmd()
+    config = ctx.obj.get("config")
+    install_spec, downloaded_path = _resolve_install_source(
+        source_for_pip, indexed, config, i18n, plugin_name, operation="install"
+    )
     try:
         result = _run_pip_install(
             pip_cmd,
-            source_for_pip,
+            install_spec,
             sandbox=use_sandbox,
             env_whitelist=capabilities.env
             + ["PATH", "HOME", "USER", "LANG", "LC_ALL", "PIP_INDEX_URL"],
@@ -280,6 +350,8 @@ def install(
         raise PluginError(
             i18n._("plugin.install_failed", plugin_name=plugin_name, exc=exc)
         ) from exc
+    finally:
+        _cleanup_downloaded(downloaded_path)
 
     registry.add(
         PluginSpec(
@@ -503,8 +575,10 @@ def update(
         raise typer.Exit(code=0)
 
     pip_cmd = _pip_cmd()
+    config = ctx.obj.get("config")
     for plugin, _installed, latest in updatable:
         source_for_pip = plugin.source
+        indexed = index.get(plugin.name)
         if dry_run:
             typer.echo(
                 i18n._(
@@ -517,7 +591,7 @@ def update(
             i18n,
             plugin.name,
             plugin.trust_level,
-            index.get(plugin.name),
+            indexed,
             plugin.capabilities,
             yes,
             skip_trust_check,
@@ -528,10 +602,13 @@ def update(
             TrustLevel.UNTRUSTED,
         )
 
+        install_spec, downloaded_path = _resolve_install_source(
+            source_for_pip, indexed, config, i18n, plugin.name, operation="update"
+        )
         try:
             result = _run_pip_install(
                 pip_cmd,
-                source_for_pip,
+                install_spec,
                 upgrade=True,
                 sandbox=use_sandbox,
                 env_whitelist=plugin.capabilities.env
@@ -545,6 +622,8 @@ def update(
             raise PluginError(
                 i18n._("plugin.update_failed", plugin_name=plugin.name, exc=exc)
             ) from exc
+        finally:
+            _cleanup_downloaded(downloaded_path)
 
         plugin.version = str(latest)
         registry.add(plugin)
