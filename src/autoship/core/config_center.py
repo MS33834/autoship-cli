@@ -12,7 +12,7 @@ from autoship.exceptions import ConfigError
 from autoship.models.config import AppConfig
 
 try:
-    import tomllib  # pyright: ignore[reportMissingTypeStubs]
+    import tomllib  # pyright: ignore[reportMissingImports, reportMissingTypeStubs]
 except ImportError:  # pragma: no cover
     import tomli as tomllib  # pyright: ignore[reportMissingImports, reportMissingTypeStubs]
 
