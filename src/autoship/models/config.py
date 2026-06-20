@@ -138,6 +138,10 @@ class RegistryConfig(BaseModel):
     )
     cache_enabled: bool = True
     cache_ttl_seconds: int = 3600
+    public_key: str | None = Field(
+        default=None,
+        description="Base64-encoded Ed25519 public key used to verify the registry index.",
+    )
 
 
 class LlmProvider(str, Enum):

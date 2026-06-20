@@ -91,3 +91,9 @@ class SandboxError(AutoShipError):
     """Raised when a required sandbox cannot be enforced."""
 
     code = ExitCode.SECURITY_ERROR
+
+
+class RegistryError(AutoShipError):
+    """Raised when the plugin registry index cannot be verified or trusted."""
+
+    code = ExitCode.SECURITY_ERROR
