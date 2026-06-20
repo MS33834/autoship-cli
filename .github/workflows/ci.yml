@@ -52,7 +52,7 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Run bandit
-        run: uv run bandit -r src -f json
+        run: uv run bandit -r src -f json -c pyproject.toml
 
   lint-and-test:
     name: Lint / Type check / Test
