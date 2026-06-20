@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import logging
 import time
@@ -9,8 +11,13 @@ from pathlib import Path
 from typing import Any, cast
 
 import httpx
+from cryptography.exceptions import InvalidSignature  # pyright: ignore[reportMissingImports]
+from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+    Ed25519PublicKey,  # pyright: ignore[reportMissingImports]
+)
 
 from autoship.core.metrics import get_registry
+from autoship.exceptions import RegistryError
 from autoship.models.config import AppConfig, RegistryConfig
 
 logger = logging.getLogger("autoship")
@@ -54,9 +61,14 @@ class RegistryClient:
             return None
         try:
             raw = self.cache_file.read_text(encoding="utf-8")
-            return cast(dict[str, Any], json.loads(raw))
+            data = cast(dict[str, Any], json.loads(raw))
+            self._verify_index(data)
+            return data
         except (OSError, json.JSONDecodeError) as exc:
             logger.warning("Failed to read registry cache: %s", exc)
+            return None
+        except RegistryError as exc:
+            logger.warning("Registry cache failed verification: %s", exc)
             return None
 
     def _write_cache(self, data: dict[str, Any]) -> None:
@@ -68,6 +80,53 @@ class RegistryClient:
         except OSError as exc:
             logger.warning("Failed to write registry cache: %s", exc)
 
+    @staticmethod
+    def _canonical_payload(data: dict[str, Any]) -> bytes:
+        """Return canonical bytes used for hashing and signing.
+
+        The ``sha256`` and ``signature`` fields are excluded because they depend on
+        the payload itself.
+        """
+        stripped = {k: v for k, v in data.items() if k not in ("sha256", "signature")}
+        return json.dumps(stripped, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+    def _verify_index(self, data: dict[str, Any]) -> None:
+        """Validate the registry index integrity and optional signature.
+
+        Raises:
+            RegistryError: If the sha256 hash does not match or if signature
+                verification fails / is required but missing.
+        """
+        payload = self._canonical_payload(data)
+
+        expected_sha256 = data.get("sha256")
+        if expected_sha256 is not None:
+            actual_sha256 = hashlib.sha256(payload).hexdigest()
+            if actual_sha256 != expected_sha256:
+                raise RegistryError(
+                    "Registry index sha256 mismatch",
+                    details={"expected": expected_sha256, "actual": actual_sha256},
+                )
+
+        signature_b64 = data.get("signature")
+        public_key_b64 = self.config.public_key
+
+        if signature_b64 is not None and public_key_b64 is not None:
+            try:
+                public_key_bytes = base64.b64decode(public_key_b64, validate=True)
+                signature_bytes = base64.b64decode(signature_b64, validate=True)
+                public_key = Ed25519PublicKey.from_public_bytes(public_key_bytes)
+                public_key.verify(signature_bytes, payload)
+            except (ValueError, InvalidSignature) as exc:
+                raise RegistryError(
+                    "Registry index signature verification failed",
+                    details={"reason": str(exc)},
+                ) from exc
+        elif public_key_b64 is not None and signature_b64 is None:
+            raise RegistryError(
+                "Registry index is not signed but a public key is configured",
+            )
+
     def _fetch_remote(self) -> dict[str, Any] | None:
         registry = get_registry()
         start = time.perf_counter()
@@ -75,6 +134,7 @@ class RegistryClient:
             response = httpx.get(str(self.config.url), timeout=10.0)
             response.raise_for_status()
             data = cast(dict[str, Any], response.json())
+            self._verify_index(data)
             self._write_cache(data)
             registry.inc("registry_sync_success", description="Successful registry syncs")
             return data
