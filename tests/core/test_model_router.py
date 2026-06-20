@@ -228,7 +228,9 @@ def test_select_backend_falls_back_to_other_tiers(project_root: Path) -> None:
 
 
 def test_select_backend_honors_fallback_disabled(project_root: Path) -> None:
-    config = AppConfig(project_root=project_root, model={"backends": [_backend()], "fallback": False})
+    config = AppConfig(
+        project_root=project_root, model={"backends": [_backend()], "fallback": False}
+    )
     router = ModelRouter(config)
     low = MagicMock()
     low.cfg.tier = 1

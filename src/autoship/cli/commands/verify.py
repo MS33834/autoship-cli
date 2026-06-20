@@ -33,9 +33,7 @@ def _write_error_log(stdout: str, stderr: str) -> None:
         pass
 
 
-def _validate_verify_command(
-    command: str, verify_config: VerifyConfig, i18n: I18n
-) -> list[str]:
+def _validate_verify_command(command: str, verify_config: VerifyConfig, i18n: I18n) -> list[str]:
     """Validate ``command`` against the configured allowlist.
 
     Returns the split command list on success, or raises ``VerifyError`` if the
