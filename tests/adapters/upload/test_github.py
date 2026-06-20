@@ -27,7 +27,9 @@ def _write_artifacts(root: Path, names: list[str]) -> list[Path]:
 def _mock_run_for_github(cmd, **_kwargs):
     """Return fake output for gh repo view; otherwise behave as success."""
     if cmd[:4] == ["gh", "repo", "view", "--json"]:
-        mock = type("CompletedProcess", (), {"stdout": json.dumps({"url": "https://github.com/owner/repo"})})()
+        mock = type(
+            "CompletedProcess", (), {"stdout": json.dumps({"url": "https://github.com/owner/repo"})}
+        )()
         return mock
     return type("CompletedProcess", (), {"returncode": 0})()
 
@@ -88,7 +90,11 @@ def test_github_upload_failure_raises_upload_error(tmp_path: Path) -> None:
 
     def _fail_create(cmd, **_kwargs) -> None:
         if cmd[:4] == ["gh", "repo", "view", "--json"]:
-            return type("CompletedProcess", (), {"stdout": json.dumps({"url": "https://github.com/owner/repo"})})()
+            return type(
+                "CompletedProcess",
+                (),
+                {"stdout": json.dumps({"url": "https://github.com/owner/repo"})},
+            )()
         raise subprocess.CalledProcessError(1, cmd)
 
     with (
