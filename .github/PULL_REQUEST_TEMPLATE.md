@@ -1,3 +1,5 @@
+> **注意**：本仓库以 GitHub（https://github.com/MS33834/autoship-cli）为主仓，GitCode 为镜像。请确认此 PR 是提交到 GitHub 主仓的。
+
 ## 改动摘要
 
 <!-- 简要描述本次 PR 做了哪些改动，解决了什么问题 -->
