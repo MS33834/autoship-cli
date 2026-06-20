@@ -42,7 +42,8 @@ jobs:
               aarch64|arm64) arch=arm64 ;;
             esac
             version=$(gh api repos/gitleaks/gitleaks/releases/latest --jq '.tag_name')
-            curl -sL "https://github.com/gitleaks/gitleaks/releases/download/${version}/gitleaks_${version}_${os}_${arch}.tar.gz" | tar xz -C /tmp
+            version=${version#v}
+            curl -sL "https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_${os}_${arch}.tar.gz" | tar xz -C /tmp
             sudo install /tmp/gitleaks /usr/local/bin/gitleaks
           fi
           gitleaks detect --source . --no-banner
