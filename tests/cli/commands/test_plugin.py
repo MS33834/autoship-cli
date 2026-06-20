@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import subprocess
+from pathlib import Path
 from unittest.mock import patch
 
 from packaging.version import parse as parse_version
 from typer.testing import CliRunner
 
 from autoship.cli.main import app
+from autoship.core.package_verifier import PackageVerificationError
 from autoship.core.plugin_registry import PluginSpec, TrustLevel
 
 runner = CliRunner()
@@ -319,3 +321,90 @@ def test_plugin_install_stores_capabilities() -> None:
     spec = mock_reg.return_value.add.call_args[0][0]
     assert spec.capabilities.git is True
     assert "JIRA_BASE_URL" in spec.capabilities.env
+
+
+def test_plugin_install_with_sha256_downloads_and_verifies() -> None:
+    downloaded = Path("/tmp/autoship-pkg/verified-plugin.whl")
+    with (
+        patch("autoship.cli.commands.plugin.RegistryIndex") as mock_index,
+        patch("autoship.cli.commands.plugin._run_pip_install") as mock_install,
+        patch("autoship.cli.commands.plugin.PluginRegistry"),
+        patch("autoship.cli.commands.plugin.PluginStats"),
+        patch("autoship.cli.commands.plugin.download_and_verify", return_value=downloaded),
+    ):
+        mock_index.return_value.get.return_value = {
+            "name": "verified-plugin",
+            "package": "verified-plugin",
+            "version": "1.0.0",
+            "trust_level": "verified",
+            "sha256": "a" * 64,
+            "signature": "sig",
+        }
+        mock_install.return_value = subprocess.CompletedProcess(
+            args=["pip", "install", str(downloaded)], returncode=0, stdout="", stderr=""
+        )
+        result = runner.invoke(
+            app,
+            ["plugin", "install", "verified-plugin", "--yes", "--skip-trust-check"],
+        )
+    assert result.exit_code == 0
+    assert "Installed plugin: verified-plugin" in result.output
+    mock_install.assert_called_once()
+    assert mock_install.call_args[0][1] == str(downloaded)
+
+
+def test_plugin_install_with_sha256_verification_failure() -> None:
+    with (
+        patch("autoship.cli.commands.plugin.RegistryIndex") as mock_index,
+        patch(
+            "autoship.cli.commands.plugin.download_and_verify",
+            side_effect=PackageVerificationError("sha256 mismatch"),
+        ),
+    ):
+        mock_index.return_value.get.return_value = {
+            "name": "bad-plugin",
+            "package": "bad-plugin",
+            "version": "1.0.0",
+            "trust_level": "verified",
+            "sha256": "a" * 64,
+        }
+        result = runner.invoke(
+            app,
+            ["plugin", "install", "bad-plugin", "--yes", "--skip-trust-check"],
+        )
+    assert result.exit_code != 0
+    assert result.exception is not None
+    assert "integrity verification" in str(result.exception)
+
+
+def test_plugin_update_with_sha256_downloads_and_verifies() -> None:
+    downloaded = Path("/tmp/autoship-pkg/pkg-a.whl")
+    plugins = [
+        PluginSpec(name="a", version="1.0.0", source="pkg-a", trust_level=TrustLevel.VERIFIED),
+    ]
+    with (
+        patch("autoship.cli.commands.plugin.PluginRegistry") as mock_reg,
+        patch("autoship.cli.commands.plugin.RegistryIndex") as mock_index,
+        patch(
+            "autoship.cli.commands.plugin._installed_version", return_value=parse_version("1.0.0")
+        ),
+        patch("autoship.cli.commands.plugin._run_pip_install") as mock_install,
+        patch("autoship.cli.commands.plugin.download_and_verify", return_value=downloaded),
+    ):
+        mock_reg.return_value.list.return_value = plugins
+        mock_reg.return_value.get.return_value = plugins[0]
+        mock_index.return_value.get.return_value = {
+            "version": "2.0.0",
+            "sha256": "a" * 64,
+        }
+        mock_install.return_value = subprocess.CompletedProcess(
+            args=["pip", "install", "--upgrade", str(downloaded)],
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+        result = runner.invoke(app, ["plugin", "update", "--all", "--yes"])
+    assert result.exit_code == 0
+    assert "Updated plugin: a -> 2.0.0" in result.output
+    mock_install.assert_called_once()
+    assert mock_install.call_args[0][1] == str(downloaded)
