@@ -1,3 +1,14 @@
+## 仓库说明
+
+**本仓库以 GitHub 为主仓，GitCode 为镜像。**
+
+- 主仓库地址：https://github.com/MS33834/autoship-cli
+- GitCode 镜像：https://gitcode.com/badhope/autoship-cli
+
+请直接在 **GitHub 主仓** 提交 Issue 和 Pull Request。GitCode 仅用于代码镜像，不处理 Issue/PR。
+
+---
+
 # 贡献指南
 
 感谢你对 AutoShip-CLI 的关注！我们欢迎并鼓励社区贡献。
