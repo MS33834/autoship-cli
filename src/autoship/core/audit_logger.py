@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import stat
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,6 +16,34 @@ import httpx
 from autoship.models.config import AppConfig
 
 logger = logging.getLogger("autoship")
+
+
+def _ensure_dir_permissions(path: Path, mode: int) -> None:
+    """Create ``path`` and enforce ``mode``, warning if it was too broad."""
+    path.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        _warn_if_too_broad(path, mode)
+        path.chmod(mode)
+
+
+def _ensure_file_permissions(path: Path, mode: int) -> None:
+    """Enforce ``mode`` on ``path``, warning if it was too broad."""
+    if path.exists():
+        _warn_if_too_broad(path, mode)
+    path.chmod(mode)
+
+
+def _warn_if_too_broad(path: Path, mode: int) -> None:
+    """Log a warning when ``path`` has permission bits beyond ``mode``."""
+    current = stat.S_IMODE(path.stat().st_mode)
+    if current & ~mode:
+        logger.warning(
+            "Permissions on %s (%04o) are too broad; tightening to %04o",
+            path,
+            current,
+            mode,
+        )
+
 
 # Common sensitive field names that should never be forwarded to a SIEM.
 SENSITIVE_KEYS = frozenset(
@@ -165,7 +194,7 @@ class AuditLogger:
     def _ensure_log_dir(self) -> None:
         """Create the log directory, tolerating permission errors."""
         try:
-            self.log_dir.mkdir(parents=True, exist_ok=True)
+            _ensure_dir_permissions(self.log_dir, 0o700)
         except OSError as exc:
             logger.warning("Cannot create audit log directory %s: %s", self.log_dir, exc)
 
@@ -186,6 +215,7 @@ class AuditLogger:
         try:
             with self.log_file.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(entry, default=str) + "\n")
+            _ensure_file_permissions(self.log_file, 0o600)
         except OSError as exc:
             logger.warning("Failed to write audit record for %s: %s", event, exc)
         self._forward_to_siem(entry)
@@ -237,6 +267,7 @@ class AuditLogger:
                 records.append(entry)
 
         output.write_text("".join(json.dumps(record) + "\n" for record in records))
+        _ensure_file_permissions(output, 0o600)
         return output
 
     def cleanup(self, retention_days: int | None = None) -> int:

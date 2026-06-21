@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import stat
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -189,3 +190,20 @@ def test_invalid_sha256_raises(tmp_path: Path) -> None:
         client = RegistryClient(config=config, cache_file=cache)
         with pytest.raises(RegistryError):
             client.get()
+
+
+def test_registry_cache_has_restrictive_permissions(tmp_path: Path) -> None:
+    """Registry cache directory and file are only owner-readable/writable."""
+    cache = tmp_path / "registry.json"
+    remote_data = {"version": 2, "plugins": [{"name": "remote"}]}
+
+    with patch("autoship.core.registry_client.httpx.get") as mock_get:
+        mock_get.return_value.json.return_value = remote_data
+        mock_get.return_value.raise_for_status = lambda: None
+        client = RegistryClient(cache_file=cache)
+        client.get()
+
+    assert cache.parent.exists()
+    assert stat.S_IMODE(cache.parent.stat().st_mode) == 0o700
+    assert cache.exists()
+    assert stat.S_IMODE(cache.stat().st_mode) == 0o600
