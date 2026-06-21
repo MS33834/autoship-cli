@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import stat
 from pathlib import Path
 
 import pytest
@@ -43,3 +44,13 @@ def test_persistence(tmp_path: Path) -> None:
 
     registry2 = PluginRegistry(registry_dir=tmp_path)
     assert registry2.get("persist") is not None
+
+
+def test_registry_has_restrictive_permissions(tmp_path: Path) -> None:
+    """Plugin registry directory and file are only owner-readable/writable."""
+    registry = PluginRegistry(registry_dir=tmp_path)
+    registry.add(PluginSpec(name="secure", source="local"))
+
+    assert stat.S_IMODE(tmp_path.stat().st_mode) == 0o700
+    assert registry.registry_file.exists()
+    assert stat.S_IMODE(registry.registry_file.stat().st_mode) == 0o600

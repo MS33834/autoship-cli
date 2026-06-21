@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -313,6 +314,37 @@ def test_audit_logger_exact_key_match_not_substring(
     assert payload["mytoken"] == "not-redacted-by-key"
     assert payload["api_key"] == "***"
     assert payload["token_value"] == "***"
+
+
+def test_audit_logger_sets_restrictive_permissions(tmp_path: Path) -> None:
+    """Audit log directory and file are only owner-readable/writable."""
+    log_dir = tmp_path / "logs"
+    config = AppConfig(audit_log_dir=log_dir)
+    audit = AuditLogger(config)
+
+    audit.record("test.permissions", {"status": "ok"})
+
+    assert audit.log_dir.exists()
+    assert stat.S_IMODE(audit.log_dir.stat().st_mode) == 0o700
+    assert audit.log_file.exists()
+    assert stat.S_IMODE(audit.log_file.stat().st_mode) == 0o600
+
+
+def test_audit_logger_export_sets_restrictive_permissions(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Exported audit files are only owner-readable/writable."""
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "audit.2099-01-01.jsonl"
+    log_file.write_text(json.dumps({"ts": "2099-01-01T00:00:00+00:00", "event": "x"}) + "\n")
+
+    config = AppConfig(audit_log_dir=log_dir)
+    audit = AuditLogger(config)
+    output = audit.export()
+
+    assert output.exists()
+    assert stat.S_IMODE(output.stat().st_mode) == 0o600
 
 
 def test_audit_logger_redact_unknown_fields(
