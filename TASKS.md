@@ -1,6 +1,6 @@
 # AutoShip-CLI 下一阶段任务清单
 
-> 状态：P0 与 P1-1 / P1-2 / P1-3 已完成并合并至 `main`。  
+> 状态：P0 与 P1-1 / P1-2 / P1-3 / P1-4 / P1-5 已完成并合并至 `main`。  
 > 本清单供团队承接剩余 **P1（短期内修复）** 与 **P2（中期改进）** 项使用。
 
 ---
@@ -24,8 +24,8 @@
 
 | 小组 | 负责范围 | 当前任务 |
 |------|----------|----------|
-| **安全组** | 审计日志脱敏、SIEM、文件权限、密钥/token 防护 | P1-5、P2-1、P2-6 |
-| **CLI 命令组** | 各子命令的输入校验与沙箱行为 | P1-4、P2-2、P2-4 |
+| **安全组** | 审计日志脱敏、SIEM、文件权限、密钥/token 防护 | P2-1、P2-6 |
+| **CLI 命令组** | 各子命令的输入校验与沙箱行为 | P2-2、P2-4 |
 | **基础设施组** | 配置中心、外部工具、Telemetry、环境变量 | P2-3、P2-5、P2-7 |
 | **模型网关组** | 模型后端错误处理与信息脱敏 | P2-8 |
 
@@ -79,8 +79,9 @@
   - 单元测试覆盖：常见 token 格式被替换、非敏感字段保留、嵌套字典生效。
 - **相关文件**：`src/autoship/core/audit_logger.py`、`tests/test_audit_logger.py`。
 
-### P1-4 `commit` 命令 EDITOR 校验
+### P1-4 `commit` 命令 EDITOR 校验 ✅
 
+- **状态**：已完成（PR #11 已合并）。
 - **问题**：`src/autoship/cli/commands/commit.py:88-99` 使用 `shlex.split` 解析 `EDITOR` 环境变量后执行，复杂 payload 仍可注入。
 - **影响**：高危（H4）。
 - **修复建议**：
@@ -92,8 +93,9 @@
   - 新增测试：合法编辑器通过、带分号的命令被拒绝、路径遍历被拒绝。
 - **相关文件**：`src/autoship/cli/commands/commit.py`、`src/autoship/models/config.py`。
 
-### P1-5 `verify` 失败日志脱敏与权限收紧
+### P1-5 `verify` 失败日志脱敏与权限收紧 ✅
 
+- **状态**：已完成（PR #12 已合并）。
 - **问题**：`src/autoship/cli/commands/verify.py:19-27` 将明文 stdout/stderr 写入 `~/.local/state/autoship/last_error.txt`，可能泄露密钥。
 - **影响**：高危（H5）。
 - **修复建议**：
