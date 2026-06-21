@@ -173,6 +173,8 @@ class AuditLogger:
         self.log_file = self.log_dir / f"audit.{today}.jsonl"
         self._context: dict[str, Any] = {}
         self._siem_client: httpx.Client | None = None
+        self._siem_failures: int = 0
+        self._siem_disabled: bool = False
         if config.audit.siem_enabled and config.audit.siem_url:
             headers: dict[str, str] = {}
             if config.audit.siem_token:
@@ -358,10 +360,23 @@ class AuditLogger:
 
         The record is redacted before transmission to avoid leaking tokens,
         credentials, or other secrets.
+
+        After ``config.audit.siem_max_failures`` consecutive failures, SIEM
+        forwarding is disabled and a warning is emitted to avoid spamming a
+        down endpoint.
         """
-        if self._siem_client is None:
+        if self._siem_client is None or getattr(self, "_siem_disabled", False):
             return
         try:
             self._siem_client.post("", json=self._redact(entry))
         except httpx.HTTPError as exc:
+            self._siem_failures = getattr(self, "_siem_failures", 0) + 1
             logger.debug("Failed to forward audit record to SIEM: %s", exc)
+            if self._siem_failures >= self.config.audit.siem_max_failures:
+                self._siem_disabled = True
+                logger.warning(
+                    "SIEM forwarding has failed %d consecutive times and is now disabled.",
+                    self._siem_failures,
+                )
+        else:
+            self._siem_failures = 0

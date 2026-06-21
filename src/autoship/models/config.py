@@ -103,6 +103,7 @@ class AuditConfig(BaseModel):
     siem_token: str | None = Field(default=None, repr=False)
     retention_days: int = 30
     redact_unknown_fields: bool = False
+    siem_max_failures: int = 3
 
 
 class SandboxConfig(BaseModel):

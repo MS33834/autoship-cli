@@ -382,3 +382,47 @@ def test_audit_logger_redact_unknown_fields(
     assert payload["unknown_field"] == "***"
     assert payload["details"]["value"] == "kept"
     assert payload["details"]["another_unknown"] == "***"
+
+
+def test_audit_logger_disables_siem_after_consecutive_failures(
+    project_root: Path, app_config: AppConfig, monkeypatch, caplog
+) -> None:
+    log_dir = project_root / "logs"
+
+    class FailingClient:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def post(self, _path: str, *, json: object) -> None:
+            self.calls += 1
+            raise httpx.ConnectError("connection refused")
+
+    def _init(self: AuditLogger, config: AppConfig) -> None:
+        self.config = config
+        self.config.audit.siem_enabled = True
+        self.config.audit.siem_url = "https://siem.example.com"
+        self.config.audit.siem_max_failures = 2
+        self.trace_id = "trace-siem-failures"
+        self.log_dir = log_dir
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.log_file = self.log_dir / "audit.test.jsonl"
+        self._siem_client = FailingClient()
+        self._context = {}
+        self._siem_failures = 0
+        self._siem_disabled = False
+
+    monkeypatch.setattr(AuditLogger, "__init__", _init)
+    audit = AuditLogger(app_config)
+
+    with caplog.at_level("WARNING", logger="autoship"):
+        audit.record("test.siem_1", {"status": "value"})
+        audit.record("test.siem_2", {"status": "value"})
+        # After 2 failures, forwarding should be disabled.
+        audit.record("test.siem_3", {"status": "value"})
+
+    assert audit._siem_disabled is True
+    assert audit._siem_failures == 2
+    assert "SIEM forwarding has failed 2 consecutive times" in caplog.text
+    # The failing client should have been called exactly twice, not three times.
+    assert audit._siem_client is not None
+    assert audit._siem_client.calls == 2
