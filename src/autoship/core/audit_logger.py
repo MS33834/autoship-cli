@@ -54,6 +54,19 @@ _SENSITIVE_VALUE_PATTERNS = tuple(
     )
 )
 
+
+def redact_text(text: str) -> str:
+    """Redact a free-form string when it contains a secret-like pattern.
+
+    This mirrors ``AuditLogger._redact_scalar`` so that unstructured text such
+    as command stdout/stderr can be sanitized without an ``AuditLogger``
+    instance.
+    """
+    if any(pattern.search(text) for pattern in _SENSITIVE_VALUE_PATTERNS):
+        return "***"
+    return text
+
+
 # Keys that are safe to retain when ``redact_unknown_fields`` is enabled.
 _SAFE_KEYS = frozenset(
     {
@@ -292,10 +305,8 @@ class AuditLogger:
 
     def _redact_scalar(self, value: Any) -> Any:
         """Redact a scalar value if it contains a secret-like pattern."""
-        if isinstance(value, str) and any(
-            pattern.search(value) for pattern in _SENSITIVE_VALUE_PATTERNS
-        ):
-            return "***"
+        if isinstance(value, str):
+            return redact_text(value)
         return value
 
     def _redact_unknown_value(self, value: Any) -> Any:
