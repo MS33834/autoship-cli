@@ -51,6 +51,21 @@ class CommitConfig(BaseModel):
     max_tokens: int = 512
     conventional_commits: bool = True
     auto_push: bool = False
+    allowed_editors: list[str] = Field(
+        default_factory=lambda: [
+            "vim",
+            "nvim",
+            "vi",
+            "emacs",
+            "nano",
+            "code",
+            "subl",
+            "micro",
+            "helix",
+            "hx",
+        ],
+        description="Allowed editors for the commit command. Only the first token of $EDITOR is used.",
+    )
 
 
 class SecurityThreshold(str, Enum):

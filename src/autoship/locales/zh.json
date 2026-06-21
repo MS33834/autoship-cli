@@ -26,6 +26,8 @@
   "commit.dry_run": "[dry-run] 将使用以下信息提交：\n{message}",
   "commit.done": "已提交：{message}",
   "commit.editor_error": "编辑器以代码 {code} 退出；提交信息未保存。",
+  "commit.editor_disallowed": "编辑器值不被允许：{editor}",
+  "commit.editor_unknown": "编辑器 '{editor}' 不在白名单中。允许的编辑器：{allowed}",
 
   "init.help": "为当前项目初始化 AutoShip 配置文件。",
   "init.option.type": "覆盖项目类型",
