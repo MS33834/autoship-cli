@@ -106,6 +106,7 @@
   "fix.patch_failed": "应用补丁失败：{reason}",
   "fix.patch_no_tool": "当前环境没有 git 或 patch 工具来应用补丁。",
   "fix.patch_unsafe_paths": "补丁包含不安全的文件路径，将不会应用。",
+  "fix.reading_files": "正在为上下文读取项目文件：{files}",
 
   "doctor.help": "诊断 AutoShip 环境和依赖。",
   "doctor.option.json": "以 JSON 格式输出报告",

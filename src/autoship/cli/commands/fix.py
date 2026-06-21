@@ -14,6 +14,17 @@ app = typer.Typer()
 
 ERROR_LOG_PATH = Path.home() / ".local" / "state" / "autoship" / "last_error.txt"
 
+ALLOWED_EXTENSIONS = {
+    ".py",
+    ".toml",
+    ".cfg",
+    ".ini",
+    ".yaml",
+    ".yml",
+    ".json",
+}
+MAX_FILE_SIZE = 50 * 1024  # 50 KiB
+
 
 SYSTEM_PROMPT = (
     "You are an expert software engineer. A verification command failed. "
@@ -51,7 +62,9 @@ def fix(
     if not config.llm.api_key and config.llm.provider.value in ("openai", "openrouter"):
         raise typer.BadParameter(i18n._("fix.missing_api_key", provider=config.llm.provider.value))
 
-    user_prompt = _build_prompt(error_context, config.project_root)
+    user_prompt, read_paths = _build_prompt(error_context, config.project_root)
+    if read_paths:
+        typer.echo(i18n._("fix.reading_files", files=", ".join(read_paths)))
 
     typer.echo(i18n._("fix.thinking"))
     client = LlmClient(config.llm)
@@ -67,37 +80,71 @@ def fix(
         _apply_patch(config.project_root, patch, i18n)
 
 
-def _build_prompt(error_context: str, project_root: Path) -> str:
-    relevant_files = _collect_relevant_files(project_root, error_context)
+def _build_prompt(error_context: str, project_root: Path) -> tuple[str, list[str]]:
+    relevant_files, read_paths = _collect_relevant_files(project_root, error_context)
     files_section = ""
     if relevant_files:
         files_section = "\n\nRelevant project files:\n" + "\n".join(
             f"--- {path} ---\n{content[:2000]}" for path, content in relevant_files.items()
         )
-    return f"Verification failed with the following output:\n\n{error_context}{files_section}"
+    prompt = f"Verification failed with the following output:\n\n{error_context}{files_section}"
+    return prompt, read_paths
 
 
-def _collect_relevant_files(project_root: Path, error_context: str) -> dict[str, str]:
-    """Best-effort extraction of file paths from the error context."""
+def _is_within_project(path: Path, project_root: Path) -> bool:
+    """Return True when ``path`` resolves to a location inside ``project_root``."""
+    try:
+        resolved = path.resolve()
+        root = project_root.resolve()
+        return resolved.is_relative_to(root)
+    except (OSError, ValueError, RuntimeError):
+        return False
+
+
+def _collect_relevant_files(project_root: Path, error_context: str) -> tuple[dict[str, str], list[str]]:
+    """Best-effort extraction of file paths from the error context.
+
+    Only files that resolve inside ``project_root``, have an allowed extension,
+    and are smaller than ``MAX_FILE_SIZE`` are returned.
+    """
     files: dict[str, str] = {}
+    read_paths: list[str] = []
+    root = project_root.resolve()
+
     for token in error_context.split():
         token = token.strip("'\":(),")
+        if not token or ".." in Path(token).parts:
+            continue
+
         path = Path(token)
         if not path.is_absolute():
             path = project_root / path
-        if (
-            path.exists()
-            and path.is_file()
-            and path.suffix in {".py", ".toml", ".cfg", ".ini", ".yaml", ".yml"}
-        ):
-            try:
-                rel = path.relative_to(project_root)
-                files[str(rel)] = path.read_text(encoding="utf-8")
-            except (OSError, ValueError):
+
+        if not _is_within_project(path, project_root):
+            continue
+
+        resolved = path.resolve()
+        if resolved.suffix.lower() not in ALLOWED_EXTENSIONS:
+            continue
+        if not resolved.is_file():
+            continue
+
+        try:
+            if resolved.stat().st_size > MAX_FILE_SIZE:
                 continue
+            content = resolved.read_text(encoding="utf-8")
+            rel = resolved.relative_to(root)
+            rel_str = str(rel)
+            if rel_str not in files:
+                files[rel_str] = content
+                read_paths.append(rel_str)
+        except (OSError, ValueError):
+            continue
+
         if len(files) >= 3:
             break
-    return files
+
+    return files, read_paths
 
 
 def _extract_patch(response: str) -> str | None:

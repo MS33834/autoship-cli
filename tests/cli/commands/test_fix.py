@@ -88,8 +88,48 @@ def test_collect_relevant_files(tmp_path: Path) -> None:
     py_file = tmp_path / "module.py"
     py_file.write_text("x = 1", encoding="utf-8")
     error_context = f"Error in {py_file}"
-    files = fix_module._collect_relevant_files(tmp_path, error_context)
+    files, read_paths = fix_module._collect_relevant_files(tmp_path, error_context)
     assert "module.py" in files
+    assert "module.py" in read_paths
+
+
+def test_collect_relevant_files_rejects_outside_project(tmp_path: Path) -> None:
+    outside = tmp_path.parent / "outside.py"
+    outside.write_text("x = 1", encoding="utf-8")
+    files, read_paths = fix_module._collect_relevant_files(tmp_path, str(outside))
+    assert not files
+    assert not read_paths
+
+
+def test_collect_relevant_files_rejects_traversal(tmp_path: Path) -> None:
+    parent_file = tmp_path.parent / "parent.py"
+    parent_file.write_text("x = 1", encoding="utf-8")
+    files, read_paths = fix_module._collect_relevant_files(tmp_path, "../parent.py")
+    assert not files
+    assert not read_paths
+
+
+def test_collect_relevant_files_rejects_bad_extension(tmp_path: Path) -> None:
+    secret = tmp_path / "secret.txt"
+    secret.write_text("ssh-key", encoding="utf-8")
+    files, _ = fix_module._collect_relevant_files(tmp_path, str(secret))
+    assert "secret.txt" not in files
+
+
+def test_collect_relevant_files_respects_size_limit(tmp_path: Path) -> None:
+    big = tmp_path / "big.py"
+    big.write_text("x" * (fix_module.MAX_FILE_SIZE + 1), encoding="utf-8")
+    files, _ = fix_module._collect_relevant_files(tmp_path, str(big))
+    assert "big.py" not in files
+
+
+def test_collect_relevant_files_rejects_symlink_outside_project(tmp_path: Path) -> None:
+    outside = tmp_path.parent / "outside.py"
+    outside.write_text("x = 1", encoding="utf-8")
+    link = tmp_path / "link.py"
+    link.symlink_to(outside)
+    files, _ = fix_module._collect_relevant_files(tmp_path, str(link))
+    assert not files
 
 
 def test_apply_patch_with_git(tmp_path: Path) -> None:
