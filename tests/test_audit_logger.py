@@ -238,3 +238,115 @@ def test_audit_logger_siem_failure_is_best_effort(
     audit.record("test.siem_fail", {"status": "value"})
 
     assert audit.log_file.exists()
+
+
+def test_audit_logger_redacts_secret_values_by_pattern(
+    project_root: Path, app_config: AppConfig, monkeypatch
+) -> None:
+    log_dir = project_root / "logs"
+
+    def _init(self: AuditLogger, config: AppConfig) -> None:
+        self.config = config
+        self.trace_id = "trace-pattern"
+        self.log_dir = log_dir
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.log_file = self.log_dir / "audit.test.jsonl"
+        self._siem_client = None
+        self._context = {}
+
+    monkeypatch.setattr(AuditLogger, "__init__", _init)
+    audit = AuditLogger(app_config)
+
+    github_token = "ghp_" + "a" * 36
+    openai_key = "sk-" + "b" * 48
+    audit.record(
+        "test.patterns",
+        {
+            "message": f"Authorization: Bearer {github_token}",
+            "openai_api_key": openai_key,
+            "aws_key": "AKIAIOSFODNN7EXAMPLE",
+            "nested": {
+                "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+            },
+            "safe": "plain text without secrets",
+        },
+    )
+
+    lines = audit.log_file.read_text().strip().splitlines()
+    entry = json.loads(lines[0])
+    payload = entry["payload"]
+    assert payload["message"] == "***"
+    assert payload["openai_api_key"] == "***"
+    assert payload["aws_key"] == "***"
+    assert payload["nested"]["jwt"] == "***"
+    assert payload["safe"] == "plain text without secrets"
+
+
+def test_audit_logger_exact_key_match_not_substring(
+    project_root: Path, app_config: AppConfig, monkeypatch
+) -> None:
+    log_dir = project_root / "logs"
+
+    def _init(self: AuditLogger, config: AppConfig) -> None:
+        self.config = config
+        self.trace_id = "trace-exact"
+        self.log_dir = log_dir
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.log_file = self.log_dir / "audit.test.jsonl"
+        self._siem_client = None
+        self._context = {}
+
+    monkeypatch.setattr(AuditLogger, "__init__", _init)
+    audit = AuditLogger(app_config)
+
+    audit.record(
+        "test.exact",
+        {
+            "mytoken": "not-redacted-by-key",
+            "api_key": "redacted-by-key",
+            "token_value": "ghp_" + "c" * 36,
+        },
+    )
+
+    lines = audit.log_file.read_text().strip().splitlines()
+    payload = json.loads(lines[0])["payload"]
+    assert payload["mytoken"] == "not-redacted-by-key"
+    assert payload["api_key"] == "***"
+    assert payload["token_value"] == "***"
+
+
+def test_audit_logger_redact_unknown_fields(
+    project_root: Path, app_config: AppConfig, monkeypatch
+) -> None:
+    log_dir = project_root / "logs"
+
+    def _init(self: AuditLogger, config: AppConfig) -> None:
+        self.config = config
+        self.config.audit.redact_unknown_fields = True
+        self.trace_id = "trace-unknown"
+        self.log_dir = log_dir
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.log_file = self.log_dir / "audit.test.jsonl"
+        self._siem_client = None
+        self._context = {}
+
+    monkeypatch.setattr(AuditLogger, "__init__", _init)
+    audit = AuditLogger(app_config)
+
+    audit.record(
+        "test.unknown",
+        {
+            "command": "deploy",
+            "returncode": 0,
+            "unknown_field": "secret",
+            "details": {"value": "kept", "another_unknown": "data"},
+        },
+    )
+
+    lines = audit.log_file.read_text().strip().splitlines()
+    payload = json.loads(lines[0])["payload"]
+    assert payload["command"] == "deploy"
+    assert payload["returncode"] == 0
+    assert payload["unknown_field"] == "***"
+    assert payload["details"]["value"] == "kept"
+    assert payload["details"]["another_unknown"] == "***"
