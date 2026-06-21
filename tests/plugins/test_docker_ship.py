@@ -82,3 +82,51 @@ def test_docker_ship_pushes_when_configured(docker_context: CommandContext) -> N
 
     cmd = mock_run.call_args[0][0]
     assert cmd == ["/usr/bin/docker", "push", "myapp:v1"]
+
+
+def test_docker_ship_build_args_passed(docker_context: CommandContext) -> None:
+    docker_context.config.docker_ship.build_args = {
+        "VERSION": "1.0.0",
+        "BUILD_DATE": "2026-06-21",
+    }
+    with (
+        patch("shutil.which", return_value="/usr/bin/docker"),
+        patch("subprocess.run") as mock_run,
+    ):
+        docker_ship.plugin.pre_upload(docker_context)
+
+    cmd = mock_run.call_args[0][0]
+    assert "VERSION=1.0.0" in cmd
+    assert "BUILD_DATE=2026-06-21" in cmd
+
+
+def test_docker_ship_invalid_build_arg_key_skipped(
+    docker_context: CommandContext, caplog: pytest.LogCaptureFixture
+) -> None:
+    docker_context.config.docker_ship.build_args = {"9bad": "value", "GOOD": "value"}
+    with (
+        patch("shutil.which", return_value="/usr/bin/docker"),
+        patch("subprocess.run") as mock_run,
+    ):
+        docker_ship.plugin.pre_upload(docker_context)
+
+    cmd = " ".join(mock_run.call_args[0][0])
+    assert "GOOD=value" in cmd
+    assert "9bad" not in cmd
+    assert "invalid key" in caplog.text
+
+
+def test_docker_ship_dangerous_build_arg_value_skipped(
+    docker_context: CommandContext, caplog: pytest.LogCaptureFixture
+) -> None:
+    docker_context.config.docker_ship.build_args = {"CMD": "foo$(bar)", "SAFE": "ok"}
+    with (
+        patch("shutil.which", return_value="/usr/bin/docker"),
+        patch("subprocess.run") as mock_run,
+    ):
+        docker_ship.plugin.pre_upload(docker_context)
+
+    cmd = " ".join(mock_run.call_args[0][0])
+    assert "SAFE=ok" in cmd
+    assert "foo$(bar)" not in cmd
+    assert "shell metacharacters" in caplog.text
