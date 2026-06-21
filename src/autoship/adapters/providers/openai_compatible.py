@@ -13,6 +13,7 @@ from autoship.adapters.model_gateway import (
     ChatCompletionResponse,
     ModelGateway,
 )
+from autoship.adapters.providers._utils import format_provider_error
 from autoship.exceptions import ModelGatewayError
 from autoship.models.config import ModelBackendConfig
 
@@ -89,18 +90,8 @@ class OpenAIGateway(ModelGateway):
                 resp = await client.post("chat/completions", json=payload)
                 resp.raise_for_status()
                 data = resp.json()
-            except httpx.HTTPStatusError as exc:
-                raise ModelGatewayError(
-                    f"{self.PROVIDER_NAME} returned HTTP {exc.response.status_code}"
-                ) from exc
-            except httpx.RequestError as exc:
-                if isinstance(exc, httpx.TimeoutException):
-                    msg = f"{self.PROVIDER_NAME} request timed out"
-                else:
-                    msg = f"{self.PROVIDER_NAME} request failed: {exc}"
-                raise ModelGatewayError(msg) from exc
-            except ValueError as exc:
-                raise ModelGatewayError(f"{self.PROVIDER_NAME} returned invalid JSON") from exc
+            except (httpx.HTTPStatusError, httpx.RequestError, ValueError) as exc:
+                raise ModelGatewayError(format_provider_error(self.PROVIDER_NAME, exc)) from exc
 
             try:
                 content = data["choices"][0]["message"]["content"]
