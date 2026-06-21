@@ -25,7 +25,7 @@
 | 小组 | 负责范围 | 当前任务 |
 |------|----------|----------|
 | **安全组** | 审计日志脱敏、SIEM、文件权限、密钥/token 防护 | P2-1、P2-6 |
-| **CLI 命令组** | 各子命令的输入校验与沙箱行为 | P2-4 |
+| **CLI 命令组** | 各子命令的输入校验与沙箱行为 | - |
 | **基础设施组** | 配置中心、外部工具、Telemetry、环境变量 | P2-3、P2-5、P2-7 |
 | **模型网关组** | 模型后端错误处理与信息脱敏 | P2-8 |
 
@@ -143,8 +143,9 @@
 - **完成标准**：至少对 `git`, `docker`, `twine`, `gh`, `patch` 提供可选的绝对路径/哈希校验配置。
 - **相关文件**：`src/autoship/adapters/tool_adapter.py`、`src/autoship/adapters/upload/*.py`。
 
-### P2-4 `docker_ship` 插件 `build_args` 校验
+### P2-4 `docker_ship` 插件 `build_args` 校验 ✅
 
+- **状态**：已完成（本 PR）。
 - **问题**：`src/autoship/plugins/docker_ship.py:42-44` 将配置读取的 `build_args` 直接传入 `docker build`，`foo=$(...)` 在 Dockerfile 中仍可能被 shell 解析。
 - **影响**：中危（M4）。
 - **修复建议**：
