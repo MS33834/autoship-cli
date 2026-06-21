@@ -10,6 +10,8 @@ from autoship.core.config_center import (
     _coerce_env_value,
     _deep_merge,
     _env_to_dict,
+    _env_var_name,
+    _filter_env_cfg,
     _find_project_root,
     load_config,
 )
@@ -87,3 +89,44 @@ def test_deep_merge() -> None:
     merged = _deep_merge(base, override)
     assert merged["a"] == 1
     assert merged["b"] == {"c": 99, "d": 3}
+
+
+def test_env_var_name() -> None:
+    assert _env_var_name(["log", "level"]) == "AUTOSHIP_LOG__LEVEL"
+
+
+def test_filter_env_cfg_allows_allowlisted_keys() -> None:
+    assert _filter_env_cfg({"log_level": "DEBUG", "clean": {"enabled": False}}) == {
+        "log_level": "DEBUG",
+        "clean": {"enabled": False},
+    }
+
+
+def test_filter_env_cfg_blocks_sensitive_keys() -> None:
+    assert _filter_env_cfg({"api_key": "secret"}) == {}
+
+
+def test_filter_env_cfg_blocks_unknown_keys(caplog) -> None:
+    assert _filter_env_cfg({"unknown_field": "value"}) == {}
+    assert "AUTOSHIP_UNKNOWN_FIELD" in caplog.text
+    assert "not in allowlist" in caplog.text
+
+
+def test_filter_env_cfg_blocks_nested_sensitive_keys(caplog) -> None:
+    assert _filter_env_cfg({"model": {"backends": {"0": {"api_key": "secret"}}}}) == {}
+    assert "AUTOSHIP_MODEL__BACKENDS__0__API_KEY" in caplog.text
+    assert "sensitive" in caplog.text
+
+
+def test_load_config_respects_allowlisted_env_vars(monkeypatch, project_root: Path) -> None:
+    monkeypatch.setenv("AUTOSHIP_LOG_LEVEL", "DEBUG")
+    monkeypatch.setenv("AUTOSHIP_CLEAN__ENABLED", "false")
+    cfg = load_config(project_root=project_root)
+    assert cfg.log_level == "DEBUG"
+    assert cfg.clean.enabled is False
+
+
+def test_load_config_ignores_sensitive_env_vars(monkeypatch, project_root: Path) -> None:
+    monkeypatch.setenv("AUTOSHIP_LLM__API_KEY", "secret-key")
+    cfg = load_config(project_root=project_root)
+    assert cfg.llm.api_key is None

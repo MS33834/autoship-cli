@@ -131,8 +131,9 @@
 - **完成标准**：`_collect_relevant_files` 加入路径与扩展名校验。
 - **相关文件**：`src/autoship/cli/commands/fix.py`。
 
-### P2-3 外部工具 PATH 污染防护
+### P2-3 外部工具 PATH 污染防护 ✅
 
+- **状态**：已完成（本 PR）。
 - **问题**：`src/autoship/adapters/tool_adapter.py:54-62`、`src/autoship/adapters/upload/docker.py:40-47` 等依赖外部工具，PATH 污染可导致执行恶意二进制。
 - **影响**：中危（M3）。
 - **修复建议**：
@@ -151,8 +152,9 @@
 - **完成标准**：危险字符/键名被拒绝或转义，并记录警告。
 - **相关文件**：`src/autoship/plugins/docker_ship.py`。
 
-### P2-5 环境变量覆盖配置白名单
+### P2-5 环境变量覆盖配置白名单 ✅
 
+- **状态**：已完成（本 PR）。
 - **问题**：`src/autoship/core/config_center.py:74-108`、`133-193` 允许 `AUTOSHIP_DOCKER_SHIP__ENABLED=1` 等任意覆盖。
 - **影响**：中危（M5）。
 - **修复建议**：
@@ -170,8 +172,9 @@
 - **完成标准**：SIEM 连续失败 N 次后输出告警并停用转发。
 - **相关文件**：`src/autoship/core/audit_logger.py`。
 
-### P2-7 Telemetry 端点校验
+### P2-7 Telemetry 端点校验 ✅
 
+- **状态**：已完成（本 PR）。
 - **问题**：`src/autoship/core/telemetry.py:54-142` 端点来自环境变量且未校验 URL 格式。
 - **影响**：低危（L2）。
 - **修复建议**：校验 `endpoint` 为 HTTPS URL，默认仅允许已知域名或要求用户显式启用。

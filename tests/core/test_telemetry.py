@@ -60,14 +60,58 @@ def test_collector_records_exception_info(telemetry_log: Path) -> None:
 def test_collector_sends_to_endpoint_when_configured(telemetry_log: Path) -> None:
     collector = TelemetryCollector(
         enabled=True,
-        endpoint="https://example.com/telemetry",
+        endpoint="https://telemetry.autoship.dev/v1/events",
         log_dir=telemetry_log.parent,
     )
     with patch("autoship.core.telemetry.httpx.post") as mock_post:
         collector.record("upload", time.perf_counter(), 0)
     mock_post.assert_called_once()
     call = mock_post.call_args
-    assert call.kwargs["timeout"] == 5.0
+    assert call.kwargs["timeout"] == collector.timeout
+
+
+def test_collector_accepts_untrusted_endpoint_when_allowed(telemetry_log: Path) -> None:
+    collector = TelemetryCollector(
+        enabled=True,
+        endpoint="https://example.com/telemetry",
+        log_dir=telemetry_log.parent,
+        allow_untrusted=True,
+    )
+    assert collector.endpoint == "https://example.com/telemetry"
+
+
+def test_collector_rejects_http_endpoint(telemetry_log: Path) -> None:
+    collector = TelemetryCollector(
+        enabled=True,
+        endpoint="http://telemetry.autoship.dev/v1/events",
+        log_dir=telemetry_log.parent,
+    )
+    assert collector.endpoint is None
+
+
+def test_collector_rejects_untrusted_https_endpoint(telemetry_log: Path) -> None:
+    collector = TelemetryCollector(
+        enabled=True,
+        endpoint="https://example.com/telemetry",
+        log_dir=telemetry_log.parent,
+    )
+    assert collector.endpoint is None
+
+
+def test_collector_timeout_from_env(monkeypatch) -> None:
+    monkeypatch.setenv("AUTOSHIP_TELEMETRY_TIMEOUT", "10")
+    collector = TelemetryCollector()
+    assert collector.timeout == 10.0
+
+
+def test_collector_timeout_bounds(monkeypatch) -> None:
+    monkeypatch.setenv("AUTOSHIP_TELEMETRY_TIMEOUT", "999")
+    collector = TelemetryCollector()
+    assert collector.timeout == 5.0
+
+    monkeypatch.setenv("AUTOSHIP_TELEMETRY_TIMEOUT", "not-a-number")
+    collector = TelemetryCollector()
+    assert collector.timeout == 5.0
 
 
 def test_event_to_dict() -> None:

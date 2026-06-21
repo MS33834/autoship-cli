@@ -37,14 +37,19 @@ def test_fix_empty_error_log(tmp_path: Path) -> None:
     assert "empty" in result.output
 
 
-def test_fix_calls_llm_and_shows_suggestion(tmp_path: Path) -> None:
+def _write_config_with_api_key(root: Path) -> None:
+    """Create a project config that supplies an LLM API key for tests."""
+    config_file = root / ".autoship.toml"
+    config_file.write_text('[llm]\napi_key = "fake-key"\n', encoding="utf-8")
+
+
+def test_fix_calls_llm_and_shows_suggestion(tmp_path: Path, monkeypatch) -> None:
+    _write_config_with_api_key(tmp_path)
+    monkeypatch.chdir(tmp_path)
     error_log = tmp_path / "error.txt"
     error_log.write_text("NameError: name 'x' is not defined", encoding="utf-8")
 
-    with (
-        patch.dict("os.environ", {"AUTOSHIP_LLM__API_KEY": "fake-key"}, clear=False),
-        patch("autoship.cli.commands.fix.LlmClient") as mock_client,
-    ):
+    with patch("autoship.cli.commands.fix.LlmClient") as mock_client:
         mock_client.return_value.chat.return_value = "Add `x = 0` before usage."
         result = runner.invoke(app, ["fix", str(error_log)])
 
@@ -52,14 +57,15 @@ def test_fix_calls_llm_and_shows_suggestion(tmp_path: Path) -> None:
     assert "Add `x = 0`" in result.output
 
 
-def test_fix_yes_flag_applies_patch(tmp_path: Path) -> None:
+def test_fix_yes_flag_applies_patch(tmp_path: Path, monkeypatch) -> None:
+    _write_config_with_api_key(tmp_path)
+    monkeypatch.chdir(tmp_path)
     error_log = tmp_path / "error.txt"
     error_log.write_text("error", encoding="utf-8")
 
     patch_text = "--- a/file.txt\n+++ b/file.txt\n@@ -1 +1 @@\n-old\n+new"
 
     with (
-        patch.dict("os.environ", {"AUTOSHIP_LLM__API_KEY": "fake-key"}, clear=False),
         patch("autoship.cli.commands.fix.LlmClient") as mock_client,
         patch("autoship.cli.commands.fix._apply_patch") as mock_apply,
     ):

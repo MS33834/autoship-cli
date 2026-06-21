@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any, cast
@@ -10,6 +11,8 @@ from pydantic import ValidationError
 
 from autoship.exceptions import ConfigError
 from autoship.models.config import AppConfig
+
+logger = logging.getLogger("autoship")
 
 try:
     import tomllib  # pyright: ignore[reportMissingImports, reportMissingTypeStubs]
@@ -24,6 +27,69 @@ GLOBAL_CONFIG_DIR = Path.home() / ".config" / "autoship"
 GLOBAL_CONFIG_FILE = GLOBAL_CONFIG_DIR / "config.toml"
 ENV_PREFIX = "AUTOSHIP_"
 SUPPORTED_CLEAN_TOOLS = {"autoflake", "black", "isort", "ruff"}
+
+# Environment variables may only override fields explicitly listed here.
+# Sensitive keys are blocked regardless of whether they appear in this list.
+SENSITIVE_ENV_KEYS = frozenset({"siem_url", "siem_token", "base_url", "api_key"})
+ENV_ALLOWLIST = frozenset({
+    "log_level",
+    "telemetry_enabled",
+    "locale",
+    "clean.enabled",
+    "clean.tools",
+    "clean.dry_run",
+    "clean.exclude",
+    "commit.enabled",
+    "commit.max_tokens",
+    "commit.conventional_commits",
+    "commit.auto_push",
+    "commit.allowed_editors",
+    "security.enabled",
+    "security.tools",
+    "security.threshold",
+    "security.fail_fast",
+    "audit.log_dir",
+    "audit.retention_days",
+    "audit.redact_unknown_fields",
+    "audit.siem_enabled",
+    "audit.siem_max_failures",
+    "sandbox.required",
+    "web_search.enabled",
+    "web_search.provider",
+    "web_search.max_results",
+    "web_search.timeout",
+    "web_search.instance_url",
+    "docker_ship.enabled",
+    "docker_ship.default_image",
+    "docker_ship.default_tag",
+    "docker_ship.push",
+    "docker_ship.build_args",
+    "model.default_tier",
+    "model.fallback",
+    "verify.allowed_commands",
+    "cache.enabled",
+    "cache.ttl",
+    "cache.dir",
+    "registry.url",
+    "registry.cache_enabled",
+    "registry.cache_ttl_seconds",
+    "registry.public_key",
+    "llm.provider",
+    "llm.model",
+    "llm.timeout",
+    "llm.max_tokens",
+    "llm.api_version",
+    "tools.git.path",
+    "tools.git.sha256",
+    "tools.docker.path",
+    "tools.docker.sha256",
+    "tools.twine.path",
+    "tools.twine.sha256",
+    "tools.gh.path",
+    "tools.gh.sha256",
+    "tools.patch.path",
+    "tools.patch.sha256",
+})
 
 
 def _default_config() -> dict[str, Any]:
@@ -88,6 +154,39 @@ def _env_to_dict(prefix: str = ENV_PREFIX) -> dict[str, Any]:
             target = target.setdefault(part, {})
         target[path[-1]] = _coerce_env_value(value)
     return result
+
+
+def _env_var_name(path: list[str]) -> str:
+    """Reconstruct the original environment variable name for a path."""
+    return f"{ENV_PREFIX}{'__'.join(path).upper()}"
+
+
+def _filter_env_cfg(cfg: dict[str, Any], path: list[str] | None = None) -> dict[str, Any]:
+    """Drop environment overrides that are not in the allowlist or are sensitive.
+
+    Only leaf values are checked. Nested dictionaries are recursed into and kept
+    only if they contain at least one allowed leaf.
+    """
+    path = path or []
+    filtered: dict[str, Any] = {}
+    for key, value in cfg.items():
+        current = [*path, key]
+        if isinstance(value, dict):
+            nested = _filter_env_cfg(cast(dict[str, Any], value), current)
+            if nested:
+                filtered[key] = nested
+            continue
+        dotted = ".".join(current)
+        if key in SENSITIVE_ENV_KEYS or dotted not in ENV_ALLOWLIST:
+            reason = "sensitive" if key in SENSITIVE_ENV_KEYS else "not in allowlist"
+            logger.warning(
+                "Ignoring disallowed environment override %s (%s)",
+                _env_var_name(current),
+                reason,
+            )
+            continue
+        filtered[key] = value
+    return filtered
 
 
 def _coerce_env_value(value: str) -> Any:
@@ -174,8 +273,8 @@ def load_config(
 
     merged = _deep_merge(merged, project_cfg)
 
-    # Environment variables
-    env_cfg = _env_to_dict()
+    # Environment variables (filtered by allowlist)
+    env_cfg = _filter_env_cfg(_env_to_dict())
     merged = _deep_merge(merged, env_cfg)
 
     # CLI overrides
