@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import logging
+import stat
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -248,3 +251,60 @@ def test_apply_patch_no_tools(app_config: AppConfig) -> None:
 
     assert applied is False
     assert "Neither git nor patch" in reason
+
+
+def test_write_error_log_redacts_secrets(monkeypatch, tmp_path: Path) -> None:
+    """Secrets embedded in stdout/stderr must be masked before persistence."""
+    error_dir = tmp_path / "autoship"
+    error_file = error_dir / "last_error.txt"
+    monkeypatch.setattr(verify, "ERROR_LOG_DIR", error_dir)
+    monkeypatch.setattr(verify, "ERROR_LOG_PATH", error_file)
+
+    token = "ghp_" + "a" * 36
+    stdout = "cloning into repo"
+    stderr = f"fatal: Authentication failed for https://user:{token}@github.com"
+
+    verify._write_error_log(stdout, stderr)
+
+    content = error_file.read_text(encoding="utf-8")
+    assert token not in content
+    assert "***" in content
+    assert stdout in content
+
+
+def test_write_error_log_sets_permissions(monkeypatch, tmp_path: Path) -> None:
+    """The error log directory and file must be readable only by the owner."""
+    error_dir = tmp_path / "autoship"
+    error_file = error_dir / "last_error.txt"
+    monkeypatch.setattr(verify, "ERROR_LOG_DIR", error_dir)
+    monkeypatch.setattr(verify, "ERROR_LOG_PATH", error_file)
+
+    verify._write_error_log("out", "err")
+
+    assert error_dir.exists()
+    assert error_file.exists()
+    assert stat.S_IMODE(error_dir.stat().st_mode) == 0o700
+    assert stat.S_IMODE(error_file.stat().st_mode) == 0o600
+
+
+def test_write_error_log_warns_when_permissions_are_too_broad(
+    monkeypatch, tmp_path: Path, caplog
+) -> None:
+    """A warning is emitted if an existing log path has overly broad permissions."""
+    error_dir = tmp_path / "autoship"
+    error_file = error_dir / "last_error.txt"
+    monkeypatch.setattr(verify, "ERROR_LOG_DIR", error_dir)
+    monkeypatch.setattr(verify, "ERROR_LOG_PATH", error_file)
+
+    error_dir.mkdir(parents=True)
+    error_dir.chmod(0o755)
+    error_file.write_text("old content", encoding="utf-8")
+    error_file.chmod(0o644)
+
+    with caplog.at_level(logging.WARNING, logger="autoship"):
+        verify._write_error_log("out", "err")
+
+    assert error_file.exists()
+    assert stat.S_IMODE(error_dir.stat().st_mode) == 0o700
+    assert stat.S_IMODE(error_file.stat().st_mode) == 0o600
+    assert "too broad" in caplog.text
