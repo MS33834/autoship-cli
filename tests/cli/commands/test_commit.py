@@ -104,3 +104,39 @@ def test_commit_git_error_raises(project_root, app_config: AppConfig) -> None:
         pytest.raises(GitError),
     ):
         commit.commit(ctx, message=None)
+
+
+def test_validate_editor_accepts_allowed_editor(i18n) -> None:
+    executable = commit._validate_editor("vim", ["vim", "nvim"], i18n)
+    assert executable == "vim"
+
+
+def test_validate_editor_accepts_allowed_editor_with_args(i18n) -> None:
+    executable = commit._validate_editor("code --wait", ["code", "vim"], i18n)
+    assert executable == "code"
+
+
+def test_validate_editor_rejects_semicolon_injection(i18n) -> None:
+    with pytest.raises(GitError, match="not allowed"):
+        commit._validate_editor("vim; rm -rf /", ["vim", "nvim"], i18n)
+
+
+def test_validate_editor_rejects_path_traversal(i18n) -> None:
+    with pytest.raises(GitError, match="not allowed"):
+        commit._validate_editor("../bin/evil-editor", ["evil-editor"], i18n)
+
+
+def test_validate_editor_rejects_unknown_editor(i18n) -> None:
+    with pytest.raises(GitError, match="not in the allowlist"):
+        commit._validate_editor("malicious", ["vim", "nvim"], i18n)
+
+
+def test_validate_editor_uses_configurable_allowlist(i18n) -> None:
+    executable = commit._validate_editor("custom-editor", ["custom-editor"], i18n)
+    assert executable == "custom-editor"
+
+
+def test_open_editor_rejects_injected_editor(i18n, monkeypatch) -> None:
+    monkeypatch.setenv("EDITOR", "vim; rm -rf /")
+    with pytest.raises(GitError, match="not allowed"):
+        commit._open_editor(i18n, "initial", ["vim", "nvim"])

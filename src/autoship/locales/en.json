@@ -26,6 +26,8 @@
   "commit.dry_run": "[dry-run] Would commit with message:\n{message}",
   "commit.done": "Committed: {message}",
   "commit.editor_error": "Editor exited with code {code}; commit message was not saved.",
+  "commit.editor_disallowed": "Editor value is not allowed: {editor}",
+  "commit.editor_unknown": "Editor '{editor}' is not in the allowlist. Allowed editors: {allowed}",
 
   "init.help": "Initialize an AutoShip configuration file for the current project.",
   "init.option.type": "Override project type",
