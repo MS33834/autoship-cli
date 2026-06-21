@@ -24,10 +24,10 @@
 
 | 小组 | 负责范围 | 当前任务 |
 |------|----------|----------|
-| **安全组** | 审计日志脱敏、SIEM、文件权限、密钥/token 防护 | P2-1、P2-6 |
-| **CLI 命令组** | 各子命令的输入校验与沙箱行为 | P2-2、P2-4 |
-| **基础设施组** | 配置中心、外部工具、Telemetry、环境变量 | P2-3、P2-5、P2-7 |
-| **模型网关组** | 模型后端错误处理与信息脱敏 | P2-8 |
+| **安全组** | 审计日志脱敏、SIEM、文件权限、密钥/token 防护 | 已完成 |
+| **CLI 命令组** | 各子命令的输入校验与沙箱行为 | 已完成 |
+| **基础设施组** | 配置中心、外部工具、Telemetry、环境变量 | 已完成 |
+| **模型网关组** | 模型后端错误处理与信息脱敏 | 已完成 |
 
 > 各组按任务编号顺序推进；完成一项后在本文件勾选并在 GitHub issue #5 回复进度。
 
@@ -120,8 +120,9 @@
 - **完成标准**：上述三个模块创建本地持久化文件时均设置仅所有者可读写。
 - **相关文件**：`src/autoship/core/audit_logger.py`、`src/autoship/core/registry_client.py`、`src/autoship/core/plugin_registry.py`。
 
-### P2-2 `fix` 命令读取文件路径限制
+### P2-2 `fix` 命令读取文件路径限制 ✅
 
+- **状态**：已完成（本 PR）。
 - **问题**：`src/autoship/cli/commands/fix.py:82-102` 读取错误日志中任意文件路径并发送给 LLM，可能泄露项目外文件（如 `~/.ssh/id_rsa`）。
 - **影响**：中危（M2）。
 - **修复建议**：
@@ -142,8 +143,9 @@
 - **完成标准**：至少对 `git`, `docker`, `twine`, `gh`, `patch` 提供可选的绝对路径/哈希校验配置。
 - **相关文件**：`src/autoship/adapters/tool_adapter.py`、`src/autoship/adapters/upload/*.py`。
 
-### P2-4 `docker_ship` 插件 `build_args` 校验
+### P2-4 `docker_ship` 插件 `build_args` 校验 ✅
 
+- **状态**：已完成（本 PR）。
 - **问题**：`src/autoship/plugins/docker_ship.py:42-44` 将配置读取的 `build_args` 直接传入 `docker build`，`foo=$(...)` 在 Dockerfile 中仍可能被 shell 解析。
 - **影响**：中危（M4）。
 - **修复建议**：
@@ -181,8 +183,9 @@
 - **完成标准**：非法/非 HTTPS 端点被拒绝并记录警告。
 - **相关文件**：`src/autoship/core/telemetry.py`。
 
-### P2-8 模型网关错误信息脱敏
+### P2-8 模型网关错误信息脱敏 ✅
 
+- **状态**：已完成（本 PR）。
 - **问题**：`src/autoship/adapters/providers/openai_compatible.py:92-103`、`azure_openai.py:82-91` 等错误消息可能泄露后端 URL 或模型名称。
 - **影响**：低危（L3）。
 - **修复建议**：统一错误消息格式，避免打印 `base_url` 或 API 密钥；verbose 输出也做脱敏。
