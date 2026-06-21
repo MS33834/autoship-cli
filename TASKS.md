@@ -1,7 +1,7 @@
 # AutoShip-CLI 下一阶段任务清单
 
-> 状态：P0 项已全部修复并推送至 GitHub / GitCode。  
-> 本清单供团队承接 **P1（短期内修复）** 与 **P2（中期改进）** 项使用。
+> 状态：P0 与 P1-1 / P1-2 已完成并合并至 `main`。  
+> 本清单供团队承接剩余 **P1（短期内修复）** 与 **P2（中期改进）** 项使用。
 
 ---
 
@@ -20,10 +20,24 @@
 
 ---
 
+## 团队分工（建议）
+
+| 小组 | 负责范围 | 当前任务 |
+|------|----------|----------|
+| **安全组** | 审计日志脱敏、SIEM、文件权限、密钥/token 防护 | P1-3、P1-5、P2-1、P2-6 |
+| **CLI 命令组** | 各子命令的输入校验与沙箱行为 | P1-4、P2-2、P2-4 |
+| **基础设施组** | 配置中心、外部工具、Telemetry、环境变量 | P2-3、P2-5、P2-7 |
+| **模型网关组** | 模型后端错误处理与信息脱敏 | P2-8 |
+
+> 各组按任务编号顺序推进；完成一项后在本文件勾选并在 GitHub issue #5 回复进度。
+
+---
+
 ## P1 — 短期内修复（高优先级）
 
-### P1-1 注册表索引远程拉取签名/完整性校验
+### P1-1 注册表索引远程拉取签名/完整性校验 ✅
 
+- **状态**：已完成（PR #4 已合并）。
 - **问题**：`src/autoship/core/registry_client.py:71-117` 仅校验 HTTP 状态码，不校验 JSON 签名或哈希；中间人或篡改缓存可导致分发恶意插件索引。
 - **影响**：高危（H1）。
 - **修复建议**：
@@ -36,8 +50,9 @@
   - 新增测试覆盖：合法签名通过、篡改签名失败、缓存被篡改失败。
 - **相关文件**：`src/autoship/core/registry_client.py`、`src/autoship/exceptions.py`、注册表发布流程。
 
-### P1-2 插件安装/更新时验证 sha256 与 signature
+### P1-2 插件安装/更新时验证 sha256 与 signature ✅
 
+- **状态**：已完成（PR #6 已合并）。
 - **问题**：`src/autoship/cli/commands/plugin.py:284-298` 与 `505-551` 仅存储注册表提供的 `sha256`/`signature`，从不验证。
 - **影响**：高危（H2）。
 - **修复建议**：
@@ -170,13 +185,15 @@
 
 ## 团队交接备注
 
-- 已合并的 P0 修复见最近 6 个 commit：
-  1. `fix(ci): add missing npm install step in website workflow`
-  2. `fix(sandbox): require isolation tooling by default`
-  3. `fix(verify): validate command against allowlist and reject shell metacharacters`
-  4. `fix(fix): remove --apply flag and validate patch paths before applying`
-  5. `fix(i18n): guard against formatting exceptions`
-  6. `fix(metrics): make Counter increments thread-safe and harden plugin stats loading`
+- 已合并的 P0 / P1 修复见最近 8 个 commit：
+  1. `feat(security): verify registry index signature and sha256 (P1-1)`
+  2. `feat(security): verify plugin packages before install/update (P1-2)`
+  3. `fix(ci): add missing npm install step in website workflow`
+  4. `fix(sandbox): require isolation tooling by default`
+  5. `fix(verify): validate command against allowlist and reject shell metacharacters`
+  6. `fix(fix): remove --apply flag and validate patch paths before applying`
+  7. `fix(i18n): guard against formatting exceptions`
+  8. `fix(metrics): make Counter increments thread-safe and harden plugin stats loading`
 - 本地质量门禁：`uv run ruff check src tests`、`uv run pyright`、`uv run pytest`。
 - 安全扫描：`uv run bandit -r src -ll`。
 - 未跟踪的 `*_report.md` 为审计/性能/质量报告，团队决定是否纳入版本控制。
