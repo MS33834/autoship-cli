@@ -20,6 +20,7 @@ import traceback
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 import structlog
@@ -29,6 +30,50 @@ from autoship.core.metrics import get_registry
 logger = structlog.get_logger()
 
 DEFAULT_ENDPOINT_ENV = "AUTOSHIP_TELEMETRY_ENDPOINT"
+ALLOW_UNTRUSTED_ENV = "AUTOSHIP_TELEMETRY_ALLOW_UNTRUSTED"
+DEFAULT_TIMEOUT_SECONDS = 5.0
+MAX_TIMEOUT_SECONDS = 30.0
+TRUSTED_TELEMETRY_HOSTS = {"telemetry.autoship.dev"}
+
+
+def _parse_timeout(value: str | None, default: float = DEFAULT_TIMEOUT_SECONDS) -> float:
+    """Parse and bound a user-supplied timeout string."""
+    if value is None:
+        return default
+    try:
+        timeout = float(value)
+    except ValueError:
+        return default
+    if timeout <= 0 or timeout > MAX_TIMEOUT_SECONDS:
+        return default
+    return timeout
+
+
+def _is_valid_endpoint(endpoint: str, allow_untrusted: bool) -> bool:
+    """Return ``True`` if ``endpoint`` is an acceptable HTTPS URL.
+
+    The endpoint must use ``https://`` and, unless ``allow_untrusted`` is set,
+    its host must be in ``TRUSTED_TELEMETRY_HOSTS``.
+    """
+    try:
+        parsed = urlparse(endpoint)
+    except ValueError:
+        return False
+    if parsed.scheme != "https":
+        logger.warning("telemetry.endpoint_not_https", endpoint=endpoint)
+        return False
+    if not parsed.hostname:
+        logger.warning("telemetry.endpoint_missing_host", endpoint=endpoint)
+        return False
+    host = parsed.hostname.lower()
+    if host not in TRUSTED_TELEMETRY_HOSTS and not allow_untrusted:
+        logger.warning(
+            "telemetry.endpoint_not_trusted",
+            endpoint=endpoint,
+            trusted_hosts=TRUSTED_TELEMETRY_HOSTS,
+        )
+        return False
+    return True
 
 
 @dataclass
@@ -56,10 +101,20 @@ class TelemetryCollector:
         enabled: bool = False,
         endpoint: str | None = None,
         log_dir: Path | None = None,
+        timeout: float | None = None,
+        allow_untrusted: bool | None = None,
     ) -> None:
         self.enabled = enabled
-        self.endpoint = endpoint or os.getenv(DEFAULT_ENDPOINT_ENV)
         self.log_dir = log_dir or Path.home() / ".autoship"
+        self.timeout = timeout or _parse_timeout(os.getenv("AUTOSHIP_TELEMETRY_TIMEOUT"))
+        if allow_untrusted is None:
+            allow_untrusted = os.getenv(ALLOW_UNTRUSTED_ENV, "").lower() in {"1", "true", "yes"}
+
+        raw_endpoint = endpoint or os.getenv(DEFAULT_ENDPOINT_ENV)
+        if raw_endpoint is not None and _is_valid_endpoint(raw_endpoint, allow_untrusted):
+            self.endpoint = raw_endpoint
+        else:
+            self.endpoint = None
 
     def record(
         self,
@@ -137,7 +192,7 @@ class TelemetryCollector:
                 self.endpoint,
                 content=record,
                 headers={"Content-Type": "application/json"},
-                timeout=5.0,
+                timeout=self.timeout,
             )
         except Exception:  # noqa: BLE001
             logger.debug("telemetry.remote_send_failed")
