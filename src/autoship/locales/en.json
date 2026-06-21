@@ -106,6 +106,7 @@
   "fix.patch_failed": "Failed to apply patch: {reason}",
   "fix.patch_no_tool": "Neither git nor patch is available to apply the suggestion.",
   "fix.patch_unsafe_paths": "Patch contains unsafe file paths and will not be applied.",
+  "fix.reading_files": "Reading project files for context: {files}",
 
   "doctor.help": "Diagnose the environment and dependencies.",
   "doctor.option.json": "Output report as JSON",
