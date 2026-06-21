@@ -8,6 +8,7 @@ is not installed.
 from __future__ import annotations
 
 import logging
+import re
 import shutil
 import subprocess
 from typing import Any
@@ -17,6 +18,9 @@ from autoship.exceptions import UploadError
 from autoship.hookspec import hookimpl
 
 logger = logging.getLogger("autoship")
+
+_BUILD_ARG_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_BUILD_ARG_DANGEROUS_RE = re.compile(r"[`$;&|<>(){}[\]\\!\n\r]")
 
 
 class DockerShipPlugin:
@@ -40,7 +44,7 @@ class DockerShipPlugin:
             return
 
         cmd = [executable, "build", "-t", full_tag]
-        for key, value in context.config.docker_ship.build_args.items():
+        for key, value in _sanitize_build_args(context.config.docker_ship.build_args).items():
             cmd.extend(["--build-arg", f"{key}={value}"])
         cmd.append(str(context.project_root))
 
@@ -101,6 +105,27 @@ def _resolve_image_and_tag(context: CommandContext) -> tuple[str, str]:
             "Docker image name is required (use --image or set docker_ship.default_image)"
         )
     return str(image), str(tag)
+
+
+def _sanitize_build_args(build_args: dict[str, str]) -> dict[str, str]:
+    """Return build args with unsafe keys or values removed.
+
+    Keys must be valid shell-style identifiers. Values containing shell
+    metacharacters are dropped to prevent command substitution or chaining
+    inside Docker ``RUN`` instructions.
+    """
+    safe: dict[str, str] = {}
+    for key, value in build_args.items():
+        if not _BUILD_ARG_KEY_RE.fullmatch(key):
+            logger.warning("Skipping docker build-arg with invalid key: %r", key)
+            continue
+        if _BUILD_ARG_DANGEROUS_RE.search(value):
+            logger.warning(
+                "Skipping docker build-arg %r: value contains shell metacharacters", key
+            )
+            continue
+        safe[key] = value
+    return safe
 
 
 plugin = DockerShipPlugin()
