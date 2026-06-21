@@ -87,6 +87,7 @@ class AuditConfig(BaseModel):
     siem_url: HttpUrl | None = None
     siem_token: str | None = Field(default=None, repr=False)
     retention_days: int = 30
+    redact_unknown_fields: bool = False
 
 
 class SandboxConfig(BaseModel):

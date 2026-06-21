@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,11 +26,89 @@ SENSITIVE_KEYS = frozenset(
         "siem_token",
         "key",
         "private",
+        "private_key",
         "credentials",
         "auth",
         "authorization",
         "access_token",
         "refresh_token",
+    }
+)
+
+# Patterns that indicate a scalar string contains a secret or high-entropy token.
+_SENSITIVE_VALUE_PATTERNS = tuple(
+    re.compile(pattern)
+    for pattern in (
+        # GitHub personal access token (classic)
+        r"ghp_[A-Za-z0-9_]{36}",
+        # GitHub fine-grained personal access token
+        r"github_pat_[A-Za-z0-9_]{22}_[A-Za-z0-9_]{59}",
+        # OpenAI API key
+        r"sk-[a-zA-Z0-9]{48}",
+        # AWS access key id
+        r"AKIA[0-9A-Z]{16}",
+        # PEM/SSH private key block
+        r"-----BEGIN (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----",
+        # JWT (header.payload.signature)
+        r"eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*",
+    )
+)
+
+# Keys that are safe to retain when ``redact_unknown_fields`` is enabled.
+_SAFE_KEYS = frozenset(
+    {
+        "ts",
+        "trace_id",
+        "event",
+        "payload",
+        "event_type",
+        "command",
+        "commands",
+        "returncode",
+        "duration_ms",
+        "status",
+        "action",
+        "actions",
+        "user",
+        "env",
+        "environment",
+        "plugin_name",
+        "plugin",
+        "version",
+        "path",
+        "paths",
+        "target",
+        "targets",
+        "message",
+        "messages",
+        "error",
+        "errors",
+        "description",
+        "output",
+        "result",
+        "details",
+        "config",
+        "args",
+        "cwd",
+        "project_type",
+        "detected",
+        "fix",
+        "count",
+        "removed",
+        "since",
+        "reason",
+        "operation",
+        "enabled",
+        "value",
+        "values",
+        "name",
+        "names",
+        "id",
+        "ids",
+        "type",
+        "types",
+        "source",
+        "sources",
     }
 )
 
@@ -181,21 +260,56 @@ class AuditLogger:
         self._context.update(kwargs)
         return self
 
-    def _redact(self, value: Any) -> Any:
-        """Recursively remove sensitive keys from audit payloads."""
+    def _redact(self, value: Any, *, _unknown: bool | None = None) -> Any:
+        """Recursively redact sensitive keys and secret-like values.
+
+        When ``config.audit.redact_unknown_fields`` is enabled, any key that is
+        not explicitly known to be safe is redacted to avoid leaking data that
+        accidentally ends up in an audit record.
+        """
+        if _unknown is None:
+            _unknown = self.config.audit.redact_unknown_fields
         if isinstance(value, dict):
             value_dict = cast(dict[str, Any], value)
             redacted: dict[str, Any] = {}
             for key, item in value_dict.items():
-                if any(s in key.lower() for s in SENSITIVE_KEYS):
+                key_lower = key.lower()
+                if self._is_sensitive_key(key_lower):
                     redacted[key] = "***"
+                elif key_lower in _SAFE_KEYS or not _unknown:
+                    redacted[key] = self._redact(item, _unknown=_unknown)
                 else:
-                    redacted[key] = self._redact(item)
+                    redacted[key] = self._redact_unknown_value(item)
             return redacted
         if isinstance(value, list):
             value_list = cast(list[Any], value)
-            return [self._redact(item) for item in value_list]
+            return [self._redact(item, _unknown=_unknown) for item in value_list]
+        return self._redact_scalar(value)
+
+    def _is_sensitive_key(self, key: str) -> bool:
+        """Return True if ``key`` is a known sensitive field name."""
+        return key in SENSITIVE_KEYS
+
+    def _redact_scalar(self, value: Any) -> Any:
+        """Redact a scalar value if it contains a secret-like pattern."""
+        if isinstance(value, str) and any(
+            pattern.search(value) for pattern in _SENSITIVE_VALUE_PATTERNS
+        ):
+            return "***"
         return value
+
+    def _redact_unknown_value(self, value: Any) -> Any:
+        """Redact an unknown value recursively.
+
+        Dictionaries and lists are traversed so that any nested unknown fields
+        are also redacted; scalars are replaced with a mask.
+        """
+        if isinstance(value, dict):
+            return self._redact(value, _unknown=True)
+        if isinstance(value, list):
+            value_list = cast(list[Any], value)
+            return [self._redact_unknown_value(item) for item in value_list]
+        return "***"
 
     def _forward_to_siem(self, entry: dict[str, Any]) -> None:
         """Best-effort forward a single audit record to a configured SIEM.

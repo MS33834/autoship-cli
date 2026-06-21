@@ -1,0 +1,10 @@
+title = "AutoShip CLI gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test fixtures with fake secrets"
+paths = [
+  '''tests/test_audit_logger.py''',
+]
