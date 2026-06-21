@@ -109,6 +109,7 @@ class HookDispatcher:
         registry: PluginRegistry | None = None,
         sandbox_runner_factory: type[SandboxRunner] = SandboxRunner,
         no_sandbox: bool = False,
+        load_builtins: bool = True,
     ) -> None:
         self.pm = pluggy.PluginManager("autoship")
         self.pm.add_hookspecs(AutoShipHookSpec)
@@ -116,7 +117,8 @@ class HookDispatcher:
         self._sandbox_runner_factory = sandbox_runner_factory
         self._no_sandbox = no_sandbox
         self._builtin_names: set[str] = set()
-        self._load_builtin()
+        if load_builtins:
+            self._load_builtin()
         self._discover_entry_points()
 
     def _load_builtin(self) -> None:

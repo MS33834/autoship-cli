@@ -29,7 +29,7 @@ class PluginTestHarness:
     """
 
     def __init__(self) -> None:
-        self.dispatcher = HookDispatcher()
+        self.dispatcher = HookDispatcher(load_builtins=False)
 
     def register(self, plugin: Any) -> None:
         """Register a plugin instance with the internal dispatcher."""
