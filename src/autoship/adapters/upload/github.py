@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
-import shutil
 import subprocess
 from pathlib import Path
 
 from autoship.adapters.upload.base import UploadAdapter, UploadResult
+from autoship.core.tool_verifier import ToolVerifier
 from autoship.exceptions import UploadError
+from autoship.models.config import ToolsConfig
 
 
 class GitHubUploader(UploadAdapter):
@@ -16,14 +17,22 @@ class GitHubUploader(UploadAdapter):
 
     name = "github"
 
-    def __init__(self, project_root: Path, tag: str, artifacts: list[str] | None = None) -> None:
+    def __init__(
+        self,
+        project_root: Path,
+        tag: str,
+        artifacts: list[str] | None = None,
+        *,
+        tool_verifier: ToolVerifier | None = None,
+    ) -> None:
         self.project_root = project_root
         self.tag = tag
         self.artifacts = artifacts or ["dist/*"]
+        self._verifier = tool_verifier or ToolVerifier(ToolsConfig())
 
     def validate(self) -> None:
         """Ensure GitHub CLI is available."""
-        if not shutil.which("gh"):
+        if not self._verifier.check("gh"):
             raise UploadError("`gh` CLI not found for GitHub release upload")
 
     def upload(self, *, dry_run: bool = False, verbose: bool = False) -> UploadResult:
@@ -38,16 +47,17 @@ class GitHubUploader(UploadAdapter):
         self.validate()
 
         try:
+            gh = self._verifier.resolve("gh")
             repo_info = subprocess.run(
-                ["gh", "repo", "view", "--json", "url"],
+                [gh, "repo", "view", "--json", "url"],
                 cwd=self.project_root,
                 check=True,
                 capture_output=True,
                 text=True,
             )
             repo_url = json.loads(repo_info.stdout).get("url", "").rstrip("/")
-            create_cmd = ["gh", "release", "create", self.tag, "--generate-notes"]
-            upload_cmd = ["gh", "release", "upload", self.tag, *self.artifacts]
+            create_cmd = [gh, "release", "create", self.tag, "--generate-notes"]
+            upload_cmd = [gh, "release", "upload", self.tag, *self.artifacts]
             if verbose:
                 print(f"[exec] {' '.join(create_cmd)}")
                 print(f"[exec] {' '.join(upload_cmd)}")

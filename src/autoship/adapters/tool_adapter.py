@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 from pathlib import Path
+
+from autoship.core.tool_verifier import ToolVerifier
+from autoship.models.config import ToolsConfig
 
 
 class ToolChain:
@@ -17,11 +19,20 @@ class ToolChain:
         *,
         dry_run: bool = False,
         verbose: bool = False,
+        tool_verifier: ToolVerifier | None = None,
     ) -> None:
         self.tools = tools
         self.project_root = project_root
         self.dry_run = dry_run
         self.verbose = verbose
+        self._verifier = tool_verifier or ToolVerifier(ToolsConfig())
+
+    def _resolve(self, name: str) -> str | None:
+        """Return the verified absolute path to ``name`` or ``None``."""
+        try:
+            return self._verifier.resolve(name)
+        except Exception:  # noqa: BLE001
+            return None
 
     def _run(
         self,
@@ -46,17 +57,20 @@ class ToolChain:
     def preview(self, paths: list[Path]) -> str:
         """Return a diff/preview of the changes that would be applied."""
         targets = [str(p) for p in paths]
-        if "black" in self.tools and shutil.which("black"):
-            result = self._run(["black", "--diff"] + targets, capture_output=True)
+        black = self._resolve("black")
+        if "black" in self.tools and black:
+            result = self._run([black, "--diff"] + targets, capture_output=True)
             return result.stdout
         return ""
 
     def apply(self, paths: list[Path]) -> None:
         """Apply formatting/cleanup tools in place."""
         targets = [str(p) for p in paths]
-        if "autoflake" in self.tools and shutil.which("autoflake"):
+        autoflake = self._resolve("autoflake")
+        black = self._resolve("black")
+        if "autoflake" in self.tools and autoflake:
             self._run(
-                ["autoflake", "--remove-all-unused-imports", "--in-place", "-r"] + targets,
+                [autoflake, "--remove-all-unused-imports", "--in-place", "-r"] + targets,
             )
-        if "black" in self.tools and shutil.which("black"):
-            self._run(["black"] + targets)
+        if "black" in self.tools and black:
+            self._run([black] + targets)

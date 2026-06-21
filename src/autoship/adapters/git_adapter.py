@@ -5,14 +5,21 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+from autoship.core.tool_verifier import ToolVerifier
 from autoship.exceptions import GitError
+from autoship.models.config import ToolsConfig
 
 
 class GitAdapter:
     """Thin wrapper around Git subprocess calls."""
 
-    def __init__(self, repo_root: Path) -> None:
+    def __init__(self, repo_root: Path, tool_verifier: ToolVerifier | None = None) -> None:
         self.repo_root = repo_root
+        self._verifier = tool_verifier or ToolVerifier(ToolsConfig())
+
+    def _git_cmd(self, *args: str) -> list[str]:
+        """Build a git command list using the verified git executable."""
+        return [self._verifier.resolve("git"), *args]
 
     def _run(
         self,
@@ -37,20 +44,20 @@ class GitAdapter:
 
     def has_changes(self) -> bool:
         """Return True if the working tree has staged or unstaged changes."""
-        result = self._run(["git", "status", "--porcelain"], check=False)
+        result = self._run(self._git_cmd("status", "--porcelain"), check=False)
         return result.stdout.strip() != ""
 
     def diff(self) -> str:
         """Return the full diff of unstaged changes."""
-        result = self._run(["git", "diff"])
+        result = self._run(self._git_cmd("diff"))
         return result.stdout
 
     def stats(self) -> str:
         """Return a short diff stat summary."""
-        result = self._run(["git", "diff", "--stat"])
+        result = self._run(self._git_cmd("diff", "--stat"))
         return result.stdout
 
     def commit(self, message: str) -> None:
         """Stage all changes and commit with the given message."""
-        self._run(["git", "add", "-A"])
-        self._run(["git", "commit", "-m", message])
+        self._run(self._git_cmd("add", "-A"))
+        self._run(self._git_cmd("commit", "-m", message))

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 from pathlib import Path
 
 from autoship.adapters.upload.base import UploadAdapter, UploadResult
+from autoship.core.tool_verifier import ToolVerifier
 from autoship.exceptions import UploadError
+from autoship.models.config import ToolsConfig
 
 
 class DockerUploader(UploadAdapter):
@@ -15,14 +16,22 @@ class DockerUploader(UploadAdapter):
 
     name = "docker"
 
-    def __init__(self, project_root: Path, image: str, tag: str = "latest") -> None:
+    def __init__(
+        self,
+        project_root: Path,
+        image: str,
+        tag: str = "latest",
+        *,
+        tool_verifier: ToolVerifier | None = None,
+    ) -> None:
         self.project_root = project_root
         self.image = image
         self.tag = tag
+        self._verifier = tool_verifier or ToolVerifier(ToolsConfig())
 
     def validate(self) -> None:
         """Ensure Docker CLI is available."""
-        if not shutil.which("docker"):
+        if not self._verifier.check("docker"):
             raise UploadError("`docker` CLI not found for Docker upload")
 
     def upload(self, *, dry_run: bool = False, verbose: bool = False) -> UploadResult:
@@ -38,8 +47,9 @@ class DockerUploader(UploadAdapter):
         self.validate()
 
         try:
-            build_cmd = ["docker", "build", "-t", full_image, "."]
-            push_cmd = ["docker", "push", full_image]
+            docker = self._verifier.resolve("docker")
+            build_cmd = [docker, "build", "-t", full_image, "."]
+            push_cmd = [docker, "push", full_image]
             if verbose:
                 print(f"[exec] {' '.join(build_cmd)}")
                 print(f"[exec] {' '.join(push_cmd)}")

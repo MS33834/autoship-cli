@@ -212,6 +212,27 @@ class VerifyConfig(BaseModel):
     )
 
 
+class ToolConfig(BaseModel):
+    """Configuration for a single external tool."""
+
+    path: str | None = None
+    sha256: str | None = None
+
+
+class ToolsConfig(BaseModel):
+    """Configuration for external tool paths and optional SHA-256 verification."""
+
+    git: ToolConfig = Field(default_factory=ToolConfig)
+    docker: ToolConfig = Field(default_factory=ToolConfig)
+    twine: ToolConfig = Field(default_factory=ToolConfig)
+    gh: ToolConfig = Field(default_factory=ToolConfig)
+    patch: ToolConfig = Field(default_factory=ToolConfig)
+
+    def get(self, name: str) -> ToolConfig:
+        """Return the configured tool or an empty default."""
+        return getattr(self, name, ToolConfig())
+
+
 class AppConfig(BaseModel):
     """Top-level application configuration."""
 
@@ -233,3 +254,4 @@ class AppConfig(BaseModel):
     registry: RegistryConfig = Field(default_factory=RegistryConfig)
     llm: LlmConfig = Field(default_factory=LlmConfig)
     cache: CacheConfig = Field(default_factory=CacheConfig)
+    tools: ToolsConfig = Field(default_factory=ToolsConfig)
