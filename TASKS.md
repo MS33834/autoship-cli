@@ -194,18 +194,190 @@
 
 ---
 
+## P3 — 产品化冲刺（让 CLI 可用于真实项目）
+
+P3 目标是把已完成的 MVP 功能在真实后端、真实仓库、真实 CI 环境中跑通，并补齐文档与分发能力，使 AutoShip 成为“可安装、可配置、可发布”的工具。
+
+### 团队分工（P3）
+
+| 小组 | 负责范围 | P3 任务 |
+|------|----------|---------|
+| **AI/模型组** | 本地模型后端、LLM prompt、fallback、token/cost | P3-1 |
+| **发布/集成组** | PyPI/Docker 上传、包分发、版本发布 | P3-2、P3-3、P3-5 |
+| **文档/UX组** | 命令参考、快速上手、错误提示、多语言 | P3-4、P3-6 |
+| **安全/合规组** | 隐私、遥测、审计、权限 | P3-7 |
+| **生态/插件组** | 插件注册表、发布流程、示例插件 | P3-8 |
+
+### P3-1 AI 路径真实后端联测
+
+- **Owner**：AI/模型组
+- **问题**：当前 commit/verify --fix 仅在单元测试里 mock 了 ModelRouter，未在 Ollama、LM Studio、OpenAI 等真实后端下验证生成质量、错误处理与脱敏。
+- **验收标准**：
+  - 在 `tests/integration/ai_backends/` 下新增测试，使用环境变量或 fixtures 配置后端。
+  - 至少验证 Ollama（本地）与 OpenAI-compatible（如 LM Studio）两种后端。
+  - 验证失败（后端不可用、模型不存在、超时）时 CLI 给出清晰提示且不泄露 URL/key。
+  - prompt 输出不包含原始 API key 或完整本地路径。
+- **相关文件**：`src/autoship/adapters/providers/*.py`、`src/autoship/core/model_router.py`、`src/autoship/cli/commands/commit.py`、`src/autoship/cli/commands/verify.py`。
+- **依赖**：P2-8 模型网关脱敏已完成。
+- **状态**：✅ 已完成。新增 Ollama 与 LM Studio 集成测试，修复 OllamaGateway 使用标准 `/v1` OpenAI-compatible 端点，完成多角色 review 与修复，review 记录见 `docs/reviews/p3-1-ai-backend-integration.md`。
+
+### P3-2 真实上传集成（PyPI / Docker）
+
+- **Owner**：发布/集成组
+- **问题**：upload 目前仅验证 `--dry-run`，真实 PyPI/Docker 路径未在集成环境中跑通。
+- **验收标准**：
+  - `autoship upload --target pypi` 能调用 `twine upload`（或等价工具）完成真实上传，并在测试环境使用 TestPyPI。
+  - `autoship upload --target docker` 能完成 `docker build` + `docker push`。
+  - 提供 `--repository-url` / `--dry-run` 明确区分测试与生产。
+  - CI 中使用 mock 或临时 registry（如 `localstack`、本地 Docker registry）跑通上传路径。
+- **相关文件**：`src/autoship/adapters/upload/*.py`、`src/autoship/cli/commands/upload.py`。
+- **依赖**：P2-3 外部工具 PATH 校验已完成。
+
+### P3-3 安装包与分发验证
+
+- **Owner**：发布/集成组
+- **问题**：CLI 在源码环境下开发，未验证 `pip install autoship` 在干净环境是否可用。
+- **验收标准**：
+  - `python -m build` 生成 wheel/sdist 成功。
+  - 在干净的虚拟环境中 `pip install dist/autoship-*.whl` 后，所有非 AI 命令可用。
+  - entry point `autoship` 能正确找到并执行。
+  - autoship-sdk 作为 extras 或 workspace 依赖关系清晰，无循环依赖。
+- **相关文件**：`pyproject.toml`、`src/autoship/__main__.py`、`src/autoship/cli/main.py`。
+
+### P3-4 完整命令参考文档
+
+- **Owner**：文档/UX组
+- **问题**：docs/commands.md 缺失或过时，用户无法查全命令参数。
+- **验收标准**：
+  - 每个子命令（init、clean、verify、fix、commit、upload、plugin、doctor、config、registry）都有独立的命令参考页。
+  - 文档中的命令输出与实际 CLI 行为一致。
+  - 提供中文与英文版本，并更新 `docs/demo.md` 中的链接。
+- **相关文件**：`docs/commands/` 或 `docs/commands.md`、各 `src/autoship/cli/commands/*.py`。
+- **依赖**：P3-6 错误提示稳定后文档再定稿。
+
+### P3-5 GitHub Actions CI 流水线
+
+- **Owner**：发布/集成组
+- **问题**：已有 CI 配置但 dogfood/benchmarks 未接入自动化运行。
+- **验收标准**：
+  - CI 运行 `ruff`、`pyright`、`pytest`、`bandit`。
+  - CI 运行 `python dogfood/dogfood.py` 并上传 `dogfood/report.json` artifact。
+  - CI 运行 `python benchmarks/benchmark.py` 并保存/对比 `benchmarks/results.json`。
+  - 发布 tag 时自动构建 wheel 并上传到 PyPI/TestPyPI。
+- **相关文件**：`.github/workflows/ci.yml`、`.github/workflows/release.yml`。
+- **依赖**：P3-3 打包验证完成。
+
+### P3-6 错误消息与 UX 打磨
+
+- **Owner**：文档/UX组
+- **问题**：部分错误消息仍为英文或技术栈信息过重，多语言覆盖不完整。
+- **验收标准**：
+  - 所有用户可见错误消息都可通过 `zh.json` / `en.json` 翻译。
+  - 常见错误（未初始化、未配置模型、未安装工具、上传失败）给出下一步操作建议。
+  - `--help` 与各命令 help 文本经过统一润色。
+  - 新增 UX 测试：验证 `--help` 输出无 Traceback、未知命令提示友好。
+- **相关文件**：`src/autoship/cli/main.py`、各 `src/autoship/cli/commands/*.py`、`src/autoship/locales/*.json`。
+
+### P3-7 遥测与隐私合规
+
+- **Owner**：安全/合规组
+- **问题**：Telemetry 已校验端点，但尚未提供用户可见的遥测说明与关闭方式文档。
+- **验收标准**：
+  - 在 `docs/privacy.md` 中说明收集哪些数据、存储多久、如何关闭。
+  - CLI 首次启用遥测时提示用户（或默认关闭，需 opt-in）。
+  - 提供 `autoship config telemetry --disable` 命令或等效配置项。
+  - 审计日志保存策略（轮转、清理）写入文档与默认配置。
+- **相关文件**：`src/autoship/core/telemetry.py`、`src/autoship/core/audit_logger.py`、`docs/privacy.md`。
+
+### P3-8 插件商店与发布流程
+
+- **Owner**：生态/插件组
+- **问题**：registry-web 已可用，但缺少插件提交、审核、签名发布的 SOP。
+- **验收标准**：
+  - 在 `docs/plugin-publishing.md` 中定义插件元数据格式、签名/哈希要求、PR 模板。
+  - `registry/plugins.json` 增加签名字段与审核状态字段，并更新 schema。
+  - registry-web 能正确展示 verified / community 状态。
+  - 提供至少 2 个经过审核的真实插件（docker-ship 可算一个，再新增一个）。
+- **相关文件**：`registry/plugins.json`、`registry-web/*`、`docs/plugin-publishing.md`。
+
+---
+
+## P4 — 发布就绪（正式对外发布）
+
+P4 目标是从“可用”走向“可信赖的产品”：稳定的发布节奏、完整的公开文档、可验证的安全性、活跃的插件生态。
+
+### 团队分工（P4）
+
+| 小组 | 负责范围 | P4 任务 |
+|------|----------|---------|
+| **发布/集成组** | 版本号、Changelog、自动化发布 | P4-1 |
+| **文档/UX组** | 官方文档站、教程、视频/截图 | P4-2 |
+| **生态/插件组** | 社区插件、审核、认证发布者 | P4-3 |
+| **性能/测试组** | 大规模项目测试、回归、稳定性 | P4-4 |
+| **安全/合规组** | 第三方安全审计、渗透测试 | P4-5 |
+| **市场/运营组** | 发布通告、README、社交媒体 | P4-6 |
+
+### P4-1 版本管理与发布流程
+
+- **Owner**：发布/集成组
+- **验收标准**：
+  - 采用 SemVer，使用 `python-semantic-release` 或手动 tag + changelog。
+  - 每次 release 自动生成 GitHub Release Notes 与 `CHANGELOG.md`。
+  - 发布前 checklist 包含：测试通过、文档最新、签名密钥轮换、PyPI 上传成功。
+- **相关文件**：`CHANGELOG.md`、`.github/workflows/release.yml`。
+
+### P4-2 公开文档站点
+
+- **Owner**：文档/UX组
+- **验收标准**：
+  - 使用 MkDocs / Docusaurus / 静态站点工具构建官方文档站。
+  - 包含：快速开始、命令参考、插件开发、模型配置、隐私政策、FAQ。
+  - CI 自动部署到 GitHub Pages 或自定义域名。
+- **相关文件**：`docs/`、`mkdocs.yml` 或 `website/docs/`。
+
+### P4-3 社区插件征集与审核
+
+- **Owner**：生态/插件组
+- **验收标准**：
+  - 制定插件提交模板与审核 checklist。
+  - 至少 5 个社区或官方插件进入 registry。
+  - 明确 verified publisher 认证流程。
+- **相关文件**：`docs/plugin-publishing.md`、`registry/plugins.json`。
+
+### P4-4 性能与规模测试
+
+- **Owner**：性能/测试组
+- **验收标准**：
+  - 在 1000+ 文件的项目上跑 `clean`、`verify`、`upload --dry-run` 并记录基线。
+  - 多线程/并发场景下 metrics 与审计日志无竞争问题。
+  - 长时间运行（如 CI 连续 24h）无内存泄漏。
+- **相关文件**：`benchmarks/benchmark.py`、`dogfood/dogfood.py`、`src/autoship/core/metrics.py`。
+
+### P4-5 安全审计与渗透测试
+
+- **Owner**：安全/合规组
+- **验收标准**：
+  - 通过 `pip-audit`、`bandit`、 Dependabot/ Renovate 扫描。
+  - 邀请第三方或内部红队做一轮针对 CLI 的渗透测试。
+  - 所有 H/M 级别漏洞修复并发布安全公告。
+- **相关文件**：`pyproject.toml`、CI 安全配置。
+
+### P4-6 发布与市场推广
+
+- **Owner**：市场/运营组
+- **验收标准**：
+  - README 包含安装、徽章、截图/asciinema、贡献指南。
+  - 发布 blog/推特/掘金/知乎等渠道公告。
+  - 收集首批用户反馈并形成下一轮迭代 issue。
+- **相关文件**：`README.md`、`README.zh.md`、社交媒体文案。
+
+---
+
 ## 团队交接备注
 
-- 已合并的 P0 / P1 修复见最近 8 个 commit：
-  1. `feat(security): verify registry index signature and sha256 (P1-1)`
-  2. `feat(security): verify plugin packages before install/update (P1-2)`
-  3. `fix(ci): add missing npm install step in website workflow`
-  4. `fix(sandbox): require isolation tooling by default`
-  5. `fix(verify): validate command against allowlist and reject shell metacharacters`
-  6. `fix(fix): remove --apply flag and validate patch paths before applying`
-  7. `fix(i18n): guard against formatting exceptions`
-  8. `fix(metrics): make Counter increments thread-safe and harden plugin stats loading`
+- 已合并的 P0 / P1 / P2 修复见最近 commit；P3/P4 为下一轮产品化计划。
 - 本地质量门禁：`uv run ruff check src tests`、`uv run pyright`、`uv run pytest`。
 - 安全扫描：`uv run bandit -r src -ll`。
-- 未跟踪的 `*_report.md` 为审计/性能/质量报告，团队决定是否纳入版本控制。
-- 提交修复请走 **GitHub Pull Request**，不要在 GitCode 发起 PR。
+- 新增 P3 任务建议从 `main` 切分支：`git switch -c feat/P3-X-short-desc`。
+- 提交修复/功能请走 **GitHub Pull Request**，不要在 GitCode 发起 PR。
+- 计划如有调整，请直接修改本文件并提交 PR。

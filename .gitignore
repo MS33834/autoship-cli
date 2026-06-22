@@ -54,6 +54,14 @@ coverage.xml
 
 # Benchmarks
 benchmarks/results.json
+benchmarks/report.md
+
+# Dogfood reports
+dogfood/report.md
+dogfood/report.json
+
+# Security reports
+bandit-report.json
 
 # MkDocs build output
 site/

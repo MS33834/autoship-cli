@@ -102,6 +102,9 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--cov=autoship --cov-report=term-missing --cov-report=xml --cov-fail-under=85"
+markers = [
+    "integration: tests that require real external services (slow, optional)",
+]
 
 [tool.coverage.run]
 source = ["src/autoship"]
