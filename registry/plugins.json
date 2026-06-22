@@ -189,6 +189,68 @@
       "homepage": "https://github.com/example/autoship-jira-link",
       "source_url": "https://github.com/example/autoship-jira-link",
       "audit_status": "pending"
+    },
+    {
+      "name": "changelog",
+      "package": "autoship-changelog",
+      "module": "autoship_changelog.plugin",
+      "version": "0.1.0",
+      "description": "根据 commit 历史自动生成或更新 CHANGELOG.md。",
+      "trust_level": "community",
+      "entry_point": "autoship_changelog.plugin:ChangelogPlugin",
+      "hooks": ["post_commit"],
+      "publisher": {
+        "id": "changelog-contrib",
+        "verified": false,
+        "url": "https://github.com/changelog-contrib"
+      },
+      "maintainer": "Community",
+      "license": "MIT",
+      "permissions": {
+        "filesystem": "read-write",
+        "network": false,
+        "shell": false,
+        "git": true,
+        "env": []
+      },
+      "categories": ["productivity", "git"],
+      "tags": ["changelog", "release", "git"],
+      "downloads": 36,
+      "rating": {"score": 4.0, "count": 4},
+      "homepage": "https://github.com/example/autoship-changelog",
+      "source_url": "https://github.com/example/autoship-changelog",
+      "audit_status": "approved"
+    },
+    {
+      "name": "pytest-cov",
+      "package": "autoship-pytest-cov",
+      "module": "autoship_pytest_cov.plugin",
+      "version": "0.1.2",
+      "description": "pre_commit 阶段运行 pytest 并检查覆盖率阈值。",
+      "trust_level": "community",
+      "entry_point": "autoship_pytest_cov.plugin:PytestCovPlugin",
+      "hooks": ["pre_commit"],
+      "publisher": {
+        "id": "pytest-cov-contrib",
+        "verified": false,
+        "url": "https://github.com/pytest-cov-contrib"
+      },
+      "maintainer": "Community",
+      "license": "MIT",
+      "permissions": {
+        "filesystem": "read-only",
+        "network": false,
+        "shell": true,
+        "git": false,
+        "env": []
+      },
+      "categories": ["quality", "testing"],
+      "tags": ["pytest", "coverage", "testing"],
+      "downloads": 89,
+      "rating": {"score": 4.2, "count": 6},
+      "homepage": "https://github.com/example/autoship-pytest-cov",
+      "source_url": "https://github.com/example/autoship-pytest-cov",
+      "audit_status": "approved"
     }
   ]
 }
