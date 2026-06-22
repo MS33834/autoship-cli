@@ -183,12 +183,12 @@ def benchmark_clean(num_files: int = 100) -> Benchmark:
     return bench
 
 
-def benchmark_verify() -> Benchmark:
+def benchmark_verify(num_files: int = 10) -> Benchmark:
     """测量 ``autoship verify`` 的端到端耗时。"""
     bench = Benchmark("verify_execution", "s", target=5.0)
     with tempfile.TemporaryDirectory() as tmp:
         project_root = Path(tmp)
-        _create_project(project_root, num_files=10)
+        _create_project(project_root, num_files=num_files)
         _setup_git(project_root)
         _write_config(project_root)
         for _ in range(3):
@@ -197,6 +197,48 @@ def benchmark_verify() -> Benchmark:
                 _autoship_cmd() + ["verify", "python --version"],
                 cwd=project_root,
                 timeout=60,
+            )
+            elapsed_s = time.perf_counter() - start
+            if proc.returncode != 0:
+                bench.measure(float("inf"))
+            else:
+                bench.measure(elapsed_s)
+    return bench
+
+
+def benchmark_clean_large_project() -> Benchmark:
+    """测量 ``autoship clean`` 在 1000 个文件的大规模合成项目上的执行时间。"""
+    bench = Benchmark("clean_large_project", "s", target=60.0)
+    for _ in range(3):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp)
+            _create_project(project_root, num_files=1000)
+            _setup_git(project_root)
+            _write_config(project_root)
+            start = time.perf_counter()
+            proc = run(_autoship_cmd() + ["--yes", "clean"], cwd=project_root, timeout=300)
+            elapsed_s = time.perf_counter() - start
+            if proc.returncode != 0:
+                bench.measure(float("inf"))
+            else:
+                bench.measure(elapsed_s)
+    return bench
+
+
+def benchmark_verify_large_project() -> Benchmark:
+    """测量 ``autoship verify`` 在 1000 个文件的大规模合成项目上的执行时间。"""
+    bench = Benchmark("verify_large_project", "s", target=30.0)
+    with tempfile.TemporaryDirectory() as tmp:
+        project_root = Path(tmp)
+        _create_project(project_root, num_files=1000)
+        _setup_git(project_root)
+        _write_config(project_root)
+        for _ in range(3):
+            start = time.perf_counter()
+            proc = run(
+                _autoship_cmd() + ["verify", "python --version"],
+                cwd=project_root,
+                timeout=300,
             )
             elapsed_s = time.perf_counter() - start
             if proc.returncode != 0:
@@ -250,6 +292,8 @@ def run_benchmarks() -> dict[str, Any]:
         benchmark_startup(),
         benchmark_clean(),
         benchmark_verify(),
+        benchmark_clean_large_project(),
+        benchmark_verify_large_project(),
         benchmark_plugin_list(),
         benchmark_idle_memory(),
     ]
