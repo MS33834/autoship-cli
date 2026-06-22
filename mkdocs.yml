@@ -77,6 +77,7 @@ nav:
   - Changelog: changelog.md
   - 贡献指南: contributing.md
   - 安全策略: security.md
+  - 安全审计: security-audit.md
   - 遥测与隐私: telemetry.md
   - 隐私政策: privacy.md
   - 发布检查清单: release-checklist.md
