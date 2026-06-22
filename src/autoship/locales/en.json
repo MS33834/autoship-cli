@@ -189,5 +189,37 @@
   "audit.cleanup_dry_run": "[dry-run] Would remove old audit log files",
 
   "common.aborted": "Aborted.",
-  "common.dry_run_tag": "[dry-run]"
+  "common.dry_run_tag": "[dry-run]",
+
+  "config.help": "Inspect and manage AutoShip configuration.",
+  "config.list_help": "Show effective configuration (sensitive values are redacted).",
+  "config.get_help": "Get a single configuration value.",
+  "config.telemetry_help": "Enable, disable, or view telemetry setting.",
+  "config.option.json": "Output as JSON",
+  "config.option.key": "Dotted configuration key, e.g. model.default_tier",
+  "config.option.enable": "Enable telemetry",
+  "config.option.disable": "Disable telemetry",
+  "config.option.status": "Show current telemetry status",
+  "config.key_not_found": "Key '{key}' not found in configuration",
+  "config.read_error": "Failed to read configuration: {exc}",
+  "config.telemetry_status": "Telemetry is {state}.",
+  "config.telemetry_set": "Telemetry {state}. Configuration written to {target}",
+
+  "upload.repository_url_invalid": "--repository-url must use HTTPS or point to localhost/127.0.0.1",
+  "upload.option.target": "Upload target, e.g. pypi/docker/github",
+  "upload.option.image": "Docker image name",
+  "upload.option.tag": "Docker image tag or GitHub release tag",
+  "upload.option.artifact": "Artifacts to upload",
+  "upload.option.registry": "Docker registry prefix (e.g. localhost:5000)",
+
+  "plugin.rate_invalid": "Rating must be between 1 and 5",
+
+  "cli.unknown_command": "Unknown command: {command}",
+  "cli.unknown_command.suggestion": "Run `autoship --help` to see available commands.",
+
+  "error.suggestion.init": "Run `autoship init` to create a configuration file.",
+  "error.suggestion.model_config": "Edit `.autoship.toml` to configure a model backend, or run `autoship init`.",
+  "error.suggestion.install_tool": "Install the required tool or add it to PATH.",
+  "error.suggestion.upload_dry_run": "Use `autoship upload --target {target} --dry-run` to preview.",
+  "error.suggestion.doctor": "Run `autoship doctor` to diagnose your environment."
 }

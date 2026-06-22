@@ -10,34 +10,35 @@ import typer
 from autoship.adapters.upload import get_uploader
 from autoship.core.audit_logger import AuditLogger
 from autoship.core.context import CommandContext
-from autoship.core.i18n import I18n, get_i18n_from_ctx
+from autoship.core.i18n import I18n, get_i18n, get_i18n_from_ctx
 from autoship.exceptions import UploadError
 from autoship.plugin_manager import manager as plugin_manager
 
+_i18n = get_i18n()
 app = typer.Typer()
 
 
 def register(parent: typer.Typer) -> None:
-    parent.command(name="upload")(upload)
+    parent.command(name="upload", help=_i18n._("upload.help"))(upload)
 
 
 @app.command(name="upload")
 def upload(
     ctx: typer.Context,
-    target: str = typer.Option(..., "--target", help="Upload target, e.g. pypi/docker/github"),
-    image: str | None = typer.Option(None, "--image", help="Docker image name"),
+    target: str = typer.Option(..., "--target", help=_i18n._("upload.option.target")),
+    image: str | None = typer.Option(None, "--image", help=_i18n._("upload.option.image")),
     tag: str | None = typer.Option(
-        None, "--tag", "-t", help="Docker image tag or GitHub release tag"
+        None, "--tag", "-t", help=_i18n._("upload.option.tag")
     ),
-    artifacts: list[str] | None = typer.Option(None, "--artifact", help="Artifacts to upload"),
+    artifacts: list[str] | None = typer.Option(None, "--artifact", help=_i18n._("upload.option.artifact")),
     repository: str | None = typer.Option(
-        None, "--repository", help="PyPI repository name (default: testpypi)"
+        None, "--repository", help=_i18n._("upload.option.repository")
     ),
     repository_url: str | None = typer.Option(
-        None, "--repository-url", help="PyPI repository upload URL"
+        None, "--repository-url", help=_i18n._("upload.option.repository_url")
     ),
     registry: str | None = typer.Option(
-        None, "--registry", help="Docker registry prefix (e.g. localhost:5000)"
+        None, "--registry", help=_i18n._("upload.option.registry")
     ),
 ) -> None:
     """Upload artifacts to a configured target."""
@@ -69,9 +70,7 @@ def upload(
         uploader_cfg["repository"] = repository
     if repository_url:
         if not PyPIUploader.is_safe_repository_url(repository_url):
-            raise UploadError(
-                "--repository-url must use HTTPS or point to localhost/127.0.0.1"
-            )
+            raise UploadError(i18n._("upload.repository_url_invalid"))
         uploader_cfg["repository_url"] = repository_url
     if registry:
         uploader_cfg["registry"] = registry

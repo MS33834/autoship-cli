@@ -270,16 +270,17 @@ P3 目标是把已完成的 MVP 功能在真实后端、真实仓库、真实 CI
 - **依赖**：P3-3 打包验证完成。
 - **状态**：已完成。release.yml 新增 TestPyPI 支持（workflow_dispatch 选择与预发布 tag 自动路由），ci.yml/release.yml 统一 lint 范围至 `src tests dogfood benchmarks`，刷新 `benchmarks/results.json` 基线。多角色 review 与修复记录见 `docs/reviews/p3-5-ci-pipeline.md`。
 
-### P3-6 错误消息与 UX 打磨
+### P3-6 错误消息与 UX 打磨 ✅
 
 - **Owner**：文档/UX组
-- **问题**：部分错误消息仍为英文或技术栈信息过重，多语言覆盖不完整。
+- **问题**：部分错误消息仍为英文或技术栈信息过重，多语言覆盖不完整；缺少常见错误下一步操作建议与 UX 测试。
 - **验收标准**：
   - 所有用户可见错误消息都可通过 `zh.json` / `en.json` 翻译。
   - 常见错误（未初始化、未配置模型、未安装工具、上传失败）给出下一步操作建议。
   - `--help` 与各命令 help 文本经过统一润色。
   - 新增 UX 测试：验证 `--help` 输出无 Traceback、未知命令提示友好。
 - **相关文件**：`src/autoship/cli/main.py`、各 `src/autoship/cli/commands/*.py`、`src/autoship/locales/*.json`。
+- **状态**：已完成。main.py / config.py / upload.py / plugin.py 的 help 与错误消息接入 i18n；新增未知命令拦截与 `_print_suggestion` 下一步建议；新增 `--help` 无 traceback、未知命令友好提示、ConfigError 建议三个 UX 测试；修复 `I18n._()` 占位符冲突；刷新 benchmark 基线。多角色 review 与修复记录见 `docs/reviews/p3-6-error-ux.md`。
 
 ### P3-7 遥测与隐私合规
 

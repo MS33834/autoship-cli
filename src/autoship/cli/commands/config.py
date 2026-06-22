@@ -11,11 +11,17 @@ import tomli_w
 import typer
 
 from autoship.core.config_center import DEFAULT_CONFIG_NAME
+from autoship.core.i18n import I18n, get_i18n, get_i18n_from_ctx
 from autoship.exceptions import ConfigError
 
 logger = structlog.get_logger()
 
-app = typer.Typer(name="config", help="Inspect and manage AutoShip configuration.")
+_i18n = get_i18n()
+app = typer.Typer(
+    name="config",
+    help=_i18n._("config.help"),
+    rich_markup_mode="rich",
+)
 
 # Keys whose values should be redacted when printing configuration.
 SENSITIVE_KEYS = frozenset({"api_key", "siem_token", "base_url", "cx", "public_key"})
@@ -48,16 +54,16 @@ def _drop_none(value: Any) -> Any:
     return value
 
 
-def _dotted_get(cfg: dict[str, Any], key: str) -> Any:
+def _dotted_get(cfg: dict[str, Any], dotted_key: str, i18n: I18n) -> Any:
     """Retrieve a nested configuration value by dotted key."""
-    parts = key.split(".")
+    parts = dotted_key.split(".")
     target: Any = cfg
     for part in parts:
         if not isinstance(target, dict):
-            raise ConfigError(f"Key '{key}' not found in configuration")
+            raise ConfigError(i18n._("config.key_not_found", key=dotted_key))
         mapping = cast(dict[str, Any], target)
         if part not in mapping:
-            raise ConfigError(f"Key '{key}' not found in configuration")
+            raise ConfigError(i18n._("config.key_not_found", key=dotted_key))
         target = mapping[part]
     return target
 
@@ -79,10 +85,10 @@ def _load_toml(path: Path) -> dict[str, Any]:
         return tomllib.load(f)  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
 
 
-@app.command("list")
+@app.command("list", help=_i18n._("config.list_help"))
 def list_config(
     ctx: typer.Context,
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    json_output: bool = typer.Option(False, "--json", help=_i18n._("config.option.json")),
 ) -> None:
     """Show effective configuration (sensitive values are redacted)."""
     cfg = ctx.obj["config"].model_dump(mode="json")
@@ -93,17 +99,18 @@ def list_config(
         typer.echo(tomli_w.dumps(_drop_none(cfg)).strip())
 
 
-@app.command("get")
+@app.command("get", help=_i18n._("config.get_help"))
 def get_config(
     ctx: typer.Context,
-    key: str = typer.Argument(..., help="Dotted configuration key, e.g. model.default_tier"),
+    key: str = typer.Argument(..., help=_i18n._("config.option.key")),
 ) -> None:
     """Get a single configuration value."""
+    i18n = get_i18n_from_ctx(ctx)
     cfg = ctx.obj["config"].model_dump(mode="json")
     try:
-        value = _dotted_get(cfg, key)
+        value = _dotted_get(cfg, key, i18n)
     except ConfigError as exc:
-        typer.secho(f"Error: {exc}", fg=typer.colors.RED, err=True)
+        typer.secho(i18n._("error.prefix", exc=exc), fg=typer.colors.RED, err=True)
         raise typer.Exit(code=2) from exc
     if isinstance(value, (dict, list)):
         typer.echo(json.dumps(value, indent=2))
@@ -111,18 +118,19 @@ def get_config(
         typer.echo(str(value))
 
 
-@app.command("telemetry")
+@app.command("telemetry", help=_i18n._("config.telemetry_help"))
 def telemetry_config(
     ctx: typer.Context,
-    enable: bool = typer.Option(False, "--enable", help="Enable telemetry"),
-    disable: bool = typer.Option(False, "--disable", help="Disable telemetry"),
-    status: bool = typer.Option(False, "--status", help="Show current telemetry status"),
+    enable: bool = typer.Option(False, "--enable", help=_i18n._("config.option.enable")),
+    disable: bool = typer.Option(False, "--disable", help=_i18n._("config.option.disable")),
+    status: bool = typer.Option(False, "--status", help=_i18n._("config.option.status")),
 ) -> None:
     """Enable, disable, or view telemetry setting."""
+    i18n = get_i18n_from_ctx(ctx)
     cfg = ctx.obj["config"]
     if status or (not enable and not disable):
         state = "enabled" if cfg.telemetry_enabled else "disabled"
-        typer.echo(f"Telemetry is {state}.")
+        typer.echo(i18n._("config.telemetry_status", state=state))
         return
 
     target = _target_path(ctx)
@@ -131,7 +139,7 @@ def telemetry_config(
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(tomli_w.dumps(data), encoding="utf-8")
     state = "enabled" if data["telemetry_enabled"] else "disabled"
-    typer.echo(f"Telemetry {state}. Configuration written to {target}")
+    typer.echo(i18n._("config.telemetry_set", state=state, target=target))
 
 
 def register(parent: typer.Typer) -> None:

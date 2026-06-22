@@ -189,5 +189,37 @@
   "audit.cleanup_dry_run": "[dry-run] 将删除过期审计日志文件",
 
   "common.aborted": "已中止。",
-  "common.dry_run_tag": "[dry-run]"
+  "common.dry_run_tag": "[dry-run]",
+
+  "config.help": "查看和管理 AutoShip 配置。",
+  "config.list_help": "显示生效配置（敏感值会被脱敏）。",
+  "config.get_help": "获取单个配置项的值。",
+  "config.telemetry_help": "启用、禁用或查看遥测开关。",
+  "config.option.json": "以 JSON 格式输出",
+  "config.option.key": "点号分隔的配置键，例如 model.default_tier",
+  "config.option.enable": "启用遥测",
+  "config.option.disable": "禁用遥测",
+  "config.option.status": "显示当前遥测状态",
+  "config.key_not_found": "配置中不存在键 '{key}'",
+  "config.read_error": "读取配置失败：{exc}",
+  "config.telemetry_status": "遥测已{state}。",
+  "config.telemetry_set": "遥测已{state}。配置已写入 {target}",
+
+  "upload.repository_url_invalid": "--repository-url 必须使用 HTTPS，或指向 localhost/127.0.0.1",
+  "upload.option.target": "上传目标，例如 pypi/docker/github",
+  "upload.option.image": "Docker 镜像名称",
+  "upload.option.tag": "Docker 镜像标签或 GitHub 发布标签",
+  "upload.option.artifact": "要上传的产物",
+  "upload.option.registry": "Docker 仓库前缀（例如 localhost:5000）",
+
+  "plugin.rate_invalid": "评分必须在 1 到 5 之间",
+
+  "cli.unknown_command": "未知命令：{command}",
+  "cli.unknown_command.suggestion": "运行 `autoship --help` 查看可用命令。",
+
+  "error.suggestion.init": "运行 `autoship init` 创建配置文件。",
+  "error.suggestion.model_config": "编辑 `.autoship.toml` 配置模型后端，或运行 `autoship init`。",
+  "error.suggestion.install_tool": "安装所需工具，或将其加入 PATH。",
+  "error.suggestion.upload_dry_run": "使用 `autoship upload --target {target} --dry-run` 预览上传。",
+  "error.suggestion.doctor": "运行 `autoship doctor` 诊断环境。"
 }

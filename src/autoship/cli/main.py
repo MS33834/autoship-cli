@@ -12,13 +12,15 @@ import typer
 from autoship.cli import commands
 from autoship.core.audit_logger import AuditLogger
 from autoship.core.config_center import load_config
-from autoship.core.i18n import get_i18n
+from autoship.core.i18n import I18n, get_i18n
 from autoship.core.telemetry import TelemetryCollector
-from autoship.exceptions import AutoShipError, ExitCode
+from autoship.exceptions import AutoShipError, ConfigError, ExitCode
+
+_i18n = get_i18n()
 
 app = typer.Typer(
     name="autoship",
-    help="AutoShip: AI-assisted code shipping toolkit",
+    help=_i18n._("cli.help"),
     no_args_is_help=True,
     rich_markup_mode="rich",
     pretty_exceptions_enable=False,
@@ -28,12 +30,14 @@ app = typer.Typer(
 @app.callback()
 def main_callback(
     ctx: typer.Context,
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
-    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Show actions without executing"),
-    yes: bool = typer.Option(False, "--yes", "-y", help="Skip interactive confirmations"),
-    config_path: Path | None = typer.Option(None, "--config", "-c", help="Path to config file"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help=_i18n._("option.verbose")),
+    dry_run: bool = typer.Option(False, "--dry-run", "-n", help=_i18n._("option.dry_run")),
+    yes: bool = typer.Option(False, "--yes", "-y", help=_i18n._("option.yes")),
+    config_path: Path | None = typer.Option(
+        None, "--config", "-c", help=_i18n._("option.config_path")
+    ),
     lang: str | None = typer.Option(
-        None, "--lang", help="Output language (en, zh, auto)", show_default=False
+        None, "--lang", help=_i18n._("option.lang"), show_default=False
     ),
 ) -> None:
     """AutoShip global options."""
@@ -57,11 +61,54 @@ def main_callback(
 commands.register_all(app)
 
 
+def _known_commands() -> set[str]:
+    """Return the set of top-level subcommand names registered on ``app``."""
+    names: set[str] = set()
+    for cmd in app.registered_commands:
+        name = getattr(cmd, "name", None)
+        if name:
+            names.add(name)
+    for group in app.registered_groups:
+        name = getattr(getattr(group, "typer_instance", None), "name", None)
+        if name:
+            names.add(name)
+    return names
+
+
 def _guess_command() -> str:
     """Infer the invoked subcommand from ``sys.argv``."""
     if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
         return sys.argv[1]
     return "help"
+
+
+def _is_unknown_command(command: str) -> bool:
+    """Return True if ``command`` looks like a user-supplied but unknown subcommand."""
+    return bool(command) and command not in _known_commands() and command != "help"
+
+
+def _print_suggestion(i18n: I18n, exc: AutoShipError) -> None:
+    """Print a contextual next-step suggestion for common error types."""
+    message = str(exc).lower()
+    details = getattr(exc, "details", {}) or {}
+    suggestion_key: str | None = None
+
+    if isinstance(exc, ConfigError):
+        suggestion_key = "error.suggestion.init"
+    elif "api key" in message or (
+        "model" in message and ("unreachable" in message or "backend" in message)
+    ):
+        suggestion_key = "error.suggestion.model_config"
+    elif "command not found" in message or "not found on path" in message:
+        suggestion_key = "error.suggestion.install_tool"
+    elif "upload" in message:
+        target = details.get("target") or "<target>"
+        suggestion_key = "error.suggestion.upload_dry_run"
+        typer.secho(f"\n💡 {i18n._(suggestion_key, target=target)}", fg=typer.colors.CYAN, err=True)
+        return
+
+    if suggestion_key:
+        typer.secho(f"\n💡 {i18n._(suggestion_key)}", fg=typer.colors.CYAN, err=True)
 
 
 def cli_entrypoint() -> int:
@@ -75,6 +122,16 @@ def cli_entrypoint() -> int:
     exit_code = 0
     exc_record: BaseException | None = None
 
+    if _is_unknown_command(command):
+        typer.secho(i18n._("cli.unknown_command", command=command), fg=typer.colors.RED, err=True)
+        typer.secho(
+            f"💡 {i18n._('cli.unknown_command.suggestion')}",
+            fg=typer.colors.CYAN,
+            err=True,
+        )
+        telemetry.record(command, start, ExitCode.USAGE_ERROR, exc=None)
+        return ExitCode.USAGE_ERROR
+
     try:
         app()
     except typer.Exit as exc:
@@ -83,12 +140,21 @@ def cli_entrypoint() -> int:
         exit_code = exc.code
         exc_record = exc
         typer.secho(i18n._("error.prefix", exc=exc), fg=typer.colors.RED, err=True)
+        _print_suggestion(i18n, exc)
     except Exception as exc:
         exit_code = ExitCode.USAGE_ERROR
         exc_record = exc
         logger.exception("Unhandled exception")
         typer.secho(i18n._("unexpected_error.prefix", exc=exc), fg=typer.colors.RED, err=True)
+        typer.secho(
+            f"\n💡 {i18n._('error.suggestion.doctor')}",
+            fg=typer.colors.CYAN,
+            err=True,
+        )
     finally:
+        if exc_record is None and exit_code == 0:
+            # Already recorded above for unknown commands; normal flow recorded here.
+            pass
         telemetry.record(command, start, exit_code, exc=exc_record)
 
     return exit_code

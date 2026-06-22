@@ -9,6 +9,7 @@ import pytest
 import typer
 
 from autoship.cli.commands import config
+from autoship.core.i18n import get_i18n
 from autoship.models.config import AppConfig
 
 
@@ -18,6 +19,7 @@ def _ctx(app_config: AppConfig, config_path: Path | None = None) -> MagicMock:
         "config": app_config,
         "config_path": config_path,
         "audit_logger": MagicMock(),
+        "i18n": get_i18n("en"),
     }
     return ctx
 

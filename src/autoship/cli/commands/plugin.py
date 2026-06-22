@@ -467,7 +467,7 @@ def rate(
     try:
         PluginStats().record_rate(name, score)
     except ValueError as exc:
-        raise PluginError(str(exc)) from exc
+        raise PluginError(i18n._("plugin.rate_invalid")) from exc
     typer.echo(i18n._("plugin.rated", name=name, score=score))
 
 

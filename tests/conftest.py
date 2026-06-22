@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -11,6 +12,8 @@ from autoship.core.audit_logger import AuditLogger
 from autoship.core.context import CommandContext
 from autoship.core.i18n import get_i18n
 from autoship.models.config import AppConfig
+
+os.environ.setdefault("LANG", "en_US.UTF-8")
 
 
 @pytest.fixture
