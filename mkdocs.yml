@@ -81,6 +81,8 @@ nav:
   - 遥测与隐私: telemetry.md
   - 隐私政策: privacy.md
   - 发布检查清单: release-checklist.md
+  - 1.0.0 发布通告: announcement.md
+  - 演示录制: demo.md
 
 markdown_extensions:
   - pymdownx.highlight:
