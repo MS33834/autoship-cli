@@ -9,7 +9,7 @@
 - [ ] 确认版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
   - 正式版：`MAJOR.MINOR.PATCH`，例如 `1.0.0`。
   - 预发布版：附加 `-alpha.N`、`-beta.N` 或 `-rc.N`，例如 `1.1.0-rc.1`。
-- [ ] 更新根目录 [`CHANGELOG.md`](../CHANGELOG.md) 与文档 [`changelog.md`](./changelog.md)。
+- [ ] 更新根目录 [`CHANGELOG.md`](https://github.com/autoship-cli/autoship-cli/blob/main/CHANGELOG.md) 与文档 [`changelog.md`](./changelog.md)。
   - 新增版本节，包含 `Added` / `Changed` / `Deprecated` / `Removed` / `Fixed` / `Security` 子节。
   - 标注发布日期（UTC+8）。
 - [ ] 确认 `pyproject.toml` 中 `project.version` 与目标版本一致。
@@ -77,7 +77,7 @@ git push origin v<X.Y.Z>
 
 ### 6.2 触发 Release 工作流
 
-tag push 会自动触发 [`.github/workflows/release.yml`](../.github/workflows/release.yml)：
+tag push 会自动触发 [`.github/workflows/release.yml`](https://github.com/autoship-cli/autoship-cli/blob/main/.github/workflows/release.yml)：
 
 - [ ] `pypi` / `testpypi` 自动路由正确（预发布 tag 进入 TestPyPI）。
 - [ ] `autoship` 与 `autoship-sdk` wheel 上传成功。
