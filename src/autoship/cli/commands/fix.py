@@ -148,7 +148,9 @@ def _is_within_project(path: Path, project_root: Path) -> bool:
         return False
 
 
-def _collect_relevant_files(project_root: Path, error_context: str) -> tuple[dict[str, str], list[str]]:
+def _collect_relevant_files(
+    project_root: Path, error_context: str
+) -> tuple[dict[str, str], list[str]]:
     """Best-effort extraction of file paths from the error context.
 
     Only files that resolve inside ``project_root``, have an allowed extension,

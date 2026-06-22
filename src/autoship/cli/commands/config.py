@@ -129,7 +129,7 @@ def telemetry_config(
     i18n = get_i18n_from_ctx(ctx)
     cfg = ctx.obj["config"]
     if status or (not enable and not disable):
-        state = "enabled" if cfg.telemetry_enabled else "disabled"
+        state = "enabled" if cfg.telemetry.enabled else "disabled"
         typer.echo(i18n._("config.telemetry_status", state=state))
         return
 

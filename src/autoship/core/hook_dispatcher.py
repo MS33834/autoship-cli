@@ -123,13 +123,14 @@ class HookDispatcher:
 
     def _load_builtin(self) -> None:
         """Load built-in plugins."""
-        from autoship.plugins import defaults, docker_ship, security_scan, web_search
+        from autoship.plugins import defaults, docker_ship, security_scan, typecheck, web_search
 
         for plugin in (
             defaults.plugin,
             security_scan.plugin,
             web_search.plugin,
             docker_ship.plugin,
+            typecheck.plugin,
         ):
             self.pm.register(plugin)
             name = self.pm.get_name(plugin)

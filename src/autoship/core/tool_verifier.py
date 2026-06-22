@@ -73,9 +73,7 @@ class ToolVerifier:
                 )
             resolved = raw.resolve()
             if not resolved.is_file():
-                raise ConfigError(
-                    f"Configured tool '{name}' does not exist: {tool_config.path}"
-                )
+                raise ConfigError(f"Configured tool '{name}' does not exist: {tool_config.path}")
         elif search_path:
             found = shutil.which(name)
             if found is None:

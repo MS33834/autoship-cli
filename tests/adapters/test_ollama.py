@@ -36,7 +36,9 @@ def test_health_returns_false_on_error() -> None:
 
 def test_health_returns_false_on_connection_error() -> None:
     with respx.mock:
-        respx.get("http://localhost:11434/v1/models").mock(side_effect=httpx.ConnectError("refused"))
+        respx.get("http://localhost:11434/v1/models").mock(
+            side_effect=httpx.ConnectError("refused")
+        )
         assert _gateway().health() is False
 
 
@@ -107,7 +109,9 @@ def test_chat_raises_on_missing_choices() -> None:
     from autoship.exceptions import ModelGatewayError
 
     with respx.mock:
-        respx.post("http://localhost:11434/v1/chat/completions").respond(200, json={"model": "llama3"})
+        respx.post("http://localhost:11434/v1/chat/completions").respond(
+            200, json={"model": "llama3"}
+        )
         req = ChatCompletionRequest(messages=[ChatMessage(role="user", content="hi")])
         with pytest.raises(ModelGatewayError, match="Unexpected response structure"):
             _gateway().chat(req)

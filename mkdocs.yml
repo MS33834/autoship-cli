@@ -71,9 +71,12 @@ nav:
   - 配置说明: configuration.md
   - 插件: plugins.md
   - 插件开发指南: plugin-development.md
+  - 插件发布指南: plugin-publishing.md
   - Changelog: changelog.md
   - 贡献指南: contributing.md
   - 安全策略: security.md
+  - 遥测与隐私: telemetry.md
+  - 隐私政策: privacy.md
 
 markdown_extensions:
   - pymdownx.highlight:

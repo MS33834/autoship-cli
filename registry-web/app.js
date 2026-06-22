@@ -19,6 +19,11 @@ function publisherBadge(plugin) {
   return `<span class="publisher-badge ${verifiedClass}">${escapeHtml(publisher.id)} (${label})</span>`;
 }
 
+function auditStatusBadge(plugin) {
+  const status = plugin.audit_status || "pending";
+  return `<span class="audit-badge audit-${status}">${escapeHtml(status)}</span>`;
+}
+
 function renderTags(tags) {
   if (!Array.isArray(tags) || tags.length === 0) return "";
   return tags
@@ -53,7 +58,10 @@ function renderPlugins(plugins) {
     card.innerHTML = `
       <div class="card-header">
         <h3>${escapeHtml(plugin.name)}</h3>
-        <span class="badge trust-${plugin.trust_level}">${plugin.trust_level}</span>
+        <div class="badges">
+          <span class="badge trust-${plugin.trust_level}">${plugin.trust_level}</span>
+          ${auditStatusBadge(plugin)}
+        </div>
       </div>
       <p class="version">v${escapeHtml(plugin.version || "?")}</p>
       <p class="description">${escapeHtml(plugin.description || "")}</p>
@@ -109,12 +117,13 @@ function openModal(plugin) {
   const body = document.getElementById("modal-body");
   body.innerHTML = `
     <div class="modal-header">
-      <h2>${escapeHtml(plugin.name)} <span class="badge trust-${plugin.trust_level}">${plugin.trust_level}</span></h2>
+      <h2>${escapeHtml(plugin.name)} <span class="badge trust-${plugin.trust_level}">${plugin.trust_level}</span> ${auditStatusBadge(plugin)}</h2>
       <p class="version">v${escapeHtml(plugin.version || "?")}</p>
     </div>
     <p class="modal-description">${escapeHtml(plugin.description || "")}</p>
     <dl class="modal-details">
       <dt>Publisher</dt><dd>${publisherBadge(plugin) || "Unknown"}</dd>
+      <dt>Audit status</dt><dd>${auditStatusBadge(plugin)}</dd>
       <dt>Maintainer</dt><dd>${escapeHtml(plugin.maintainer || "Unknown")}</dd>
       <dt>License</dt><dd>${escapeHtml(plugin.license || "Unknown")}</dd>
       <dt>Categories</dt><dd>${renderCategories(plugin.categories) || "—"}</dd>

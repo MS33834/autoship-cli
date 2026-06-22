@@ -105,5 +105,14 @@ def test_docker_build_and_push_to_local_registry(
     assert result.success is True
     assert result.target == "docker"
     assert local_registry in result.details["image"]
-    catalog = run_cmd(["docker", "exec", f"autoship-test-registry-{local_registry.split(':')[1]}", "wget", "-qO-", "http://localhost:5000/v2/_catalog"])
+    catalog = run_cmd(
+        [
+            "docker",
+            "exec",
+            f"autoship-test-registry-{local_registry.split(':')[1]}",
+            "wget",
+            "-qO-",
+            "http://localhost:5000/v2/_catalog",
+        ]
+    )
     assert image in catalog.stdout
