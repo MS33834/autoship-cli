@@ -100,7 +100,44 @@ base64 -w 0 signature.asc
 
 如果插件未申请 `verified` 等级，则保持 `trust_level: community` 且不填写 `sha256`/`signature`。
 
-## 4. PR 模板
+## 4. Verified Publisher 认证流程
+
+`verified` 信任等级用于标识经过 AutoShip 团队审核的发布者与插件。申请流程如下：
+
+### 4.1 发布者资格
+
+申请者必须满足：
+
+- 使用真实身份或活跃组织账号维护插件。
+- 插件源码仓库公开，且至少连续维护 3 个月或发布 2 个以上版本。
+- 过往无严重安全事件或恶意行为记录。
+
+### 4.2 提交认证申请
+
+在 GitHub 创建 issue，选择 **Verified Publisher Application** 模板，提供：
+
+- 发布者 ID（GitHub 用户名或组织名）与主页 URL。
+- 已发布或计划维护的插件列表。
+- 联系方式（公开邮箱或组织邮箱）。
+
+### 4.3 审核标准
+
+维护者按以下标准审核：
+
+| 维度 | 要求 |
+|---|---|
+| 身份真实性 | 发布者身份可验证，主页或组织资料完整。 |
+| 插件质量 | 代码通过 `ruff check` 与 `pytest`，文档与示例完整。 |
+| 安全合规 | 权限声明与实际行为一致，无过度申请 `network`/`shell`。 |
+| 持续维护 | 近 3 个月有活跃 commit 或版本发布。 |
+
+### 4.4 认证结果
+
+- 通过后：在 `registry/publishers.json` 中登记发布者信息，并允许其插件标记 `publisher.verified = true`。
+- 未通过：回复 issue 说明原因，可在补齐材料后重新申请。
+- 取消认证：如发布者后续出现安全事件、长期不维护或提供虚假信息，维护者可撤销其 `verified` 状态。
+
+## 5. PR 模板
 
 提交插件到 `registry/plugins.json` 时，请在 PR 描述中填写以下内容：
 
@@ -124,19 +161,19 @@ base64 -w 0 signature.asc
 - [ ] 我已阅读并同意 [隐私政策](./privacy.md)。
 ```
 
-## 5. 审核与上架
+## 6. 审核与上架
 
 1. 自动检查：CI 会校验 JSON schema、sha256 格式与必填字段。
 2. 安全审核：维护者审查 `permissions`、`network`、`shell` 等高敏感声明。
 3. 体验审核：确认文档、错误提示与使用示例完整。
 4. 合并后：registry-web 自动部署，用户可通过 `autoship plugin search <name>` 找到插件。
 
-## 6. 更新与下架
+## 7. 更新与下架
 
 - **版本更新**：提交新的 PR，更新 `version`、`sha256`、`signature`。
 - **下架插件**：将 `audit_status` 改为 `rejected` 并说明原因；严重安全问题的插件会被移出注册表。
 
-## 7. 相关资源
+## 8. 相关资源
 
 - [插件开发示例](../examples/custom-plugin)
 - [插件注册表 schema](https://github.com/autoship-cli/autoship-cli/blob/main/registry/schema.json)
