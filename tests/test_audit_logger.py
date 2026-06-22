@@ -330,9 +330,7 @@ def test_audit_logger_sets_restrictive_permissions(tmp_path: Path) -> None:
     assert stat.S_IMODE(audit.log_file.stat().st_mode) == 0o600
 
 
-def test_audit_logger_export_sets_restrictive_permissions(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_audit_logger_export_sets_restrictive_permissions(tmp_path: Path, monkeypatch) -> None:
     """Exported audit files are only owner-readable/writable."""
     log_dir = tmp_path / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)

@@ -118,9 +118,7 @@ def local_pypi(tmp_path: Path):
         server.shutdown()
 
 
-def test_pypi_upload_to_local_server(
-    minimal_python_package: Path, local_pypi, monkeypatch
-) -> None:
+def test_pypi_upload_to_local_server(minimal_python_package: Path, local_pypi, monkeypatch) -> None:
     """Build and upload a real package to a local upload server."""
     _build_artifacts(minimal_python_package)
 

@@ -35,9 +35,7 @@ def test_sdk_installs_and_imports(venv_dir: Path, autoship_wheel: Path, sdk_whee
     assert "ok" in result.stdout
 
 
-def test_sdk_no_dependency_cycles(
-    venv_dir: Path, autoship_wheel: Path, sdk_wheel: Path
-) -> None:
+def test_sdk_no_dependency_cycles(venv_dir: Path, autoship_wheel: Path, sdk_wheel: Path) -> None:
     """``pip check`` reports no broken dependencies after installing both packages."""
     install_wheel(venv_dir, autoship_wheel)
     install_wheel(venv_dir, sdk_wheel)

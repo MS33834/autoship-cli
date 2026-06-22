@@ -59,7 +59,9 @@ def test_verify_package_with_valid_signature(tmp_path: Path) -> None:
     signature = private_key.sign(sha256.encode("ascii"))
     signature_b64 = base64.b64encode(signature).decode("ascii")
 
-    verify_package(path, sha256_hex=sha256, signature_b64=signature_b64, public_key_b64=public_key_b64)
+    verify_package(
+        path, sha256_hex=sha256, signature_b64=signature_b64, public_key_b64=public_key_b64
+    )
 
 
 def test_verify_package_with_invalid_signature(tmp_path: Path) -> None:

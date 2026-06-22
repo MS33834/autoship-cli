@@ -28,9 +28,7 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
-def lm_studio_backend(
-    lm_studio_base_url: str, lm_studio_model: str, lm_studio_api_key: str | None
-):
+def lm_studio_backend(lm_studio_base_url: str, lm_studio_model: str, lm_studio_api_key: str | None):
     """Return a configured LM Studio backend config."""
     return backend_config(
         Provider.LM_STUDIO,
@@ -67,9 +65,7 @@ def test_lm_studio_list_models_includes_configured_model(
     assert lm_studio_model in models
 
 
-def test_lm_studio_chat_returns_content(
-    lm_studio_gateway: LmStudioGateway, chat_messages
-) -> None:
+def test_lm_studio_chat_returns_content(lm_studio_gateway: LmStudioGateway, chat_messages) -> None:
     """A simple chat request returns non-empty content."""
     request = ChatCompletionRequest(messages=chat_messages, max_tokens=64)
     response = lm_studio_gateway.chat(request)
@@ -101,9 +97,7 @@ def test_lm_studio_chat_missing_model_raises(
         )
 
 
-def test_model_router_selects_lm_studio_backend(
-    project_root: Path, lm_studio_backend
-) -> None:
+def test_model_router_selects_lm_studio_backend(project_root: Path, lm_studio_backend) -> None:
     """``ModelRouter.select_backend`` returns the LM Studio gateway when healthy."""
     config = app_config_with_backend(project_root, lm_studio_backend)
     router = ModelRouter(config)
@@ -140,9 +134,7 @@ def test_unreachable_lm_studio_reports_unhealthy(project_root: Path) -> None:
     assert gateway.health() is False
 
 
-def test_unreachable_lm_studio_router_raises(
-    project_root: Path, chat_messages
-) -> None:
+def test_unreachable_lm_studio_router_raises(project_root: Path, chat_messages) -> None:
     """Router surfaces an error when LM Studio is unreachable and fallback is off."""
     cfg = backend_config(
         Provider.LM_STUDIO,

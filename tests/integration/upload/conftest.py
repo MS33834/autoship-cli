@@ -22,7 +22,9 @@ def tool_available(name: str) -> bool:
     return shutil.which(name) is not None
 
 
-def run_cmd(cmd: list[str], cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess:
+def run_cmd(
+    cmd: list[str], cwd: Path | None = None, check: bool = True
+) -> subprocess.CompletedProcess:
     """Run a command and return the completed process."""
     return subprocess.run(cmd, cwd=cwd, check=check, capture_output=True, text=True)
 

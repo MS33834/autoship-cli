@@ -60,9 +60,7 @@ def test_docker_upload_success(tmp_path: Path) -> None:
 
 def test_docker_upload_with_registry(tmp_path: Path) -> None:
     _write_docker_project(tmp_path)
-    uploader = DockerUploader(
-        tmp_path, image="myapp", tag="v1", registry="localhost:5000"
-    )
+    uploader = DockerUploader(tmp_path, image="myapp", tag="v1", registry="localhost:5000")
     with (
         patch("shutil.which", return_value="/usr/bin/docker"),
         patch("subprocess.run") as mock_run,

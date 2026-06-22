@@ -63,9 +63,7 @@ def test_ollama_list_models_includes_configured_model(
     assert ollama_model in models
 
 
-def test_ollama_chat_returns_content(
-    ollama_gateway: OllamaGateway, chat_messages
-) -> None:
+def test_ollama_chat_returns_content(ollama_gateway: OllamaGateway, chat_messages) -> None:
     """A simple chat request returns non-empty content."""
     from autoship.adapters.model_gateway import ChatCompletionRequest
 
@@ -100,9 +98,7 @@ def test_ollama_chat_missing_model_raises(
         )
 
 
-def test_model_router_selects_ollama_backend(
-    project_root: Path, ollama_backend
-) -> None:
+def test_model_router_selects_ollama_backend(project_root: Path, ollama_backend) -> None:
     """``ModelRouter.select_backend`` returns the Ollama gateway when healthy."""
     config = app_config_with_backend(project_root, ollama_backend)
     router = ModelRouter(config)
@@ -139,9 +135,7 @@ def test_unreachable_ollama_reports_unhealthy(project_root: Path) -> None:
     assert gateway.health() is False
 
 
-def test_unreachable_ollama_router_raises(
-    project_root: Path, chat_messages
-) -> None:
+def test_unreachable_ollama_router_raises(project_root: Path, chat_messages) -> None:
     """Router surfaces an error when Ollama is unreachable and fallback is off."""
     cfg = backend_config(
         Provider.OLLAMA,

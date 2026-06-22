@@ -27,19 +27,17 @@ def upload(
     ctx: typer.Context,
     target: str = typer.Option(..., "--target", help=_i18n._("upload.option.target")),
     image: str | None = typer.Option(None, "--image", help=_i18n._("upload.option.image")),
-    tag: str | None = typer.Option(
-        None, "--tag", "-t", help=_i18n._("upload.option.tag")
+    tag: str | None = typer.Option(None, "--tag", "-t", help=_i18n._("upload.option.tag")),
+    artifacts: list[str] | None = typer.Option(
+        None, "--artifact", help=_i18n._("upload.option.artifact")
     ),
-    artifacts: list[str] | None = typer.Option(None, "--artifact", help=_i18n._("upload.option.artifact")),
     repository: str | None = typer.Option(
         None, "--repository", help=_i18n._("upload.option.repository")
     ),
     repository_url: str | None = typer.Option(
         None, "--repository-url", help=_i18n._("upload.option.repository_url")
     ),
-    registry: str | None = typer.Option(
-        None, "--registry", help=_i18n._("upload.option.registry")
-    ),
+    registry: str | None = typer.Option(None, "--registry", help=_i18n._("upload.option.registry")),
 ) -> None:
     """Upload artifacts to a configured target."""
     from autoship.adapters.upload.pypi import PyPIUploader

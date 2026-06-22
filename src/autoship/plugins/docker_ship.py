@@ -120,9 +120,7 @@ def _sanitize_build_args(build_args: dict[str, str]) -> dict[str, str]:
             logger.warning("Skipping docker build-arg with invalid key: %r", key)
             continue
         if _BUILD_ARG_DANGEROUS_RE.search(value):
-            logger.warning(
-                "Skipping docker build-arg %r: value contains shell metacharacters", key
-            )
+            logger.warning("Skipping docker build-arg %r: value contains shell metacharacters", key)
             continue
         safe[key] = value
     return safe

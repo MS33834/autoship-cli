@@ -49,11 +49,9 @@ def test_get_config_missing_key(app_config: AppConfig, capsys) -> None:
     assert "not found" in captured.err
 
 
-def test_telemetry_disable_writes_project_config(
-    project_root: Path, app_config: AppConfig
-) -> None:
+def test_telemetry_disable_writes_project_config(project_root: Path, app_config: AppConfig) -> None:
     config_file = project_root / ".autoship.toml"
-    config_file.write_text('schema_version = 1\ntelemetry_enabled = true\n', encoding="utf-8")
+    config_file.write_text("schema_version = 1\ntelemetry_enabled = true\n", encoding="utf-8")
     ctx = _ctx(app_config, config_path=config_file)
     config.telemetry_config(ctx, enable=False, disable=True, status=False)
     content = config_file.read_text(encoding="utf-8")
