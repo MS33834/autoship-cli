@@ -232,6 +232,7 @@ P3 目标是把已完成的 MVP 功能在真实后端、真实仓库、真实 CI
   - CI 中使用 mock 或临时 registry（如 `localstack`、本地 Docker registry）跑通上传路径。
 - **相关文件**：`src/autoship/adapters/upload/*.py`、`src/autoship/cli/commands/upload.py`。
 - **依赖**：P2-3 外部工具 PATH 校验已完成。
+- **状态**：✅ 已完成。PyPI/Docker 适配器支持 `--repository-url` 与 `--registry`，默认使用 TestPyPI，新增本地 registry 集成测试，完成多角色 review 与修复，review 记录见 `docs/reviews/p3-2-upload-integration.md`。
 
 ### P3-3 安装包与分发验证
 

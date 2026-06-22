@@ -21,6 +21,20 @@ from autoship.adapters.upload.pypi import PyPIUploader
 from autoship.exceptions import UploadError
 
 
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://test.pypi.org/legacy/", True),
+        ("http://localhost:8080/simple/", True),
+        ("http://127.0.0.1:8080/simple/", True),
+        ("http://example.com/simple/", False),
+        ("ftp://example.com/simple/", False),
+    ],
+)
+def test_is_safe_repository_url(url: str, expected: bool) -> None:
+    assert PyPIUploader.is_safe_repository_url(url) is expected
+
+
 def _write_dist_artifacts(root: Path) -> None:
     """Create temporary wheel/sdist artifacts in ``dist/``."""
     dist = root / "dist"
@@ -30,7 +44,7 @@ def _write_dist_artifacts(root: Path) -> None:
 
 
 def test_pypi_dry_run(tmp_path: Path) -> None:
-    uploader = PyPIUploader(tmp_path, repository="testpypi")
+    uploader = PyPIUploader(tmp_path)
     result = uploader.upload(dry_run=True)
     assert result.success is True
     assert result.target == "pypi"
@@ -78,9 +92,32 @@ def test_pypi_upload_success(tmp_path: Path) -> None:
     assert upload_call.kwargs["shell"] is False
 
 
+def test_pypi_upload_with_repository_url(tmp_path: Path) -> None:
+    _write_dist_artifacts(tmp_path)
+    uploader = PyPIUploader(
+        tmp_path, repository="pypi", repository_url="https://test.pypi.org/legacy/"
+    )
+    with (
+        patch("shutil.which", return_value="/usr/bin/twine"),
+        patch("subprocess.run") as mock_run,
+    ):
+        result = uploader.upload()
+
+    assert result.success is True
+    assert result.details["repository_url"] == "https://test.pypi.org/legacy/"
+
+    _build_call, upload_call = mock_run.call_args_list
+    assert upload_call.args[0][:4] == [
+        "twine",
+        "upload",
+        "--repository-url",
+        "https://test.pypi.org/legacy/",
+    ]
+
+
 def test_pypi_upload_failure_raises_upload_error(tmp_path: Path) -> None:
     _write_dist_artifacts(tmp_path)
-    uploader = PyPIUploader(tmp_path, repository="pypi")
+    uploader = PyPIUploader(tmp_path)
 
     def _fail_upload(*_args, **_kwargs) -> None:
         raise subprocess.CalledProcessError(1, ["twine", "upload"])
@@ -95,7 +132,7 @@ def test_pypi_upload_failure_raises_upload_error(tmp_path: Path) -> None:
 
 def test_pypi_upload_verbose_prints_command(tmp_path: Path, capsys) -> None:
     _write_dist_artifacts(tmp_path)
-    uploader = PyPIUploader(tmp_path, repository="testpypi")
+    uploader = PyPIUploader(tmp_path)
     with (
         patch("shutil.which", return_value="/usr/bin/twine"),
         patch("subprocess.run") as mock_run,

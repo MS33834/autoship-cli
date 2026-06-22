@@ -77,7 +77,8 @@ def test_upload_dry_run(tmp_path: Path) -> None:
         ["--dry-run", "--yes", "upload", "--target", "pypi"],
     )
     assert result.exit_code == 0
-    assert "Uploaded to pypi" in result.output
+    assert "Would upload to pypi" in result.output
+    assert "repository: testpypi" in result.output
 
 
 def test_init_uses_hardware_tier(tmp_path: Path) -> None:
@@ -107,4 +108,5 @@ def test_upload_docker_dry_run(tmp_path: Path) -> None:
         ["--dry-run", "--yes", "upload", "--target", "docker", "--image", "myapp", "--tag", "v1"],
     )
     assert result.exit_code == 0
-    assert "Uploaded to docker" in result.output
+    assert "Would upload to docker" in result.output
+    assert "image: myapp:v1" in result.output

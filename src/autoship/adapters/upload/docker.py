@@ -22,12 +22,21 @@ class DockerUploader(UploadAdapter):
         image: str,
         tag: str = "latest",
         *,
+        registry: str | None = None,
         tool_verifier: ToolVerifier | None = None,
     ) -> None:
         self.project_root = project_root
         self.image = image
         self.tag = tag
+        self.registry = registry
         self._verifier = tool_verifier or ToolVerifier(ToolsConfig())
+
+    @property
+    def full_image(self) -> str:
+        """Return the fully qualified image name including registry prefix."""
+        if self.registry:
+            return f"{self.registry.rstrip('/')}/{self.image}:{self.tag}"
+        return f"{self.image}:{self.tag}"
 
     def validate(self) -> None:
         """Ensure Docker CLI is available."""
@@ -36,12 +45,14 @@ class DockerUploader(UploadAdapter):
 
     def upload(self, *, dry_run: bool = False, verbose: bool = False) -> UploadResult:
         """Build and push the configured image."""
-        full_image = f"{self.image}:{self.tag}"
+        full_image = self.full_image
+        details: dict[str, object] = {"image": full_image}
         if dry_run:
+            details["dry_run"] = True
             return UploadResult(
                 success=True,
                 target=self.name,
-                details={"image": full_image, "dry_run": True},
+                details=details,
             )
 
         self.validate()
@@ -61,5 +72,5 @@ class DockerUploader(UploadAdapter):
         return UploadResult(
             success=True,
             target=self.name,
-            details={"image": full_image},
+            details=details,
         )

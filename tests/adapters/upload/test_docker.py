@@ -58,6 +58,26 @@ def test_docker_upload_success(tmp_path: Path) -> None:
     assert push_call.kwargs["check"] is True
 
 
+def test_docker_upload_with_registry(tmp_path: Path) -> None:
+    _write_docker_project(tmp_path)
+    uploader = DockerUploader(
+        tmp_path, image="myapp", tag="v1", registry="localhost:5000"
+    )
+    with (
+        patch("shutil.which", return_value="/usr/bin/docker"),
+        patch("subprocess.run") as mock_run,
+    ):
+        result = uploader.upload()
+
+    assert result.success is True
+    assert result.details["image"] == "localhost:5000/myapp:v1"
+    assert mock_run.call_count == 2
+
+    build_call, push_call = mock_run.call_args_list
+    assert build_call.args[0] == ["docker", "build", "-t", "localhost:5000/myapp:v1", "."]
+    assert push_call.args[0] == ["docker", "push", "localhost:5000/myapp:v1"]
+
+
 def test_docker_upload_failure_raises_upload_error(tmp_path: Path) -> None:
     _write_docker_project(tmp_path)
     uploader = DockerUploader(tmp_path, image="myapp", tag="v1")

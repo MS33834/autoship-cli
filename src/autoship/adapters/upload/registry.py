@@ -23,6 +23,7 @@ def _docker_factory(root: Path, cfg: dict[str, Any]) -> DockerUploader:
         root,
         image=image,
         tag=cfg.get("tag", "latest"),
+        registry=cfg.get("registry"),
     )
 
 
@@ -40,7 +41,8 @@ def _github_factory(root: Path, cfg: dict[str, Any]) -> GitHubUploader:
 _UPLOADERS: _Registry = {
     "pypi": lambda root, cfg: PyPIUploader(
         root,
-        repository=cfg.get("repository", "pypi"),
+        repository=cfg.get("repository", "testpypi"),
+        repository_url=cfg.get("repository_url"),
     ),
     "docker": _docker_factory,
     "github": _github_factory,

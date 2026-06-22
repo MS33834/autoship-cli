@@ -49,3 +49,21 @@ def test_upload_user_abort(project_root, app_config: AppConfig, monkeypatch) -> 
     with pytest.raises(upload.typer.Exit) as exc:
         upload.upload(ctx, target="pypi")
     assert exc.value.exit_code == 0
+
+
+def test_format_dry_run_details_formats_list() -> None:
+    details = {"target": "pypi", "artifacts": ["dist/a.whl", "dist/b.whl"]}
+    formatted = upload._format_dry_run_details(details)
+    assert "target: pypi" in formatted
+    assert "artifacts: dist/a.whl, dist/b.whl" in formatted
+
+
+def test_format_dry_run_details_ignores_dry_run_key() -> None:
+    details = {"dry_run": True, "repository": "pypi"}
+    formatted = upload._format_dry_run_details(details)
+    assert "dry_run" not in formatted
+    assert "repository: pypi" in formatted
+
+
+def test_format_dry_run_details_returns_empty_for_none() -> None:
+    assert upload._format_dry_run_details(None) == ""

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import subprocess
-from typing import Any
+from typing import Any, cast
 
 import typer
 
@@ -30,14 +30,33 @@ def upload(
         None, "--tag", "-t", help="Docker image tag or GitHub release tag"
     ),
     artifacts: list[str] | None = typer.Option(None, "--artifact", help="Artifacts to upload"),
+    repository: str | None = typer.Option(
+        None, "--repository", help="PyPI repository name (default: testpypi)"
+    ),
+    repository_url: str | None = typer.Option(
+        None, "--repository-url", help="PyPI repository upload URL"
+    ),
+    registry: str | None = typer.Option(
+        None, "--registry", help="Docker registry prefix (e.g. localhost:5000)"
+    ),
 ) -> None:
     """Upload artifacts to a configured target."""
+    from autoship.adapters.upload.pypi import PyPIUploader
+
     config = ctx.obj["config"]
     i18n: I18n = get_i18n_from_ctx(ctx)
     audit: AuditLogger = ctx.obj["audit_logger"]
     dry_run: bool = ctx.obj.get("dry_run", False)
     yes: bool = ctx.obj.get("yes", False)
     verbose: bool = ctx.obj.get("verbose", False)
+
+    # Direct unit-test invocations may receive typer.Option objects as defaults.
+    image = image if isinstance(image, str) else None
+    tag = tag if isinstance(tag, str) else None
+    artifacts = artifacts if isinstance(artifacts, list) else None
+    repository = repository if isinstance(repository, str) else None
+    repository_url = repository_url if isinstance(repository_url, str) else None
+    registry = registry if isinstance(registry, str) else None
 
     uploader_cfg: dict[str, Any] = {"target": target}
     if image:
@@ -46,6 +65,16 @@ def upload(
         uploader_cfg["tag"] = tag
     if artifacts:
         uploader_cfg["artifacts"] = artifacts
+    if repository:
+        uploader_cfg["repository"] = repository
+    if repository_url:
+        if not PyPIUploader.is_safe_repository_url(repository_url):
+            raise UploadError(
+                "--repository-url must use HTTPS or point to localhost/127.0.0.1"
+            )
+        uploader_cfg["repository_url"] = repository_url
+    if registry:
+        uploader_cfg["registry"] = registry
 
     context = CommandContext(
         command="upload",
@@ -78,9 +107,42 @@ def upload(
         plugin_manager.call("on_error", context=context, error=error, fail_fast=False)
         raise error from exc
 
+    if dry_run:
+        audit.record(
+            "upload.dry_run",
+            {"target": target, "details": result.details},
+        )
+        plugin_manager.call("post_upload", context=context, fail_fast=False)
+        typer.echo(
+            i18n._(
+                "upload.dry_run",
+                target=target,
+                details=_format_dry_run_details(result.details),
+            )
+        )
+        return
+
     audit.record("upload.done", {"target": target, "result": result.details})
     plugin_manager.call("post_upload", context=context, fail_fast=False)
     if result.url:
         typer.echo(i18n._("upload.result_url", target=target, url=result.url))
     else:
         typer.echo(i18n._("upload.result", target=target))
+
+
+def _format_dry_run_details(details: dict[str, Any] | None) -> str:
+    """Format dry-run details for terminal output."""
+    if not details:
+        return ""
+    lines: list[str] = []
+    for key, value in details.items():
+        if key == "dry_run":
+            continue
+        if isinstance(value, list):
+            seq = cast(list[object], value)
+            parts: list[str] = [str(v) for v in seq]
+            display_value = ", ".join(parts)
+        else:
+            display_value = str(value)
+        lines.append(f"  {key}: {display_value}")
+    return "\n".join(lines)
