@@ -244,6 +244,7 @@ P3 目标是把已完成的 MVP 功能在真实后端、真实仓库、真实 CI
   - entry point `autoship` 能正确找到并执行。
   - autoship-sdk 作为 extras 或 workspace 依赖关系清晰，无循环依赖。
 - **相关文件**：`pyproject.toml`、`src/autoship/__main__.py`、`src/autoship/cli/main.py`。
+- **状态**：✅ 已完成。新增 tests/integration/package/ 下 wheel/sdist 安装与 autoship-sdk 依赖验证，完成多角色 review 与修复，review 记录见 `docs/reviews/p3-3-package-distribution.md`。
 
 ### P3-4 完整命令参考文档
 
