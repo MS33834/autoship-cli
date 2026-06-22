@@ -109,7 +109,7 @@ def check_model_backend(config: AppConfig, i18n: I18n) -> CheckResult:
     if healthy is None:
         return CheckResult(
             "model-backend",
-            Status.ERROR,
+            Status.WARNING,
             i18n._("doctor.model_unreachable"),
             i18n._("doctor.model_start"),
         )
@@ -240,6 +240,9 @@ def register(parent: typer.Typer) -> None:
 def doctor(
     ctx: typer.Context,
     json_output: bool = typer.Option(False, "--json", help="Output report as JSON"),
+    fail_on_error: bool = typer.Option(
+        False, "--fail-on-error", help="Exit with non-zero code when errors are present"
+    ),
 ) -> None:
     """Diagnose the AutoShip environment and dependencies."""
     i18n: I18n = get_i18n_from_ctx(ctx)
@@ -262,7 +265,9 @@ def doctor(
             ],
         }
         typer.echo(_json.dumps(data, indent=2, ensure_ascii=False))
-        raise typer.Exit(code=1 if errors else 0)
+        if fail_on_error and errors:
+            raise typer.Exit(code=1)
+        return
 
     typer.echo(i18n._("doctor.title"))
     typer.echo("-" * 60)
@@ -278,5 +283,5 @@ def doctor(
 
     typer.echo("-" * 60)
     typer.echo(i18n._("doctor.summary", ok=ok, warnings=warnings, errors=errors))
-    if errors:
+    if fail_on_error and errors:
         raise typer.Exit(code=1)

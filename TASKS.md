@@ -257,10 +257,10 @@ P3 目标是把已完成的 MVP 功能在真实后端、真实仓库、真实 CI
 - **相关文件**：`docs/commands/` 或 `docs/commands.md`、各 `src/autoship/cli/commands/*.py`。
 - **依赖**：P3-6 错误提示稳定后文档再定稿。
 
-### P3-5 GitHub Actions CI 流水线
+### P3-5 GitHub Actions CI 流水线 ✅
 
 - **Owner**：发布/集成组
-- **问题**：已有 CI 配置但 dogfood/benchmarks 未接入自动化运行。
+- **问题**：已有 CI 配置但 dogfood/benchmarks 未接入自动化运行；release 流程仅支持 PyPI，缺少 TestPyPI 分支。
 - **验收标准**：
   - CI 运行 `ruff`、`pyright`、`pytest`、`bandit`。
   - CI 运行 `python dogfood/dogfood.py` 并上传 `dogfood/report.json` artifact。
@@ -268,6 +268,7 @@ P3 目标是把已完成的 MVP 功能在真实后端、真实仓库、真实 CI
   - 发布 tag 时自动构建 wheel 并上传到 PyPI/TestPyPI。
 - **相关文件**：`.github/workflows/ci.yml`、`.github/workflows/release.yml`。
 - **依赖**：P3-3 打包验证完成。
+- **状态**：已完成。release.yml 新增 TestPyPI 支持（workflow_dispatch 选择与预发布 tag 自动路由），ci.yml/release.yml 统一 lint 范围至 `src tests dogfood benchmarks`，刷新 `benchmarks/results.json` 基线。多角色 review 与修复记录见 `docs/reviews/p3-5-ci-pipeline.md`。
 
 ### P3-6 错误消息与 UX 打磨
 

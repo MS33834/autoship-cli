@@ -40,6 +40,7 @@ def _count_changes(current: dict[str, Any], fetched: dict[str, Any]) -> int:
 
 
 @app.command("dashboard")
+@app.command("list")
 def dashboard(
     ctx: typer.Context,
     top: int = typer.Option(5, "--top", help="Number of plugins to show in top lists"),

@@ -67,6 +67,7 @@ def typer_context(app_config: AppConfig, audit_logger: AuditLogger, i18n) -> Mag
     ctx = MagicMock()
     ctx.obj = {
         "config": app_config,
+        "config_path": None,
         "i18n": i18n,
         "audit_logger": audit_logger,
         "dry_run": False,

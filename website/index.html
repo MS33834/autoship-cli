@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AutoShip — AI-assisted code shipping toolkit</title>
-  <meta name="description" content="AutoShip is a local-first, AI-assisted CLI for shipping code with confidence.">
+  <meta name="description" content="AutoShip is a local-first, AI-assisted CLI for cleaning, verifying, committing, and shipping code with confidence.">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,6 +13,7 @@
       <a href="/" class="logo">AutoShip</a>
       <nav class="nav">
         <a href="#features">Features</a>
+        <a href="#workflow">Workflow</a>
         <a href="/plugins.html">Plugins</a>
         <a href="https://docs.autoship.dev">Docs</a>
         <a href="https://github.com/autoship-cli/autoship-cli" class="btn btn-secondary">GitHub</a>
@@ -24,8 +25,8 @@
     <div class="container">
       <h1>Ship code with AI, stay local.</h1>
       <p class="lead">
-        AutoShip is a local-first, AI-assisted toolkit that helps you clean, commit,
-        verify, and ship code without sending your codebase to the cloud.
+        AutoShip is a local-first, AI-assisted toolkit that helps you clean, verify,
+        commit, and ship code without sending your codebase to the cloud.
       </p>
       <div class="cta">
         <code class="install-snippet">pip install autoship</code>
@@ -47,6 +48,10 @@
           <p>Generate conventional commit messages from staged changes and review before applying.</p>
         </article>
         <article class="card">
+          <h3>Verified Toolchain</h3>
+          <p>Run <code>autoship clean</code>, <code>verify</code>, and <code>upload</code> with configurable tool paths and SHA256 checks.</p>
+        </article>
+        <article class="card">
           <h3>Plugin Ecosystem</h3>
           <p>Extend AutoShip with plugins for security scans, docker shipping, web search, and more.</p>
         </article>
@@ -54,11 +59,35 @@
           <h3>Enterprise Ready</h3>
           <p>Team configs, structured audit logs, SIEM forwarding, and multi-language CLI support.</p>
         </article>
+        <article class="card">
+          <h3>Safety First</h3>
+          <p>Editor allowlists, command allowlists, env-var overrides, and telemetry endpoint validation.</p>
+        </article>
       </div>
     </div>
   </section>
 
-  <section id="plugins" class="plugins">
+  <section id="workflow" class="workflow">
+    <div class="container">
+      <h2>A workflow that just works</h2>
+      <pre><code># 1. Initialize
+autoship init
+
+# 2. Clean and format
+autoship clean
+
+# 3. Verify
+autoship verify pytest
+
+# 4. Commit with AI-generated message
+autoship commit
+
+# 5. Upload artifacts
+autoship upload --target pypi</code></pre>
+    </div>
+  </section>
+
+  <section class="plugins">
     <div class="container">
       <h2>Built for extension</h2>
       <p>
@@ -67,6 +96,9 @@
       </p>
       <pre><code>pip install autoship-sdk
 autoship-sdk create my-plugin</code></pre>
+      <p>
+        Browse the <a href="/registry/">Plugin Registry</a> to discover community and verified plugins.
+      </p>
     </div>
   </section>
 

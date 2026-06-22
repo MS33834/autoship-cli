@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "autoship-custom-plugin"
+name = "autoship-project-guard"
 version = "0.1.0"
-description = "Example AutoShip-CLI plugin"
+description = "Real-world AutoShip-CLI plugin example: project health checks"
 requires-python = ">=3.10"
 dependencies = [
     "autoship>=0.2.0b1",

@@ -41,7 +41,33 @@ theme:
 nav:
   - 首页: index.md
   - 命令参考:
-      - commands.md
+      - 概览: commands/index.md
+      - init: commands/init.md
+      - clean: commands/clean.md
+      - verify: commands/verify.md
+      - fix: commands/fix.md
+      - commit: commands/commit.md
+      - upload: commands/upload.md
+      - plugin: commands/plugin.md
+      - doctor: commands/doctor.md
+      - audit: commands/audit.md
+      - registry: commands/registry.md
+      - metrics: commands/metrics.md
+      - config: commands/config.md
+  - Command Reference (EN):
+      - Overview: commands/en/index.md
+      - init: commands/en/init.md
+      - clean: commands/en/clean.md
+      - verify: commands/en/verify.md
+      - fix: commands/en/fix.md
+      - commit: commands/en/commit.md
+      - upload: commands/en/upload.md
+      - plugin: commands/en/plugin.md
+      - doctor: commands/en/doctor.md
+      - audit: commands/en/audit.md
+      - registry: commands/en/registry.md
+      - metrics: commands/en/metrics.md
+      - config: commands/en/config.md
   - 配置说明: configuration.md
   - 插件: plugins.md
   - 插件开发指南: plugin-development.md

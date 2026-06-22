@@ -21,6 +21,7 @@ app = typer.Typer(
     help="AutoShip: AI-assisted code shipping toolkit",
     no_args_is_help=True,
     rich_markup_mode="rich",
+    pretty_exceptions_enable=False,
 )
 
 
@@ -45,6 +46,7 @@ def main_callback(
     audit_logger.record("cli.invoked", {"config_path": str(config_path) if config_path else None})
 
     ctx.obj["config"] = config
+    ctx.obj["config_path"] = config_path
     ctx.obj["i18n"] = i18n
     ctx.obj["audit_logger"] = audit_logger
     ctx.obj["verbose"] = verbose
@@ -62,7 +64,7 @@ def _guess_command() -> str:
     return "help"
 
 
-def cli_entrypoint() -> None:
+def cli_entrypoint() -> int:
     """Top-level entry point used by ``autoship`` console script."""
     logger = structlog.get_logger()
     config = load_config()
@@ -77,17 +79,16 @@ def cli_entrypoint() -> None:
         app()
     except typer.Exit as exc:
         exit_code = exc.exit_code
-        raise
     except AutoShipError as exc:
         exit_code = exc.code
         exc_record = exc
         typer.secho(i18n._("error.prefix", exc=exc), fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=exc.code) from exc
     except Exception as exc:
         exit_code = ExitCode.USAGE_ERROR
         exc_record = exc
         logger.exception("Unhandled exception")
         typer.secho(i18n._("unexpected_error.prefix", exc=exc), fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=ExitCode.USAGE_ERROR) from exc
     finally:
         telemetry.record(command, start, exit_code, exc=exc_record)
+
+    return exit_code

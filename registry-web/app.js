@@ -33,6 +33,10 @@ function renderCategories(categories) {
     .join("");
 }
 
+function installCommand(plugin) {
+  return `autoship plugin install ${escapeHtml(plugin.name)}`;
+}
+
 function renderPlugins(plugins) {
   const container = document.getElementById("plugin-grid");
   container.innerHTML = "";
@@ -41,6 +45,7 @@ function renderPlugins(plugins) {
     return;
   }
   plugins.forEach((plugin) => {
+    const cmd = installCommand(plugin);
     const card = document.createElement("article");
     card.className = "card";
     card.tabIndex = 0;
@@ -66,10 +71,16 @@ function renderPlugins(plugins) {
         <span title="Rating">${formatRating(plugin.rating)}</span>
       </div>
       <div class="card-footer">
-        <code>autoship plugin install ${escapeHtml(plugin.name)}</code>
+        <code id="cmd-${plugin.name}">${cmd}</code>
+        <button class="copy-btn" data-cmd="${escapeHtml(plugin.name)}" aria-label="Copy install command">Copy</button>
       </div>
     `;
-    card.addEventListener("click", () => openModal(plugin));
+    card.addEventListener("click", (event) => {
+      if (event.target.closest(".copy-btn")) {
+        return;
+      }
+      openModal(plugin);
+    });
     card.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
@@ -77,6 +88,19 @@ function renderPlugins(plugins) {
       }
     });
     container.appendChild(card);
+  });
+
+  document.querySelectorAll(".copy-btn").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const pluginName = button.dataset.cmd;
+      const code = document.getElementById(`cmd-${pluginName}`).textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        const original = button.textContent;
+        button.textContent = "Copied!";
+        setTimeout(() => (button.textContent = original), 1500);
+      });
+    });
   });
 }
 
@@ -101,10 +125,21 @@ function openModal(plugin) {
       ${plugin.source_url ? `<dt>Source</dt><dd><a href="${escapeHtml(plugin.source_url)}" target="_blank" rel="noopener">${escapeHtml(plugin.source_url)}</a></dd>` : ""}
     </dl>
     <div class="modal-install">
-      <code>autoship plugin install ${escapeHtml(plugin.name)}</code>
+      <code id="modal-cmd">${installCommand(plugin)}</code>
+      <button class="copy-btn" id="modal-copy" aria-label="Copy install command">Copy</button>
     </div>
   `;
   modal.showModal();
+
+  document.getElementById("modal-copy").addEventListener("click", () => {
+    const code = document.getElementById("modal-cmd").textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      const button = document.getElementById("modal-copy");
+      const original = button.textContent;
+      button.textContent = "Copied!";
+      setTimeout(() => (button.textContent = original), 1500);
+    });
+  });
 }
 
 function closeModal() {
@@ -130,6 +165,27 @@ function populateCategoryFilter() {
   });
 }
 
+function currentSort() {
+  return document.getElementById("sort-by").value;
+}
+
+function sortPlugins(plugins) {
+  const sort = currentSort();
+  const sorted = [...plugins];
+  if (sort === "downloads") {
+    sorted.sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
+  } else if (sort === "rating") {
+    sorted.sort((a, b) => {
+      const ra = a.rating && a.rating.count ? a.rating.score : 0;
+      const rb = b.rating && b.rating.count ? b.rating.score : 0;
+      return rb - ra;
+    });
+  } else if (sort === "name") {
+    sorted.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  }
+  return sorted;
+}
+
 function filterPlugins() {
   const keyword = document.getElementById("search").value.toLowerCase();
   const level = document.getElementById("filter-trust").value;
@@ -144,12 +200,13 @@ function filterPlugins() {
     const matchesCategory = !category || (plugin.categories || []).includes(category);
     return matchesKeyword && matchesLevel && matchesCategory;
   });
-  renderPlugins(filtered);
+  renderPlugins(sortPlugins(filtered));
 }
 
 document.getElementById("search").addEventListener("input", filterPlugins);
 document.getElementById("filter-trust").addEventListener("change", filterPlugins);
 document.getElementById("filter-category").addEventListener("change", filterPlugins);
+document.getElementById("sort-by").addEventListener("change", filterPlugins);
 document.getElementById("modal-close").addEventListener("click", closeModal);
 document.getElementById("plugin-modal").addEventListener("click", (event) => {
   if (event.target.id === "plugin-modal") {
@@ -158,4 +215,4 @@ document.getElementById("plugin-modal").addEventListener("click", (event) => {
 });
 
 populateCategoryFilter();
-renderPlugins(PLUGIN_REGISTRY.plugins);
+filterPlugins();

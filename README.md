@@ -41,13 +41,13 @@
 | P3 | AI 路径真实后端联测 (P3-1) | ✅ 已完成 |
 | P3 | 真实上传集成（PyPI / Docker）(P3-2) | ✅ 已完成 |
 | P3 | 安装包与分发验证 (P3-3) | ✅ 已完成 |
-| P3 | 完整命令参考文档 (P3-4) | 🚧 进行中 |
-| P3 | GitHub Actions CI 流水线 (P3-5) | 🚧 进行中 |
-| P3 | 错误消息与 UX 打磨 (P3-6) | ⏳ 待开始 |
+| P3 | 完整命令参考文档 (P3-4) | ✅ 已完成 |
+| P3 | GitHub Actions CI 流水线 (P3-5) | ✅ 已完成 |
+| P3 | 错误消息与 UX 打磨 (P3-6) | 🚧 进行中 |
 | P3 | 遥测与隐私合规 (P3-7) | ⏳ 待开始 |
 | P3 | 插件商店与发布流程 (P3-8) | ⏳ 待开始 |
 
-下一步：**P3-3 已完成，继续推进 P3-4 完整命令参考文档与 P3-5 CI 发布流水线，同步开展 P3-6、P3-7 文档与合规工作**。
+下一步：**P3-5 已完成，继续推进 P3-6 错误消息与 UX 打磨**。
 
 ## 安装
 
@@ -115,7 +115,7 @@ autoship upload --target docker --image myapp --tag latest
 
 - 完整文档：[docs.autoship.dev](https://docs.autoship.dev)
 - 本地文档：[docs/](./docs/)
-- 命令参考：[docs/commands.md](./docs/commands.md)
+- 命令参考：[docs/commands/index.md](./docs/commands/index.md)
 - 配置说明：[docs/configuration.md](./docs/configuration.md)
 - 插件开发指南：[docs/plugin-development.md](./docs/plugin-development.md)
 

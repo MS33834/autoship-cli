@@ -4,15 +4,55 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: "PyPI repository to publish to"
+        required: true
+        default: "pypi"
+        type: choice
+        options:
+          - "pypi"
+          - "testpypi"
 
 permissions:
   contents: write
   id-token: write
 
 jobs:
-  pypi:
-    name: Publish autoship to PyPI
+  resolve-target:
+    name: Resolve publish target
     runs-on: ubuntu-latest
+    outputs:
+      repository: ${{ steps.resolve.outputs.repository }}
+      repository-url: ${{ steps.resolve.outputs.repository-url }}
+    steps:
+      - name: Resolve target repository
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            target="${{ inputs.repository }}"
+          elif [[ "${{ github.ref_name }}" =~ -(a|b|rc)[0-9]+$ ]]; then
+            target="testpypi"
+          else
+            target="pypi"
+          fi
+          if [ "$target" = "testpypi" ]; then
+            url="https://test.pypi.org/legacy/"
+          else
+            url="https://pypi.org/legacy/"
+          fi
+          echo "repository=$target" >> "$GITHUB_OUTPUT"
+          echo "repository-url=$url" >> "$GITHUB_OUTPUT"
+          echo "Publishing to $target ($url)"
+
+  pypi:
+    name: Publish autoship to ${{ needs.resolve-target.outputs.repository }}
+    runs-on: ubuntu-latest
+    needs: resolve-target
+    environment:
+      name: ${{ needs.resolve-target.outputs.repository }}
+      url: ${{ needs.resolve-target.outputs.repository-url }}
 
     steps:
       - name: Checkout
@@ -33,11 +73,11 @@ jobs:
 
       - name: Lint, type check, and test
         run: |
-          uv run ruff check src tests
+          uv run ruff check src tests dogfood benchmarks
           uv run pyright
           uv run pytest -q
 
-      - name: Dry-run build autoship
+      - name: Build autoship
         run: |
           uv build --package autoship --out-dir dist
 
@@ -46,15 +86,19 @@ jobs:
           wheel=$(ls dist/autoship-*.whl | head -n 1)
           unzip -p "$wheel" 'autoship-*.dist-info/METADATA' | grep -E '^Requires-Dist:' || true
 
-      - name: Publish autoship to PyPI
+      - name: Publish autoship to ${{ needs.resolve-target.outputs.repository }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
+          repository-url: ${{ needs.resolve-target.outputs.repository-url }}
 
   pypi-sdk:
-    name: Publish autoship-sdk to PyPI
+    name: Publish autoship-sdk to ${{ needs.resolve-target.outputs.repository }}
     runs-on: ubuntu-latest
-    needs: pypi
+    needs: [resolve-target, pypi]
+    environment:
+      name: ${{ needs.resolve-target.outputs.repository }}
+      url: ${{ needs.resolve-target.outputs.repository-url }}
 
     steps:
       - name: Checkout
@@ -81,7 +125,7 @@ jobs:
           uv run pyright
           uv run pytest -q
 
-      - name: Dry-run build autoship-sdk
+      - name: Build autoship-sdk
         run: uv build --package autoship-sdk --out-dir autoship-sdk/dist
 
       - name: Verify autoship-sdk wheel metadata
@@ -89,10 +133,11 @@ jobs:
           wheel=$(ls autoship-sdk/dist/autoship_sdk-*.whl | head -n 1)
           unzip -p "$wheel" 'autoship_sdk-*.dist-info/METADATA' | grep -E '^Requires-Dist:' || true
 
-      - name: Publish autoship-sdk to PyPI
+      - name: Publish autoship-sdk to ${{ needs.resolve-target.outputs.repository }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: autoship-sdk/dist
+          repository-url: ${{ needs.resolve-target.outputs.repository-url }}
 
   build-binaries:
     name: Build binaries (${{ matrix.os }})
@@ -164,7 +209,7 @@ jobs:
   github-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [pypi, pypi-sdk, build-binaries]
+    needs: [resolve-target, pypi, pypi-sdk, build-binaries]
     steps:
       - name: Download binary artifacts
         uses: actions/download-artifact@v4
@@ -177,4 +222,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          prerelease: ${{ needs.resolve-target.outputs.repository == 'testpypi' }}
           files: artifacts/*

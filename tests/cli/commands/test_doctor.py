@@ -29,7 +29,7 @@ def test_doctor_json_output() -> None:
 
 def test_doctor_detects_missing_git() -> None:
     with patch("autoship.cli.commands.doctor._run_cmd", return_value=(False, "not found")):
-        result = runner.invoke(app, ["doctor"])
+        result = runner.invoke(app, ["doctor", "--fail-on-error"])
     assert result.exit_code == 1
     assert "Git not found" in result.output
 
@@ -44,9 +44,23 @@ def test_doctor_detects_old_python() -> None:
             suggestion="Upgrade to Python 3.10 or later.",
         ),
     ):
-        result = runner.invoke(app, ["doctor"])
+        result = runner.invoke(app, ["doctor", "--fail-on-error"])
     assert result.exit_code == 1
     assert "Python 3.9" in result.output
+
+
+def test_doctor_defaults_to_zero_exit_with_errors() -> None:
+    with patch("autoship.cli.commands.doctor._run_cmd", return_value=(False, "not found")):
+        result = runner.invoke(app, ["doctor"])
+    assert result.exit_code == 0
+    assert "Git not found" in result.output
+
+
+def test_doctor_json_fail_on_error() -> None:
+    with patch("autoship.cli.commands.doctor._run_cmd", return_value=(False, "not found")):
+        result = runner.invoke(app, ["doctor", "--json", "--fail-on-error"])
+    assert result.exit_code == 1
+    assert '"error"' in result.output
 
 
 def test_check_directories_writable(i18n, tmp_path) -> None:

@@ -26,13 +26,14 @@ def clean(
     ctx: typer.Context,
     paths: list[Path] = typer.Argument(default_factory=lambda: [Path(".")]),
     check: bool = typer.Option(False, "--check", help="Exit with error if changes are needed"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip interactive confirmations"),
 ) -> None:
     """Clean and format the project code."""
     config = ctx.obj["config"]
     i18n: I18n = get_i18n_from_ctx(ctx)
     audit: AuditLogger = ctx.obj["audit_logger"]
     dry_run: bool = ctx.obj.get("dry_run", False)
-    yes: bool = ctx.obj.get("yes", False)
+    yes = yes or ctx.obj.get("yes", False)
     verbose: bool = ctx.obj.get("verbose", False)
 
     context = CommandContext(

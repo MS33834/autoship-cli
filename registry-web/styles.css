@@ -153,9 +153,13 @@ a:hover {
 
 .card-footer {
   margin-top: auto;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .card-footer code {
+  flex: 1;
   display: block;
   padding: 0.5rem 0.75rem;
   background: var(--color-bg);
@@ -164,6 +168,21 @@ a:hover {
   font-size: 0.875rem;
   color: var(--color-accent);
   word-break: break-all;
+}
+
+.copy-btn {
+  padding: 0.4rem 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  color: var(--color-text);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.copy-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .card-meta {
@@ -338,9 +357,13 @@ a:hover {
 
 .modal-install {
   margin-top: 1.5rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .modal-install code {
+  flex: 1;
   display: block;
   padding: 0.75rem 1rem;
   background: var(--color-bg);

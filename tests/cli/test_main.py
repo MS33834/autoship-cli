@@ -5,9 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-import typer
-
 from autoship.cli import main
 from autoship.exceptions import ConfigError, ExitCode
 
@@ -45,19 +42,13 @@ def test_main_callback_without_config() -> None:
 def test_cli_entrypoint_handles_autoship_error() -> None:
     error = ConfigError("bad config")
     mock_app = MagicMock(side_effect=error)
-    with (
-        patch.object(main, "app", mock_app),
-        pytest.raises(typer.Exit) as exc,
-    ):
-        main.cli_entrypoint()
-    assert exc.value.exit_code == error.code
+    with patch.object(main, "app", mock_app):
+        exit_code = main.cli_entrypoint()
+    assert exit_code == error.code
 
 
 def test_cli_entrypoint_handles_unexpected_error() -> None:
     mock_app = MagicMock(side_effect=RuntimeError("boom"))
-    with (
-        patch.object(main, "app", mock_app),
-        pytest.raises(typer.Exit) as exc,
-    ):
-        main.cli_entrypoint()
-    assert exc.value.exit_code == ExitCode.USAGE_ERROR
+    with patch.object(main, "app", mock_app):
+        exit_code = main.cli_entrypoint()
+    assert exit_code == ExitCode.USAGE_ERROR

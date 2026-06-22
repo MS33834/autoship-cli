@@ -27,13 +27,14 @@ def init(
     ctx: typer.Context,
     project_type: str | None = typer.Option(None, "--type", help="Override project type"),
     output: Path = typer.Option(Path(".autoship.toml"), "--output", "-o", help="Config file path"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip interactive confirmations"),
 ) -> None:
     """Initialize an AutoShip configuration file for the current project."""
     config: AppConfig = ctx.obj["config"]
     i18n: I18n = get_i18n_from_ctx(ctx)
     audit: AuditLogger = ctx.obj["audit_logger"]
     dry_run: bool = ctx.obj.get("dry_run", False)
-    yes: bool = ctx.obj.get("yes", False)
+    yes = yes or ctx.obj.get("yes", False)
 
     detected = project_type or detect_project_type(config.project_root)
     hardware = detect_hardware()

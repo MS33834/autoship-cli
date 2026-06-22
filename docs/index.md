@@ -67,6 +67,6 @@ autoship upload --target docker --image myapp --tag latest
 
 ## 下一步
 
-- 查看 [命令参考](commands.md) 了解每个命令的详细用法。
+- 查看 [命令参考](./commands/index.md) 了解每个命令的详细用法。
 - 查看 [配置说明](configuration.md) 了解 `.autoship.toml` 配置项。
 - 查看 [插件](plugins.md) 与 [插件开发指南](plugin-development.md) 了解如何扩展 AutoShip。

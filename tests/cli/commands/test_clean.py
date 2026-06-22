@@ -7,8 +7,10 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from typer.testing import CliRunner
 
 from autoship.cli.commands import clean
+from autoship.cli.main import app
 from autoship.exceptions import ToolChainError
 from autoship.models.config import AppConfig
 
@@ -73,3 +75,43 @@ def test_clean_apply_failure_raises_toolchain_error(project_root, app_config: Ap
         pytest.raises(ToolChainError, match="Failed to apply"),
     ):
         clean.clean(ctx, paths=[Path(".")], check=False)
+
+
+def test_clean_yes_option_skips_confirmation(app_config: AppConfig) -> None:
+    ctx = MagicMock()
+    ctx.obj = {
+        "config": app_config,
+        "audit_logger": MagicMock(),
+        "dry_run": False,
+        "yes": False,
+        "verbose": False,
+    }
+    with (
+        patch.object(clean.ToolChain, "preview", return_value="--- diff ---"),
+        patch.object(clean.ToolChain, "apply") as mock_apply,
+    ):
+        clean.clean(ctx, paths=[Path(".")], check=False, yes=True)
+        mock_apply.assert_called_once()
+
+
+runner = CliRunner()
+
+
+def test_clean_subcommand_yes_skips_confirm() -> None:
+    with (
+        patch.object(clean.ToolChain, "preview", return_value="--- diff ---"),
+        patch.object(clean.ToolChain, "apply") as mock_apply,
+    ):
+        result = runner.invoke(app, ["clean", "--yes"])
+    assert result.exit_code == 0
+    mock_apply.assert_called_once()
+
+
+def test_clean_global_yes_still_skips_confirm() -> None:
+    with (
+        patch.object(clean.ToolChain, "preview", return_value="--- diff ---"),
+        patch.object(clean.ToolChain, "apply") as mock_apply,
+    ):
+        result = runner.invoke(app, ["--yes", "clean"])
+    assert result.exit_code == 0
+    mock_apply.assert_called_once()

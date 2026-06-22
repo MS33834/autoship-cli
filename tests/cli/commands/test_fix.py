@@ -49,8 +49,9 @@ def test_fix_calls_llm_and_shows_suggestion(tmp_path: Path, monkeypatch) -> None
     error_log = tmp_path / "error.txt"
     error_log.write_text("NameError: name 'x' is not defined", encoding="utf-8")
 
-    with patch("autoship.cli.commands.fix.LlmClient") as mock_client:
-        mock_client.return_value.chat.return_value = "Add `x = 0` before usage."
+    mock_router = MagicMock()
+    mock_router.chat.return_value = "Add `x = 0` before usage."
+    with patch("autoship.cli.commands.fix._model_router", return_value=mock_router):
         result = runner.invoke(app, ["fix", str(error_log)])
 
     assert result.exit_code == 0
@@ -65,11 +66,12 @@ def test_fix_yes_flag_applies_patch(tmp_path: Path, monkeypatch) -> None:
 
     patch_text = "--- a/file.txt\n+++ b/file.txt\n@@ -1 +1 @@\n-old\n+new"
 
+    mock_router = MagicMock()
+    mock_router.chat.return_value = f"```diff\n{patch_text}\n```"
     with (
-        patch("autoship.cli.commands.fix.LlmClient") as mock_client,
+        patch("autoship.cli.commands.fix._model_router", return_value=mock_router),
         patch("autoship.cli.commands.fix._apply_patch") as mock_apply,
     ):
-        mock_client.return_value.chat.return_value = f"```diff\n{patch_text}\n```"
         result = runner.invoke(app, ["fix", str(error_log), "--yes"])
 
     assert result.exit_code == 0

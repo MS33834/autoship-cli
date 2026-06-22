@@ -3,12 +3,21 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import typer
+from pydantic import HttpUrl
 
+from autoship.adapters.model_gateway import ChatMessage
 from autoship.core.i18n import I18n, get_i18n_from_ctx
-from autoship.core.llm_client import LlmClient
+from autoship.core.model_router import ModelRouter
 from autoship.exceptions import ModelGatewayError
+from autoship.models.config import (
+    AppConfig,
+    LlmProvider,
+    ModelBackendConfig,
+    Provider,
+)
 
 app = typer.Typer()
 
@@ -35,6 +44,38 @@ SYSTEM_PROMPT = (
 )
 
 
+_LLM_PROVIDER_TO_BACKEND: dict[LlmProvider, Provider] = {
+    LlmProvider.OPENAI: Provider.OPENAI,
+    LlmProvider.OPENROUTER: Provider.OPENROUTER,
+    LlmProvider.OLLAMA: Provider.OLLAMA,
+}
+
+_DEFAULT_BASE_URLS: dict[Provider, str] = {
+    Provider.OPENAI: "https://api.openai.com/v1",
+    Provider.OPENROUTER: "https://openrouter.ai/api/v1",
+    Provider.OLLAMA: "http://127.0.0.1:11434/v1",
+}
+
+
+def _model_router(config: AppConfig) -> ModelRouter:
+    """Return a ModelRouter using configured backends or legacy [llm] config."""
+    if not config.model.backends and config.llm.provider in _LLM_PROVIDER_TO_BACKEND:
+        backend_provider = _LLM_PROVIDER_TO_BACKEND[config.llm.provider]
+        base_url = config.llm.base_url or cast(HttpUrl, _DEFAULT_BASE_URLS[backend_provider])
+        legacy_backend = ModelBackendConfig(
+            provider=backend_provider,
+            base_url=base_url,
+            api_key=config.llm.api_key,
+            api_version=config.llm.api_version,
+            model=config.llm.model,
+            timeout=config.llm.timeout,
+        )
+        compat_model = config.model.model_copy(update={"backends": [legacy_backend]})
+        compat_config = config.model_copy(update={"model": compat_model})
+        return ModelRouter(compat_config)
+    return ModelRouter(config)
+
+
 def register(parent: typer.Typer) -> None:
     parent.command(name="fix")(fix)
 
@@ -50,6 +91,7 @@ def fix(
     """Ask an LLM to propose a fix for the last verification failure."""
     i18n: I18n = get_i18n_from_ctx(ctx)
     config = ctx.obj["config"]
+    dry_run: bool = ctx.obj.get("dry_run", False)
 
     source = error_file or ERROR_LOG_PATH
     if not source.exists():
@@ -59,17 +101,22 @@ def fix(
     if not error_context.strip():
         raise typer.BadParameter(i18n._("fix.empty_error_log", path=str(source)))
 
-    if not config.llm.api_key and config.llm.provider.value in ("openai", "openrouter"):
-        raise typer.BadParameter(i18n._("fix.missing_api_key", provider=config.llm.provider.value))
-
     user_prompt, read_paths = _build_prompt(error_context, config.project_root)
     if read_paths:
         typer.echo(i18n._("fix.reading_files", files=", ".join(read_paths)))
 
+    if dry_run:
+        typer.echo(i18n._("fix.dry_run", files=", ".join(read_paths) if read_paths else "-"))
+        return
+
     typer.echo(i18n._("fix.thinking"))
-    client = LlmClient(config.llm)
+    router = _model_router(config)
+    messages = [
+        ChatMessage(role="system", content=SYSTEM_PROMPT),
+        ChatMessage(role="user", content=user_prompt),
+    ]
     try:
-        response = client.chat(SYSTEM_PROMPT, user_prompt)
+        response = router.chat(messages, "fix")
     except ModelGatewayError as exc:
         raise typer.BadParameter(str(exc)) from exc
 
