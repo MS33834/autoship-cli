@@ -97,7 +97,12 @@ def _default_config() -> dict[str, Any]:
         "schema_version": 1,
         "project_root": ".",
         "log_level": "INFO",
-        "telemetry_enabled": False,
+        "telemetry": {
+            "enabled": False,
+            "batch_size": 10,
+            "timeout": 5.0,
+            "allow_untrusted_endpoint": False,
+        },
         "clean": {
             "enabled": True,
             "tools": ["autoflake", "black"],

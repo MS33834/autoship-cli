@@ -59,9 +59,8 @@ def test_cli_entrypoint_handles_unexpected_error() -> None:
 
 def test_cli_entrypoint_help_does_not_traceback(capsys) -> None:
     """--help must exit cleanly without an exception traceback."""
-    with patch.object(sys, "argv", ["autoship", "--help"]):
-        with pytest.raises(SystemExit) as exc_info:
-            main.cli_entrypoint()
+    with patch.object(sys, "argv", ["autoship", "--help"]), pytest.raises(SystemExit) as exc_info:
+        main.cli_entrypoint()
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
     assert "Traceback" not in captured.err

@@ -112,6 +112,25 @@ class SandboxConfig(BaseModel):
     required: bool = True
 
 
+class TelemetryConfig(BaseModel):
+    """Configuration for anonymous telemetry collection.
+
+    Telemetry is disabled by default. When enabled, only command name, exit
+    code, duration, exception type/line, Python version, and platform family
+    are collected. No file contents, paths, tokens, arguments, or environment
+    variables are ever sent.
+    """
+
+    enabled: bool = False
+    endpoint: HttpUrl | None = Field(
+        default=None,
+        description="Optional HTTPS endpoint for telemetry uploads.",
+    )
+    batch_size: int = Field(default=10, ge=1, le=100)
+    timeout: float = Field(default=5.0, gt=0.0, le=30.0)
+    allow_untrusted_endpoint: bool = False
+
+
 class WebSearchConfig(BaseModel):
     """Configuration for the web-search plugin.
 
@@ -239,9 +258,11 @@ class AppConfig(BaseModel):
     schema_version: int = 1
     project_root: Path = Path(".")
     log_level: str = "INFO"
-    telemetry_enabled: bool = False
     audit_log_dir: Path | None = None
     locale: str = "auto"
+    telemetry: TelemetryConfig = Field(default_factory=TelemetryConfig)
+    # Backwards-compatible alias kept for legacy config files.
+    telemetry_enabled: bool | None = Field(default=None, exclude=True)
     clean: CleanConfig = Field(default_factory=CleanConfig)
     commit: CommitConfig = Field(default_factory=CommitConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
@@ -255,3 +276,8 @@ class AppConfig(BaseModel):
     llm: LlmConfig = Field(default_factory=LlmConfig)
     cache: CacheConfig = Field(default_factory=CacheConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
+
+    def model_post_init(self, __context: object) -> None:
+        """Migrate legacy ``telemetry_enabled`` flag into ``telemetry.enabled``."""
+        if self.telemetry_enabled is not None and not self.telemetry.enabled:
+            self.telemetry.enabled = self.telemetry_enabled

@@ -65,3 +65,17 @@ def test_telemetry_status_prints_current_state(app_config: AppConfig, capsys) ->
     config.telemetry_config(ctx, enable=False, disable=False, status=True)
     captured = capsys.readouterr()
     assert "disabled" in captured.out
+
+
+def test_legacy_telemetry_enabled_migrates_to_telemetry_config() -> None:
+    from autoship.models.config import AppConfig
+
+    cfg = AppConfig(telemetry_enabled=True)
+    assert cfg.telemetry.enabled is True
+
+
+def test_telemetry_disabled_by_default() -> None:
+    from autoship.models.config import AppConfig
+
+    cfg = AppConfig()
+    assert cfg.telemetry.enabled is False

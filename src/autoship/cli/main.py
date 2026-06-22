@@ -69,7 +69,7 @@ def _known_commands() -> set[str]:
         if name:
             names.add(name)
     for group in app.registered_groups:
-        name = getattr(getattr(group, "typer_instance", None), "name", None)
+        name = getattr(group, "name", None)
         if name:
             names.add(name)
     return names
@@ -116,7 +116,13 @@ def cli_entrypoint() -> int:
     logger = structlog.get_logger()
     config = load_config()
     i18n = get_i18n(config.locale)
-    telemetry = TelemetryCollector(enabled=config.telemetry_enabled)
+    telemetry = TelemetryCollector(
+        enabled=config.telemetry.enabled,
+        endpoint=str(config.telemetry.endpoint) if config.telemetry.endpoint else None,
+        timeout=config.telemetry.timeout,
+        allow_untrusted=config.telemetry.allow_untrusted_endpoint,
+        batch_size=config.telemetry.batch_size,
+    )
     start = time.perf_counter()
     command = _guess_command()
     exit_code = 0
@@ -130,6 +136,7 @@ def cli_entrypoint() -> int:
             err=True,
         )
         telemetry.record(command, start, ExitCode.USAGE_ERROR, exc=None)
+        telemetry.flush()
         return ExitCode.USAGE_ERROR
 
     try:
@@ -152,9 +159,7 @@ def cli_entrypoint() -> int:
             err=True,
         )
     finally:
-        if exc_record is None and exit_code == 0:
-            # Already recorded above for unknown commands; normal flow recorded here.
-            pass
         telemetry.record(command, start, exit_code, exc=exc_record)
+        telemetry.flush()
 
     return exit_code

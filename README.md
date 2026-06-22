@@ -44,10 +44,10 @@
 | P3 | 完整命令参考文档 (P3-4) | ✅ 已完成 |
 | P3 | GitHub Actions CI 流水线 (P3-5) | ✅ 已完成 |
 | P3 | 错误消息与 UX 打磨 (P3-6) | ✅ 已完成 |
-| P3 | 遥测与隐私合规 (P3-7) | 🚧 进行中 |
+| P3 | 遥测与隐私合规 (P3-7) | ✅ 已完成 |
 | P3 | 插件商店与发布流程 (P3-8) | ⏳ 待开始 |
 
-下一步：**P3-6 已完成，继续推进 P3-7 遥测与隐私合规**。
+下一步：**继续推进 P3-8 插件商店与发布流程**。
 
 ## 安装
 
@@ -132,6 +132,8 @@ autoship upload --target docker --image myapp --tag latest
 ### 如何禁用遥测？
 
 遥测默认已关闭，无需额外操作。如需开启，可在 `.autoship.toml` 中设置 `telemetry.enabled = true`。
+
+更多遥测字段与端点安全规则详见 [docs/telemetry.md](./docs/telemetry.md)，完整隐私政策与用户权利说明详见 [docs/privacy.md](./docs/privacy.md)。
 
 ### 如何开发自定义插件？
 

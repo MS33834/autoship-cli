@@ -65,9 +65,13 @@ def test_collector_sends_to_endpoint_when_configured(telemetry_log: Path) -> Non
     )
     with patch("autoship.core.telemetry.httpx.post") as mock_post:
         collector.record("upload", time.perf_counter(), 0)
+        collector.flush()
     mock_post.assert_called_once()
     call = mock_post.call_args
     assert call.kwargs["timeout"] == collector.timeout
+    payload = json.loads(call.kwargs["content"])
+    assert len(payload) == 1
+    assert payload[0]["command"] == "upload"
 
 
 def test_collector_accepts_untrusted_endpoint_when_allowed(telemetry_log: Path) -> None:
@@ -120,3 +124,52 @@ def test_event_to_dict() -> None:
     assert data["command"] == "clean"
     assert data["duration_ms"] == 12.3
     assert data["exit_code"] == 0
+
+
+def test_collector_batches_events_and_flushes(telemetry_log: Path) -> None:
+    collector = TelemetryCollector(
+        enabled=True,
+        endpoint="https://telemetry.autoship.dev/v1/events",
+        log_dir=telemetry_log.parent,
+        batch_size=3,
+    )
+    with patch("autoship.core.telemetry.httpx.post") as mock_post:
+        for _ in range(3):
+            collector.record("clean", time.perf_counter(), 0)
+        # batch_size reached -> auto-flush happened once
+        assert mock_post.call_count == 1
+        call = mock_post.call_args
+        payload = json.loads(call.kwargs["content"])
+        assert len(payload) == 3
+        assert payload[0]["command"] == "clean"
+
+        # leftover events flush on explicit flush
+        collector.record("verify", time.perf_counter(), 0)
+        collector.flush()
+        assert mock_post.call_count == 2
+        last_payload = json.loads(mock_post.call_args.kwargs["content"])
+        assert len(last_payload) == 1
+        assert last_payload[0]["command"] == "verify"
+
+
+def test_collector_scrubs_pii_from_arbitrary_event(telemetry_log: Path) -> None:
+    collector = TelemetryCollector(
+        enabled=True,
+        log_dir=telemetry_log.parent,
+    )
+    raw = {
+        "command": "upload",
+        "api_key": "sk-abcdefghijklmnopqrstuvwxyz",
+        "user_email": "alice@example.com",
+        "work_dir": "/home/alice/secret-project",
+        "short_ok": "hello",
+    }
+    collector.record_event(raw)
+
+    lines = telemetry_log.read_text(encoding="utf-8").strip().splitlines()
+    record = json.loads(lines[0])
+    assert record["command"] == "upload"
+    assert record["api_key"] == "<redacted>"
+    assert record["user_email"] == "<redacted>"
+    assert record["work_dir"] == "<path>"
+    assert record["short_ok"] == "hello"

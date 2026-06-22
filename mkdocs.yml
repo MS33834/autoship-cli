@@ -74,6 +74,8 @@ nav:
   - Changelog: changelog.md
   - 贡献指南: contributing.md
   - 安全策略: security.md
+  - 遥测与隐私: telemetry.md
+  - 隐私政策: privacy.md
 
 markdown_extensions:
   - pymdownx.highlight:

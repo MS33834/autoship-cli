@@ -14,12 +14,13 @@ from __future__ import annotations
 import json
 import os
 import platform
+import re
 import sys
 import time
 import traceback
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias, cast
 from urllib.parse import urlparse
 
 import httpx
@@ -34,6 +35,83 @@ ALLOW_UNTRUSTED_ENV = "AUTOSHIP_TELEMETRY_ALLOW_UNTRUSTED"
 DEFAULT_TIMEOUT_SECONDS = 5.0
 MAX_TIMEOUT_SECONDS = 30.0
 TRUSTED_TELEMETRY_HOSTS = {"telemetry.autoship.dev"}
+
+# Patterns that may indicate personally identifiable or sensitive information.
+_SENSITIVE_KEYS = {
+    "api_key",
+    "apikey",
+    "api-key",
+    "token",
+    "secret",
+    "password",
+    "passwd",
+    "pwd",
+    "authorization",
+    "auth",
+    "cookie",
+    "session",
+    "private_key",
+    "privatekey",
+    "email",
+    "phone",
+}
+_SENSITIVE_VALUE_PATTERNS = [
+    re.compile(r"[a-f0-9]{32,}", re.IGNORECASE),  # hex hashes/tokens
+    re.compile(r"[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{20,}"),  # JWT-like
+    re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"),  # email
+]
+_PATHLIKE_PREFIXES = ("/", "\\", "~", ".", "file:")
+_MAX_STRING_LENGTH = 256
+
+# Recursive type alias for telemetry payloads so pyright can reason about
+# nested dict/list structures without falling back to ``Unknown``.
+JSON: TypeAlias = dict[str, "JSON"] | list["JSON"] | str | int | float | bool | None
+
+
+def _looks_like_path(value: str) -> bool:
+    """Return True if ``value`` looks like a filesystem path."""
+    return value.startswith(_PATHLIKE_PREFIXES) or (len(value) >= 2 and value[1] == ":")
+
+
+def _is_sensitive_key(key: str) -> bool:
+    """Return True if ``key`` indicates the associated value is sensitive."""
+    lower = key.lower()
+    return any(sensitive in lower for sensitive in _SENSITIVE_KEYS)
+
+
+def _scrub_value(value: object, key: str = "") -> object:
+    """Redact a single scalar value that may contain sensitive data."""
+    if not isinstance(value, str):
+        return value
+    if not value:
+        return value
+    if _is_sensitive_key(key):
+        return "<redacted>"
+    if _looks_like_path(value):
+        return "<path>"
+    if any(pattern.search(value) for pattern in _SENSITIVE_VALUE_PATTERNS):
+        return "<redacted>"
+    return value[:_MAX_STRING_LENGTH]
+
+
+def _scrub(data: JSON) -> JSON:
+    """Recursively remove or redact PII/sensitive fields from a telemetry payload."""
+    if not isinstance(data, dict):
+        return data
+    scrubbed: dict[str, Any] = {}
+    for key, value in data.items():
+        if isinstance(value, dict):
+            scrubbed[key] = _scrub(value)
+        elif isinstance(value, list):
+            scrubbed[key] = [
+                _scrub(item) if isinstance(item, dict) else _scrub_value(item, key=key)
+                for item in value
+            ]
+        elif isinstance(value, str):
+            scrubbed[key] = _scrub_value(value, key=key)
+        else:
+            scrubbed[key] = value
+    return cast(JSON, scrubbed)
 
 
 def _parse_timeout(value: str | None, default: float = DEFAULT_TIMEOUT_SECONDS) -> float:
@@ -94,7 +172,13 @@ class TelemetryEvent:
 
 
 class TelemetryCollector:
-    """Collect and optionally emit telemetry events."""
+    """Collect and optionally emit telemetry events.
+
+    Events are buffered in memory and flushed either when ``batch_size`` is
+    reached or when ``flush()`` is called explicitly (e.g. before the CLI
+    exits). Every persisted record is scrubbed for paths, tokens, secrets,
+    and other PII before it is written locally or sent remotely.
+    """
 
     def __init__(
         self,
@@ -103,8 +187,10 @@ class TelemetryCollector:
         log_dir: Path | None = None,
         timeout: float | None = None,
         allow_untrusted: bool | None = None,
+        batch_size: int = 10,
     ) -> None:
         self.enabled = enabled
+        self.batch_size = max(1, batch_size)
         self.log_dir = log_dir or Path.home() / ".autoship"
         self.timeout = timeout or _parse_timeout(os.getenv("AUTOSHIP_TELEMETRY_TIMEOUT"))
         if allow_untrusted is None:
@@ -115,6 +201,8 @@ class TelemetryCollector:
             self.endpoint = raw_endpoint
         else:
             self.endpoint = None
+
+        self._batch: list[dict[str, Any]] = []
 
     def record(
         self,
@@ -163,11 +251,23 @@ class TelemetryCollector:
             return {}
 
     def _persist(self, event: TelemetryEvent) -> None:
-        """Write the event to the local log and optionally send it."""
+        """Write the event to the local log and buffer for batch upload."""
         self.record_event(event.to_dict())
 
     def record_event(self, data: dict[str, Any]) -> None:
-        """Write an arbitrary dictionary event to the local log and optionally send it."""
+        """Write an arbitrary dictionary event to the local log and buffer it.
+
+        The record is scrubbed before persistence to ensure no PII leaves the
+        local machine or is uploaded to a telemetry endpoint.
+        """
+        scrubbed = _scrub(cast(JSON, data))
+        self._write_local(cast(dict[str, Any], scrubbed))
+        self._batch.append(cast(dict[str, Any], scrubbed))
+        if len(self._batch) >= self.batch_size:
+            self.flush()
+
+    def _write_local(self, data: dict[str, Any]) -> None:
+        """Append a single scrubbed record to the local telemetry log."""
         self.log_dir.mkdir(parents=True, exist_ok=True)
         log_path = self.log_dir / "telemetry.logl"
         record = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
@@ -177,20 +277,27 @@ class TelemetryCollector:
         except OSError:
             logger.debug("telemetry.local_write_failed")
 
-        if self.endpoint:
-            self._send(record)
+    def flush(self) -> None:
+        """Send any buffered events to the configured endpoint."""
+        if not self._batch or not self.endpoint:
+            self._batch.clear()
+            return
+        records = self._batch[:]
+        self._batch.clear()
+        self._send(records)
 
-    def _send(self, record: str) -> None:
-        """Send the event to the configured endpoint.
+    def _send(self, records: list[dict[str, Any]]) -> None:
+        """Send a batch of events to the configured endpoint.
 
         This is a no-op if the request fails; telemetry must never break the CLI.
         """
-        if not self.endpoint:
+        if not self.endpoint or not records:
             return
+        payload = json.dumps(records, separators=(",", ":"), ensure_ascii=False)
         try:
             httpx.post(
                 self.endpoint,
-                content=record,
+                content=payload,
                 headers={"Content-Type": "application/json"},
                 timeout=self.timeout,
             )

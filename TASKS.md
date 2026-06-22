@@ -282,16 +282,23 @@ P3 目标是把已完成的 MVP 功能在真实后端、真实仓库、真实 CI
 - **相关文件**：`src/autoship/cli/main.py`、各 `src/autoship/cli/commands/*.py`、`src/autoship/locales/*.json`。
 - **状态**：已完成。main.py / config.py / upload.py / plugin.py 的 help 与错误消息接入 i18n；新增未知命令拦截与 `_print_suggestion` 下一步建议；新增 `--help` 无 traceback、未知命令友好提示、ConfigError 建议三个 UX 测试；修复 `I18n._()` 占位符冲突；刷新 benchmark 基线。多角色 review 与修复记录见 `docs/reviews/p3-6-error-ux.md`。
 
-### P3-7 遥测与隐私合规
+### P3-7 遥测与隐私合规 ✅
 
 - **Owner**：安全/合规组
+- **状态**：已完成（本 PR）。
 - **问题**：Telemetry 已校验端点，但尚未提供用户可见的遥测说明与关闭方式文档。
 - **验收标准**：
   - 在 `docs/privacy.md` 中说明收集哪些数据、存储多久、如何关闭。
   - CLI 首次启用遥测时提示用户（或默认关闭，需 opt-in）。
   - 提供 `autoship config telemetry --disable` 命令或等效配置项。
   - 审计日志保存策略（轮转、清理）写入文档与默认配置。
-- **相关文件**：`src/autoship/core/telemetry.py`、`src/autoship/core/audit_logger.py`、`docs/privacy.md`。
+- **完成标准**：
+  - 新增 `TelemetryConfig`，默认关闭遥测，支持 `batch_size`、`timeout`、`allow_untrusted_endpoint`。
+  - 实现 PII 过滤（敏感键、路径、邮箱、JWT、哈希/token），并补充单元测试。
+  - 新增 `docs/privacy.md` 与 `docs/telemetry.md`，`mkdocs.yml` 已加入导航。
+  - 审计日志默认保留 30 天，可通过 `audit.retention_days` 配置，使用 `autoship audit cleanup` 清理。
+  - 多角色 review 与修复记录见 `docs/reviews/p3-7-telemetry-privacy.md`。
+- **相关文件**：`src/autoship/core/telemetry.py`、`src/autoship/core/audit_logger.py`、`src/autoship/models/config.py`、`src/autoship/cli/main.py`、`docs/privacy.md`、`docs/telemetry.md`.
 
 ### P3-8 插件商店与发布流程
 
