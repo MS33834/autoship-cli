@@ -1,0 +1,46 @@
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+      - chore
+      - ci
+    authors:
+      - dependabot
+      - renovate
+  categories:
+    - title: Breaking Changes
+      labels:
+        - breaking
+        - breaking-change
+    - title: Security
+      labels:
+        - security
+    - title: Added
+      labels:
+        - feature
+        - enhancement
+        - feat
+    - title: Changed
+      labels:
+        - change
+        - refactor
+        - perf
+    - title: Deprecated
+      labels:
+        - deprecation
+        - deprecated
+    - title: Removed
+      labels:
+        - removal
+        - removed
+    - title: Fixed
+      labels:
+        - bug
+        - fix
+    - title: Documentation
+      labels:
+        - docs
+        - documentation
+    - title: Other Changes
+      labels:
+        - "*"

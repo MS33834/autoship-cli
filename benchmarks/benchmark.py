@@ -274,7 +274,9 @@ def render_report(report: dict[str, Any]) -> str:
     for b in report["benchmarks"]:
         median = f"{b['median']:.2f} {b['unit']}"
         target = f"{b['target']:.2f} {b['unit']}" if b["target"] is not None else "—"
-        baseline = f"{b['baseline_median']:.2f} {b['unit']}" if b["baseline_median"] is not None else "—"
+        baseline = (
+            f"{b['baseline_median']:.2f} {b['unit']}" if b["baseline_median"] is not None else "—"
+        )
         ratio = f"{b['ratio']:.2f}x" if b["ratio"] is not None else "—"
         status = "PASS" if b["passed"] else "FAIL"
         lines.append(f"| {b['name']} | {median} | {target} | {baseline} | {ratio} | {status} |")

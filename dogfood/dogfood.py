@@ -115,7 +115,9 @@ class Scenario:
         return all(step.passed for step in self.steps)
 
 
-def _record(result: subprocess.CompletedProcess[str], expected: Literal["success", "fail", "skip"]) -> Step:
+def _record(
+    result: subprocess.CompletedProcess[str], expected: Literal["success", "fail", "skip"]
+) -> Step:
     return Step(
         name=" ".join(result.args),
         rc=result.returncode,
@@ -260,9 +262,7 @@ def render_report(scenarios: list[Scenario]) -> str:
         for step in scenario.steps:
             result = "PASS" if step.passed else "FAIL"
             cmd_display = step.name.replace("|", "\\|")
-            lines.append(
-                f"| `{cmd_display}` | {step.rc} | {step.expected} | {result} |"
-            )
+            lines.append(f"| `{cmd_display}` | {step.rc} | {step.expected} | {result} |")
             if not step.passed:
                 failed_steps.append(f"- `{scenario.name}` → `{step.name}` (rc={step.rc})")
                 if step.stderr:
