@@ -69,8 +69,10 @@ nav:
       - metrics: commands/en/metrics.md
       - config: commands/en/config.md
   - 配置说明: configuration.md
+  - 模型配置: models.md
   - 插件: plugins.md
   - 插件开发指南: plugin-development.md
+  - 常见问题: faq.md
   - 插件发布指南: plugin-publishing.md
   - Changelog: changelog.md
   - 贡献指南: contributing.md

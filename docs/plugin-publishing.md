@@ -139,5 +139,5 @@ base64 -w 0 signature.asc
 ## 7. 相关资源
 
 - [插件开发示例](../examples/custom-plugin)
-- [插件注册表 schema](../registry/schema.json)
+- [插件注册表 schema](https://github.com/autoship-cli/autoship-cli/blob/main/registry/schema.json)
 - [插件注册表 Web UI](../registry-web)
