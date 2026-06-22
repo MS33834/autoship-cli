@@ -71,6 +71,7 @@ nav:
   - 配置说明: configuration.md
   - 插件: plugins.md
   - 插件开发指南: plugin-development.md
+  - 插件发布指南: plugin-publishing.md
   - Changelog: changelog.md
   - 贡献指南: contributing.md
   - 安全策略: security.md

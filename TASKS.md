@@ -300,16 +300,23 @@ P3 目标是把已完成的 MVP 功能在真实后端、真实仓库、真实 CI
   - 多角色 review 与修复记录见 `docs/reviews/p3-7-telemetry-privacy.md`。
 - **相关文件**：`src/autoship/core/telemetry.py`、`src/autoship/core/audit_logger.py`、`src/autoship/models/config.py`、`src/autoship/cli/main.py`、`docs/privacy.md`、`docs/telemetry.md`.
 
-### P3-8 插件商店与发布流程
+### P3-8 插件商店与发布流程 ✅
 
 - **Owner**：生态/插件组
+- **状态**：已完成（本 PR）。
 - **问题**：registry-web 已可用，但缺少插件提交、审核、签名发布的 SOP。
 - **验收标准**：
   - 在 `docs/plugin-publishing.md` 中定义插件元数据格式、签名/哈希要求、PR 模板。
   - `registry/plugins.json` 增加签名字段与审核状态字段，并更新 schema。
   - registry-web 能正确展示 verified / community 状态。
   - 提供至少 2 个经过审核的真实插件（docker-ship 可算一个，再新增一个）。
-- **相关文件**：`registry/plugins.json`、`registry-web/*`、`docs/plugin-publishing.md`。
+- **完成标准**：
+  - 新增 `docs/plugin-publishing.md`，包含完整元数据格式、sha256/签名要求、PR 模板、审核与下架流程。
+  - 新增 `registry/schema.json`（JSON Schema v2），定义插件条目必填字段、`trust_level`、`audit_status`、`permissions` 等约束。
+  - `registry/plugins.json` 全部条目补充 `permissions` 与 `audit_status`；新增内置真实插件 `typecheck`。
+  - `registry-web/app.js` 与 `styles.css` 增加 `audit_status` 徽章展示。
+  - 多角色 review 与修复记录见 `docs/reviews/p3-8-plugin-store.md`。
+- **相关文件**：`registry/plugins.json`、`registry/schema.json`、`registry-web/*`、`docs/plugin-publishing.md`、`src/autoship/plugins/typecheck.py`、`src/autoship/core/hook_dispatcher.py`。
 
 ---
 

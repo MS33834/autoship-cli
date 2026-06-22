@@ -266,6 +266,40 @@ a:hover {
   border-color: var(--color-danger);
 }
 
+.badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.audit-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+}
+
+.audit-badge.audit-approved {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.audit-badge.audit-pending {
+  color: var(--color-warning);
+  border-color: var(--color-warning);
+}
+
+.audit-badge.audit-rejected {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
 .empty {
   grid-column: 1 / -1;
   text-align: center;

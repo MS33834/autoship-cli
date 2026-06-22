@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://autoship.dev/schemas/plugin-registry-v2.json",
+  "title": "AutoShip Plugin Registry Index",
+  "type": "object",
+  "required": ["version", "updated_at", "plugins"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 2
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date"
+    },
+    "plugins": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/plugin" }
+    }
+  },
+  "definitions": {
+    "plugin": {
+      "type": "object",
+      "required": [
+        "name",
+        "package",
+        "module",
+        "version",
+        "description",
+        "trust_level",
+        "entry_point",
+        "hooks",
+        "publisher",
+        "maintainer",
+        "license",
+        "permissions",
+        "categories",
+        "audit_status"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "package": { "type": "string" },
+        "module": { "type": "string" },
+        "version": { "type": "string" },
+        "description": { "type": "string" },
+        "trust_level": {
+          "type": "string",
+          "enum": ["builtin", "verified", "community", "untrusted"]
+        },
+        "entry_point": { "type": "string" },
+        "hooks": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "publisher": {
+          "type": "object",
+          "required": ["id", "verified"],
+          "properties": {
+            "id": { "type": "string" },
+            "verified": { "type": "boolean" },
+            "url": { "type": "string", "format": "uri" }
+          }
+        },
+        "maintainer": { "type": "string" },
+        "license": { "type": "string" },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "signature": { "type": "string" },
+        "permissions": {
+          "type": "object",
+          "required": ["filesystem", "network", "shell", "git", "env"],
+          "properties": {
+            "filesystem": {
+              "type": "string",
+              "enum": ["none", "read-only", "read-write"]
+            },
+            "network": { "type": "boolean" },
+            "shell": { "type": "boolean" },
+            "git": { "type": "boolean" },
+            "env": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "categories": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "downloads": { "type": "integer", "minimum": 0 },
+        "rating": {
+          "type": "object",
+          "required": ["score", "count"],
+          "properties": {
+            "score": { "type": "number", "minimum": 0, "maximum": 5 },
+            "count": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "homepage": { "type": "string", "format": "uri" },
+        "source_url": { "type": "string", "format": "uri" },
+        "audit_status": {
+          "type": "string",
+          "enum": ["pending", "approved", "rejected"]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
