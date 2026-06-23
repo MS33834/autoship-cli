@@ -52,9 +52,7 @@ jobs:
 
       - name: Build website
         working-directory: website
-        run: |
-          npm install
-          npm run build
+        run: npm run build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
