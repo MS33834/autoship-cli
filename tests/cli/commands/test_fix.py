@@ -82,12 +82,12 @@ def test_fix_yes_flag_applies_patch(tmp_path: Path, monkeypatch) -> None:
 
 def test_extract_patch_from_diff_block() -> None:
     response = "```diff\n--- a\n+++ b\n```"
-    assert fix_module._extract_patch(response) == "--- a\n+++ b"
+    assert fix_module._extract_patch(response) == "--- a\n+++ b\n"
 
 
 def test_extract_patch_from_plain_diff() -> None:
     response = "Some text\n--- a/file.txt\n+++ b/file.txt"
-    assert fix_module._extract_patch(response) == "--- a/file.txt\n+++ b/file.txt"
+    assert fix_module._extract_patch(response) == "--- a/file.txt\n+++ b/file.txt\n"
 
 
 def test_extract_patch_returns_none_when_no_patch() -> None:

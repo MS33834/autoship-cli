@@ -249,7 +249,10 @@ class ToolsConfig(BaseModel):
 
     def get(self, name: str) -> ToolConfig:
         """Return the configured tool or an empty default."""
-        return getattr(self, name, ToolConfig())
+        value = getattr(self, name, ToolConfig())
+        if isinstance(value, ToolConfig):
+            return value
+        return ToolConfig()
 
 
 class AppConfig(BaseModel):

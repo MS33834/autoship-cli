@@ -197,10 +197,9 @@ class TelemetryCollector:
             allow_untrusted = os.getenv(ALLOW_UNTRUSTED_ENV, "").lower() in {"1", "true", "yes"}
 
         raw_endpoint = endpoint or os.getenv(DEFAULT_ENDPOINT_ENV)
+        self.endpoint: str | None = None
         if raw_endpoint is not None and _is_valid_endpoint(raw_endpoint, allow_untrusted):
             self.endpoint = raw_endpoint
-        else:
-            self.endpoint = None
 
         self._batch: list[dict[str, Any]] = []
 

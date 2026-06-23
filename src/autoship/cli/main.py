@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import structlog
 import typer
@@ -61,13 +62,13 @@ def main_callback(
 commands.register_all(app)
 
 
-def _command_name(cmd) -> str | None:
+def _command_name(cmd: Any) -> str | None:
     """Return the string name of a registered command or ``None``."""
     name = getattr(cmd, "name", None)
     return name if isinstance(name, str) and name else None
 
 
-def _group_name(group) -> str | None:
+def _group_name(group: Any) -> str | None:
     """Return the string name of a registered command group or ``None``.
 
     Typer stores the group name either directly on the parent ``TyperInfo`` or,
@@ -97,11 +98,6 @@ for _group in app.registered_groups:
     _name = _group_name(_group)
     if _name:
         _KNOWN_COMMANDS.add(_name)
-
-
-def _known_commands() -> set[str]:
-    """Return the set of top-level subcommand names registered on ``app``."""
-    return _KNOWN_COMMANDS
 
 
 def _guess_command() -> str:

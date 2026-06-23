@@ -201,18 +201,37 @@ def _collect_relevant_files(
 
 
 def _extract_patch(response: str) -> str | None:
-    """Extract a unified diff from the LLM response if present."""
-    start = response.find("```diff")
-    if start == -1:
-        start = response.find("--- ")
-        if start == -1:
-            return None
-        return response[start:].strip()
+    """Extract a unified diff from the LLM response if present.
 
-    end = response.find("```", start + 7)
-    if end == -1:
-        return response[start + 7 :].strip()
-    return response[start + 7 : end].strip()
+    Preserves internal indentation and trailing newlines so the patch can be
+    applied by ``git apply`` or ``patch -p1``.
+    """
+    fence_start = response.find("```diff")
+    if fence_start == -1:
+        fence_start = response.find("```patch")
+        offset = 8
+    else:
+        offset = 7
+
+    if fence_start == -1:
+        plain_start = response.find("--- ")
+        if plain_start == -1:
+            return None
+        patch = response[plain_start:].rstrip()
+        return (patch + "\n") if patch else None
+
+    content = response[fence_start + offset :]
+    fence_end = content.find("```")
+    if fence_end != -1:
+        content = content[:fence_end]
+
+    lines = content.splitlines()
+    # Drop leading blank lines introduced by the code fence, but keep all
+    # indentation and trailing newlines required by patch(1).
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    patch = "\n".join(lines)
+    return (patch + "\n") if patch else None
 
 
 def _collect_patch_paths(patch: str) -> set[str]:
@@ -232,13 +251,20 @@ def _collect_patch_paths(patch: str) -> set[str]:
 
 
 def _patch_paths_are_safe(project_root: Path, patch: str) -> bool:
-    """Return True when every path in ``patch`` stays inside ``project_root``."""
+    """Return True when every path in ``patch`` stays inside ``project_root``.
+
+    Also rejects patches that would modify test files, keeping the fix command
+    focused on implementation/source code only.
+    """
     root = project_root.resolve()
     for raw in _collect_patch_paths(patch):
         # Reject absolute paths and path traversal attempts outright.
         if Path(raw).is_absolute() or ".." in Path(raw).parts:
             return False
         if not (root / raw).resolve().is_relative_to(root):
+            return False
+        raw_lower = raw.lower()
+        if "tests/" in raw_lower or "test_" in raw_lower or raw_lower.startswith("test"):
             return False
     return True
 
@@ -254,6 +280,8 @@ def _apply_patch(project_root: Path, patch: str, i18n: I18n) -> None:
             err=True,
         )
         return
+
+    last_reason: str | None = None
 
     if shutil.which("git"):
         check = subprocess.run(
@@ -274,18 +302,9 @@ def _apply_patch(project_root: Path, patch: str, i18n: I18n) -> None:
             if apply.returncode == 0:
                 typer.echo(i18n._("fix.patch_applied"))
                 return
-            typer.secho(
-                i18n._("fix.patch_failed", reason=apply.stderr.strip()),
-                fg=typer.colors.YELLOW,
-                err=True,
-            )
-            return
-        typer.secho(
-            i18n._("fix.patch_failed", reason=check.stderr.strip()),
-            fg=typer.colors.YELLOW,
-            err=True,
-        )
-        return
+            last_reason = apply.stderr.strip() or "git apply failed"
+        else:
+            last_reason = check.stderr.strip() or "git apply --check failed"
 
     if shutil.which("patch"):
         proc = subprocess.run(
@@ -298,9 +317,13 @@ def _apply_patch(project_root: Path, patch: str, i18n: I18n) -> None:
         if proc.returncode == 0:
             typer.echo(i18n._("fix.patch_applied"))
             return
-        typer.secho(
-            i18n._("fix.patch_failed", reason=proc.stderr.strip()), fg=typer.colors.YELLOW, err=True
-        )
-        return
+        last_reason = proc.stderr.strip() or "patch command failed"
 
-    typer.secho(i18n._("fix.patch_no_tool"), fg=typer.colors.YELLOW, err=True)
+    if last_reason:
+        typer.secho(
+            i18n._("fix.patch_failed", reason=last_reason),
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+    else:
+        typer.secho(i18n._("fix.patch_no_tool"), fg=typer.colors.YELLOW, err=True)

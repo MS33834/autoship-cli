@@ -82,7 +82,8 @@ def _load_toml(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
     with path.open("rb") as f:
-        return tomllib.load(f)  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+        data: dict[str, Any] = tomllib.load(f)
+        return data
 
 
 @app.command("list", help=_i18n._("config.list_help"))

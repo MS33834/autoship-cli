@@ -14,12 +14,19 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);
   background: var(--color-bg);
   color: var(--color-text);
   line-height: 1.6;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 a {
@@ -44,8 +51,10 @@ a:hover {
 
 .site-header .container {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .logo {
@@ -56,8 +65,9 @@ a:hover {
 
 .nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .nav a {
@@ -125,12 +135,17 @@ a:hover {
 }
 
 .install-snippet {
+  display: inline-block;
+  max-width: 100%;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   padding: 0.75rem 1rem;
   border-radius: 0.375rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.95rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .features {
@@ -173,12 +188,21 @@ a:hover {
   margin-bottom: 2rem;
 }
 
+.workflow pre,
+.plugins pre,
+pre,
+code {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
 .workflow pre {
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   padding: 1.5rem;
-  max-width: 600px;
+  max-width: 100%;
   margin: 0 auto;
   text-align: left;
   overflow-x: auto;
@@ -194,7 +218,7 @@ a:hover {
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   padding: 1rem;
-  max-width: 480px;
+  max-width: 100%;
   margin: 1.5rem auto;
   text-align: left;
   overflow-x: auto;
@@ -212,7 +236,20 @@ a:hover {
     font-size: 2rem;
   }
 
+  .hero {
+    padding: 3rem 0;
+  }
+
+  .site-header .container {
+    justify-content: center;
+  }
+
   .nav {
     gap: 0.75rem;
+    justify-content: center;
+  }
+
+  .container {
+    padding: 0 1rem;
   }
 }

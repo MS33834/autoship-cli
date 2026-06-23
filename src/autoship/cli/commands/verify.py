@@ -275,9 +275,12 @@ def _present_suggestion(
 def _apply_patch(project_root: Path, patch: str) -> tuple[bool, str | None]:
     """Apply a unified diff patch to the project.
 
-    Prefers ``git apply`` and falls back to the ``patch`` command. Returns a
+    Prefers ``git apply`` and falls back to the ``patch`` command so patches
+    can still be applied when the working tree differs from HEAD. Returns a
     tuple of ``(success, reason)`` so callers can explain failures.
     """
+    last_reason: str | None = None
+
     if shutil.which("git"):
         check = subprocess.run(
             ["git", "apply", "--check"],
@@ -296,8 +299,9 @@ def _apply_patch(project_root: Path, patch: str) -> tuple[bool, str | None]:
             )
             if apply.returncode == 0:
                 return True, None
-            return False, apply.stderr.strip() or "git apply failed"
-        return False, check.stderr.strip() or "git apply --check failed"
+            last_reason = apply.stderr.strip() or "git apply failed"
+        else:
+            last_reason = check.stderr.strip() or "git apply --check failed"
 
     if shutil.which("patch"):
         proc = subprocess.run(
@@ -309,6 +313,6 @@ def _apply_patch(project_root: Path, patch: str) -> tuple[bool, str | None]:
         )
         if proc.returncode == 0:
             return True, None
-        return False, proc.stderr.strip() or "patch command failed"
+        last_reason = proc.stderr.strip() or "patch command failed"
 
-    return False, "Neither git nor patch is available on PATH"
+    return False, last_reason or "Neither git nor patch is available on PATH"
