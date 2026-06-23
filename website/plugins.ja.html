@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AutoShip Plugins</title>
-  <meta name="description" content="Discover and install AutoShip plugins.">
+  <title>AutoShip プラグイン</title>
+  <meta name="description" content="AutoShip プラグインを見つけてインストールしましょう。">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -12,13 +12,13 @@
     <div class="container">
       <a href="./" class="logo">AutoShip</a>
       <nav class="nav">
-        <a href="./">Home</a>
-        <a href="plugins.html">Plugins</a>
-        <a href="docs/">Docs</a>
+        <a href="index.ja.html">ホーム</a>
+        <a href="plugins.ja.html">プラグイン</a>
+        <a href="docs/">ドキュメント</a>
         <div class="lang-switch">
-          <a href="plugins.html" class="active" aria-label="English">EN</a>
+          <a href="plugins.html" aria-label="English">EN</a>
           <a href="plugins.zh.html" aria-label="中文">ZH</a>
-          <a href="plugins.ja.html" aria-label="日本語">JA</a>
+          <a href="plugins.ja.html" class="active" aria-label="日本語">JA</a>
         </div>
         <a href="https://github.com/MS33834/autoship-cli" class="btn btn-secondary">GitHub</a>
       </nav>
@@ -27,35 +27,34 @@
 
   <section class="hero">
     <div class="container">
-      <h1>Plugins</h1>
+      <h1>プラグイン</h1>
       <p class="lead">
-        Extend AutoShip with community and verified plugins for security,
-        shipping, issue tracking, and more.
+        セキュリティ、デリバリー、Issue 追跡などのコミュニティ・検証済みプラグインで AutoShip を拡張しましょう。
       </p>
       <div class="cta">
-        <a href="registry/" class="btn btn-primary">Browse Registry</a>
-        <a href="docs/plugin-development" class="btn btn-secondary">Build a Plugin</a>
+        <a href="registry/" class="btn btn-primary">レジストリを見る</a>
+        <a href="docs/plugin-development" class="btn btn-secondary">プラグインを作る</a>
       </div>
     </div>
   </section>
 
   <section class="features">
     <div class="container">
-      <h2>Featured plugins</h2>
+      <h2>注目のプラグイン</h2>
       <div class="grid">
         <article class="card">
           <h3>security-scan</h3>
-          <p>Run bandit, gitleaks, and osv-scanner before every commit.</p>
+          <p>毎回のコミット前に bandit、gitleaks、osv-scanner を実行。</p>
           <code>autoship plugin install security-scan</code>
         </article>
         <article class="card">
           <h3>docker-ship</h3>
-          <p>Build and push Docker images when uploading with <code>--target docker</code>.</p>
+          <p><code>--target docker</code> でアップロードする際に Docker イメージをビルド・プッシュ。</p>
           <code>autoship plugin install docker-ship</code>
         </article>
         <article class="card">
           <h3>web-search</h3>
-          <p>Search the web for error context when verification fails.</p>
+          <p>検証失敗時に Web を検索してエラーの文脈を取得。</p>
           <code>autoship plugin install web-search</code>
         </article>
       </div>
@@ -64,23 +63,23 @@
 
   <section class="plugins">
     <div class="container">
-      <h2>Trust levels</h2>
+      <h2>信頼レベル</h2>
       <div class="grid">
         <article class="card">
           <h3>builtin</h3>
-          <p>Ships with AutoShip. No extra verification needed.</p>
+          <p>AutoShip に同梱。追加の検証は不要。</p>
         </article>
         <article class="card">
           <h3>verified</h3>
-          <p>Reviewed by the AutoShip team and signed with a checksum or signature.</p>
+          <p>AutoShip チームがレビューし、チェックサムまたは署名付き。</p>
         </article>
         <article class="card">
           <h3>community</h3>
-          <p>Published by community members. We show a warning before installation.</p>
+          <p>コミュニティメンバーが公開。インストール前に警告を表示。</p>
         </article>
         <article class="card">
           <h3>untrusted</h3>
-          <p>Installed from a local path or unknown source. Use with caution.</p>
+          <p>ローカルパスや不明なソースからインストール。注意して使用。</p>
         </article>
       </div>
     </div>
@@ -88,7 +87,7 @@
 
   <footer class="site-footer">
     <div class="container">
-      <p>&copy; 2026 AutoShip Team. Released under the MIT License.</p>
+      <p>&copy; 2026 AutoShip Team. MIT ライセンスの下で公開されています。</p>
     </div>
   </footer>
 </body>

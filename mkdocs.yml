@@ -54,20 +54,6 @@ nav:
       - registry: commands/registry.md
       - metrics: commands/metrics.md
       - config: commands/config.md
-  - Command Reference (EN):
-      - Overview: commands/en/index.md
-      - init: commands/en/init.md
-      - clean: commands/en/clean.md
-      - verify: commands/en/verify.md
-      - fix: commands/en/fix.md
-      - commit: commands/en/commit.md
-      - upload: commands/en/upload.md
-      - plugin: commands/en/plugin.md
-      - doctor: commands/en/doctor.md
-      - audit: commands/en/audit.md
-      - registry: commands/en/registry.md
-      - metrics: commands/en/metrics.md
-      - config: commands/en/config.md
   - 配置说明: configuration.md
   - 模型配置: models.md
   - 插件: plugins.md
@@ -102,10 +88,25 @@ markdown_extensions:
   - toc:
       permalink: true
 
+plugins:
+  - i18n:
+      docs_structure: folder
+      languages:
+        - locale: zh
+          default: true
+          name: 中文
+          build: true
+        - locale: en
+          name: English
+          build: true
+        - locale: ja
+          name: 日本語
+          build: true
+
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/autoship-cli/autoship-cli
+      link: https://github.com/MS33834/autoship-cli
       name: GitHub
     - icon: fontawesome/solid/envelope
       link: mailto:team@autoship.dev

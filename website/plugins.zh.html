@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AutoShip Plugins</title>
-  <meta name="description" content="Discover and install AutoShip plugins.">
+  <title>AutoShip 插件</title>
+  <meta name="description" content="发现并安装 AutoShip 插件。">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -12,12 +12,12 @@
     <div class="container">
       <a href="./" class="logo">AutoShip</a>
       <nav class="nav">
-        <a href="./">Home</a>
-        <a href="plugins.html">Plugins</a>
-        <a href="docs/">Docs</a>
+        <a href="index.zh.html">首页</a>
+        <a href="plugins.zh.html">插件</a>
+        <a href="docs/">文档</a>
         <div class="lang-switch">
-          <a href="plugins.html" class="active" aria-label="English">EN</a>
-          <a href="plugins.zh.html" aria-label="中文">ZH</a>
+          <a href="plugins.html" aria-label="English">EN</a>
+          <a href="plugins.zh.html" class="active" aria-label="中文">ZH</a>
           <a href="plugins.ja.html" aria-label="日本語">JA</a>
         </div>
         <a href="https://github.com/MS33834/autoship-cli" class="btn btn-secondary">GitHub</a>
@@ -27,35 +27,34 @@
 
   <section class="hero">
     <div class="container">
-      <h1>Plugins</h1>
+      <h1>插件</h1>
       <p class="lead">
-        Extend AutoShip with community and verified plugins for security,
-        shipping, issue tracking, and more.
+        通过社区和已验证的插件扩展 AutoShip，支持安全扫描、交付、问题追踪等功能。
       </p>
       <div class="cta">
-        <a href="registry/" class="btn btn-primary">Browse Registry</a>
-        <a href="docs/plugin-development" class="btn btn-secondary">Build a Plugin</a>
+        <a href="registry/" class="btn btn-primary">浏览注册表</a>
+        <a href="docs/plugin-development" class="btn btn-secondary">开发插件</a>
       </div>
     </div>
   </section>
 
   <section class="features">
     <div class="container">
-      <h2>Featured plugins</h2>
+      <h2>精选插件</h2>
       <div class="grid">
         <article class="card">
           <h3>security-scan</h3>
-          <p>Run bandit, gitleaks, and osv-scanner before every commit.</p>
+          <p>每次提交前运行 bandit、gitleaks 和 osv-scanner。</p>
           <code>autoship plugin install security-scan</code>
         </article>
         <article class="card">
           <h3>docker-ship</h3>
-          <p>Build and push Docker images when uploading with <code>--target docker</code>.</p>
+          <p>使用 <code>--target docker</code> 上传时构建并推送 Docker 镜像。</p>
           <code>autoship plugin install docker-ship</code>
         </article>
         <article class="card">
           <h3>web-search</h3>
-          <p>Search the web for error context when verification fails.</p>
+          <p>验证失败时搜索网络获取错误上下文。</p>
           <code>autoship plugin install web-search</code>
         </article>
       </div>
@@ -64,23 +63,23 @@
 
   <section class="plugins">
     <div class="container">
-      <h2>Trust levels</h2>
+      <h2>信任等级</h2>
       <div class="grid">
         <article class="card">
           <h3>builtin</h3>
-          <p>Ships with AutoShip. No extra verification needed.</p>
+          <p>随 AutoShip 一起发布，无需额外验证。</p>
         </article>
         <article class="card">
           <h3>verified</h3>
-          <p>Reviewed by the AutoShip team and signed with a checksum or signature.</p>
+          <p>由 AutoShip 团队审核，并带有校验和或签名。</p>
         </article>
         <article class="card">
           <h3>community</h3>
-          <p>Published by community members. We show a warning before installation.</p>
+          <p>由社区成员发布，安装前会显示警告。</p>
         </article>
         <article class="card">
           <h3>untrusted</h3>
-          <p>Installed from a local path or unknown source. Use with caution.</p>
+          <p>从本地路径或未知来源安装，请谨慎使用。</p>
         </article>
       </div>
     </div>
@@ -88,7 +87,7 @@
 
   <footer class="site-footer">
     <div class="container">
-      <p>&copy; 2026 AutoShip Team. Released under the MIT License.</p>
+      <p>&copy; 2026 AutoShip Team. 基于 MIT 许可证发布。</p>
     </div>
   </footer>
 </body>

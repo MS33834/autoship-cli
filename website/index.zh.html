@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoShip — AI 辅助代码交付工具包</title>
+  <meta name="description" content="AutoShip 是一款本地优先、AI 辅助的 CLI，帮助你放心地清理、验证、提交和交付代码。">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="./" class="logo">AutoShip</a>
+      <nav class="nav">
+        <a href="#features">功能</a>
+        <a href="#workflow">工作流</a>
+        <a href="plugins.zh.html">插件</a>
+        <a href="docs/">文档</a>
+        <div class="lang-switch">
+          <a href="index.html" aria-label="English">EN</a>
+          <a href="index.zh.html" class="active" aria-label="中文">ZH</a>
+          <a href="index.ja.html" aria-label="日本語">JA</a>
+        </div>
+        <a href="https://github.com/MS33834/autoship-cli" class="btn btn-secondary">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <h1>用 AI 交付代码，保持本地优先。</h1>
+      <p class="lead">
+        AutoShip 是一款本地优先、AI 辅助的工具包，帮助你在不将代码库上传到云端的情况下完成清理、验证、提交和交付。
+      </p>
+      <div class="cta">
+        <code class="install-snippet">pip install autoship</code>
+        <a href="docs/" class="btn btn-primary">开始使用</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="features">
+    <div class="container">
+      <h2>功能特性</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>本地 AI</h3>
+          <p>兼容 Ollama、LM Studio 等本地模型后端，代码始终保留在你的机器上。</p>
+        </article>
+        <article class="card">
+          <h3>智能提交</h3>
+          <p>根据已暂存改动生成符合规范的提交信息，并在应用前供你审阅。</p>
+        </article>
+        <article class="card">
+          <h3>可信工具链</h3>
+          <p>通过可配置的工具路径与 SHA256 校验运行 <code>autoship clean</code>、<code>verify</code> 和 <code>upload</code>。</p>
+        </article>
+        <article class="card">
+          <h3>插件生态</h3>
+          <p>通过插件扩展 AutoShip，支持安全扫描、Docker 交付、Web 搜索等功能。</p>
+        </article>
+        <article class="card">
+          <h3>企业就绪</h3>
+          <p>支持团队配置、结构化审计日志、SIEM 转发和多语言 CLI。</p>
+        </article>
+        <article class="card">
+          <h3>安全第一</h3>
+          <p>编辑器白名单、命令白名单、环境变量覆盖与遥测端点校验。</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="workflow" class="workflow">
+    <div class="container">
+      <h2>开箱即用的工作流</h2>
+      <pre><code># 1. 初始化
+autoship init
+
+# 2. 清理并格式化
+autoship clean
+
+# 3. 验证
+autoship verify pytest
+
+# 4. AI 生成提交信息
+autoship commit
+
+# 5. 上传产物
+autoship upload --target pypi</code></pre>
+    </div>
+  </section>
+
+  <section class="plugins">
+    <div class="container">
+      <h2>为扩展而生</h2>
+      <p>
+        使用 <a href="docs/plugin-development">AutoShip SDK</a>
+        在几分钟内构建并发布你自己的插件。
+      </p>
+      <pre><code>pip install autoship-sdk
+autoship-sdk create my-plugin</code></pre>
+      <p>
+        浏览 <a href="registry/">插件注册表</a>，发现社区和已验证插件。
+      </p>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 AutoShip Team. 基于 MIT 许可证发布。</p>
+    </div>
+  </footer>
+</body>
+</html>

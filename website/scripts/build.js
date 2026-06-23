@@ -6,7 +6,15 @@ const srcDir = path.join(__dirname, '..');
 const distDir = path.join(srcDir, 'dist');
 const registryWebDir = path.join(srcDir, '..', 'registry-web');
 
-const files = ['index.html', 'plugins.html', 'styles.css'];
+const files = [
+  'index.html',
+  'index.zh.html',
+  'index.ja.html',
+  'plugins.html',
+  'plugins.zh.html',
+  'plugins.ja.html',
+  'styles.css',
+];
 
 fs.mkdirSync(distDir, { recursive: true });
 

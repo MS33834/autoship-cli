@@ -63,6 +63,7 @@ dev = [
     "cyclonedx-bom>=4.0.0",
     "pyinstaller>=6.0.0",
     "mkdocs-material>=9.0.0",
+    "mkdocs-static-i18n>=1.2.0",
     "build>=1.2.0",
     "twine>=5.0.0",
     "autoship-sdk",
