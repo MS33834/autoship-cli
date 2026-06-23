@@ -45,14 +45,20 @@ def test_main_callback_without_config() -> None:
 def test_cli_entrypoint_handles_autoship_error() -> None:
     error = ConfigError("bad config")
     mock_app = MagicMock(side_effect=error)
-    with patch.object(main, "app", mock_app):
+    with (
+        patch.object(sys, "argv", ["autoship", "fix"]),
+        patch.object(main, "app", mock_app),
+    ):
         exit_code = main.cli_entrypoint()
     assert exit_code == error.code
 
 
 def test_cli_entrypoint_handles_unexpected_error() -> None:
     mock_app = MagicMock(side_effect=RuntimeError("boom"))
-    with patch.object(main, "app", mock_app):
+    with (
+        patch.object(sys, "argv", ["autoship", "fix"]),
+        patch.object(main, "app", mock_app),
+    ):
         exit_code = main.cli_entrypoint()
     assert exit_code == ExitCode.USAGE_ERROR
 
@@ -81,7 +87,10 @@ def test_cli_entrypoint_config_error_shows_next_step_suggestion(capsys) -> None:
     """ConfigError should be followed by an actionable next-step suggestion."""
     error = ConfigError("missing config")
     mock_app = MagicMock(side_effect=error)
-    with patch.object(main, "app", mock_app):
+    with (
+        patch.object(sys, "argv", ["autoship", "fix"]),
+        patch.object(main, "app", mock_app),
+    ):
         exit_code = main.cli_entrypoint()
     assert exit_code == error.code
     captured = capsys.readouterr()

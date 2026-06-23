@@ -13,7 +13,9 @@ from autoship.cli.main import app
 runner = CliRunner()
 
 
-def test_fix_requires_api_key(tmp_path: Path) -> None:
+def test_fix_requires_api_key(tmp_path: Path, monkeypatch) -> None:
+    """A missing API key must be reported even when the project has a config."""
+    monkeypatch.chdir(tmp_path)
     error_log = tmp_path / "error.txt"
     error_log.write_text("SyntaxError", encoding="utf-8")
     with patch.dict("os.environ", {"AUTOSHIP_LLM__API_KEY": ""}, clear=False):

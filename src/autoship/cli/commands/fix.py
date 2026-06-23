@@ -39,8 +39,11 @@ SYSTEM_PROMPT = (
     "You are an expert software engineer. A verification command failed. "
     "Analyze the error output and project context, then propose a concrete fix. "
     "Respond with a brief explanation followed by a unified diff patch that can "
-    "be applied with `git apply` or `patch -p1`. If you cannot produce a patch, "
-    "explain what the user should check manually."
+    "be applied with `git apply` or `patch -p1`. "
+    "Fix the implementation/source code, NEVER the tests: do not modify any file "
+    "whose path contains 'tests/' or 'test_'. If the error is clearly caused by a "
+    "bug in a test, explain that instead of producing a patch. "
+    "If you cannot produce a patch, explain what the user should check manually."
 )
 
 
@@ -92,6 +95,7 @@ def fix(
     i18n: I18n = get_i18n_from_ctx(ctx)
     config = ctx.obj["config"]
     dry_run: bool = ctx.obj.get("dry_run", False)
+    yes = yes or ctx.obj.get("yes", False)
 
     source = error_file or ERROR_LOG_PATH
     if not source.exists():

@@ -61,18 +61,47 @@ def main_callback(
 commands.register_all(app)
 
 
+def _command_name(cmd) -> str | None:
+    """Return the string name of a registered command or ``None``."""
+    name = getattr(cmd, "name", None)
+    return name if isinstance(name, str) and name else None
+
+
+def _group_name(group) -> str | None:
+    """Return the string name of a registered command group or ``None``.
+
+    Typer stores the group name either directly on the parent ``TyperInfo`` or,
+    when ``add_typer`` is called without an explicit ``name``, on the child
+    ``Typer.info`` object. ``DefaultPlaceholder`` values are resolved best-effort.
+    """
+    name = getattr(group, "name", None)
+    if isinstance(name, str) and name:
+        return name
+    child = getattr(group, "typer_instance", None)
+    if child is not None:
+        child_name = getattr(getattr(child, "info", None), "name", None)
+        if isinstance(child_name, str) and child_name:
+            return child_name
+    return None
+
+
+# Snapshot top-level command names immediately after registration. This avoids
+# depending on the mutable ``app`` object at runtime, which matters for tests
+# that patch ``main.app`` and for consistent error handling.
+_KNOWN_COMMANDS: set[str] = set()
+for _cmd in app.registered_commands:
+    _name = _command_name(_cmd)
+    if _name:
+        _KNOWN_COMMANDS.add(_name)
+for _group in app.registered_groups:
+    _name = _group_name(_group)
+    if _name:
+        _KNOWN_COMMANDS.add(_name)
+
+
 def _known_commands() -> set[str]:
     """Return the set of top-level subcommand names registered on ``app``."""
-    names: set[str] = set()
-    for cmd in app.registered_commands:
-        name = getattr(cmd, "name", None)
-        if name:
-            names.add(name)
-    for group in app.registered_groups:
-        name = getattr(group, "name", None)
-        if name:
-            names.add(name)
-    return names
+    return _KNOWN_COMMANDS
 
 
 def _guess_command() -> str:
@@ -84,7 +113,7 @@ def _guess_command() -> str:
 
 def _is_unknown_command(command: str) -> bool:
     """Return True if ``command`` looks like a user-supplied but unknown subcommand."""
-    return bool(command) and command not in _known_commands() and command != "help"
+    return bool(command) and command not in _KNOWN_COMMANDS and command != "help"
 
 
 def _print_suggestion(i18n: I18n, exc: AutoShipError) -> None:

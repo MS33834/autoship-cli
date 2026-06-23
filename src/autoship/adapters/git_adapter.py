@@ -48,14 +48,21 @@ class GitAdapter:
         return result.stdout.strip() != ""
 
     def diff(self) -> str:
-        """Return the full diff of unstaged changes."""
-        result = self._run(self._git_cmd("diff"))
-        return result.stdout
+        """Return the full diff of staged and unstaged changes.
+
+        Combines ``git diff --cached`` and ``git diff`` so that both staged and
+        unstaged changes are visible, and avoids ``HEAD`` which does not exist in
+        freshly initialized repositories.
+        """
+        staged = self._run(self._git_cmd("diff", "--cached")).stdout
+        unstaged = self._run(self._git_cmd("diff")).stdout
+        return f"{staged}\n{unstaged}".strip()
 
     def stats(self) -> str:
-        """Return a short diff stat summary."""
-        result = self._run(self._git_cmd("diff", "--stat"))
-        return result.stdout
+        """Return a short diff stat summary for staged and unstaged changes."""
+        staged = self._run(self._git_cmd("diff", "--stat", "--cached")).stdout
+        unstaged = self._run(self._git_cmd("diff", "--stat")).stdout
+        return f"{staged}\n{unstaged}".strip()
 
     def commit(self, message: str) -> None:
         """Stage all changes and commit with the given message."""
