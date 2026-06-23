@@ -30,9 +30,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://autoship.dev"
-Documentation = "https://docs.autoship.dev"
-Repository = "https://github.com/autoship-cli/autoship-cli"
+Homepage = "https://ms33834.github.io/autoship-cli/"
+Documentation = "https://ms33834.github.io/autoship-cli/docs"
+Repository = "https://github.com/MS33834/autoship-cli"
 
 [tool.ruff]
 target-version = "py310"

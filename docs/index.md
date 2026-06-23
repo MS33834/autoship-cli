@@ -28,7 +28,7 @@ uv tool install autoship
 开发者可直接克隆仓库并使用 uv：
 
 ```bash
-git clone https://github.com/autoship-cli/autoship-cli.git
+git clone https://github.com/MS33834/autoship-cli.git
 cd autoship-cli
 uv sync --all-extras --dev
 ```

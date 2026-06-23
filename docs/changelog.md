@@ -97,7 +97,7 @@
 - 凭证信息默认不写入日志。
 - 插件通过 Hook 机制运行，遵循最小权限原则。
 
-[1.0.0]: https://github.com/autoship-cli/autoship-cli/releases/tag/v1.0.0
-[1.0.0-rc.1]: https://github.com/autoship-cli/autoship-cli/releases/tag/v1.0.0-rc.1
-[0.2.0-beta.1]: https://github.com/autoship-cli/autoship-cli/releases/tag/v0.2.0-beta.1
-[0.1.0]: https://github.com/autoship-cli/autoship-cli/releases/tag/v0.1.0
+[1.0.0]: https://github.com/MS33834/autoship-cli/releases/tag/v1.0.0
+[1.0.0-rc.1]: https://github.com/MS33834/autoship-cli/releases/tag/v1.0.0-rc.1
+[0.2.0-beta.1]: https://github.com/MS33834/autoship-cli/releases/tag/v0.2.0-beta.1
+[0.1.0]: https://github.com/MS33834/autoship-cli/releases/tag/v0.1.0

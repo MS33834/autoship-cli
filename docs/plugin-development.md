@@ -172,7 +172,7 @@ autoship --verbose verify pytest
 
 ## 仓库示例
 
-参见 [`examples/custom-plugin`](https://github.com/autoship-cli/autoship-cli/tree/main/examples/custom-plugin)。该示例实现：
+参见 [`examples/custom-plugin`](https://github.com/MS33834/autoship-cli/tree/main/examples/custom-plugin)。该示例实现：
 
 - `pre_commit`：在提交前扫描项目根目录下的 `TODO` 文件并告警。
 - `on_error`：当 `verify` 失败且用户启用 `--fix` 时，返回一条 `FixSuggestion`。

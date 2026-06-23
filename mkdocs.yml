@@ -1,12 +1,12 @@
 site_name: AutoShip CLI
 site_description: AutoShip-CLI 文档 — 本地优先的智能交付助手
 site_author: AutoShip Team
-site_url: https://docs.autoship.dev
+site_url: https://ms33834.github.io/autoship-cli/docs
 
 docs_dir: docs
 
-repo_url: https://github.com/autoship-cli/autoship-cli
-repo_name: autoship-cli/autoship-cli
+repo_url: https://github.com/MS33834/autoship-cli
+repo_name: MS33834/autoship-cli
 edit_uri: edit/main/docs/
 
 theme:

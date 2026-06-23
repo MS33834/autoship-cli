@@ -170,7 +170,7 @@ class RegistryConfig(BaseModel):
 
     url: HttpUrl = cast(
         HttpUrl,
-        "https://raw.githubusercontent.com/autoship-cli/autoship-cli/main/registry/plugins.json",
+        "https://raw.githubusercontent.com/MS33834/autoship-cli/main/registry/plugins.json",
     )
     cache_enabled: bool = True
     cache_ttl_seconds: int = 3600

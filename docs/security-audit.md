@@ -79,4 +79,4 @@
 
 ## 如何报告安全问题
 
-请遵循 [SECURITY.md](https://github.com/autoship-cli/autoship-cli/blob/main/SECURITY.md) 中的流程，通过邮件私下报告。
+请遵循 [SECURITY.md](https://github.com/MS33834/autoship-cli/blob/main/SECURITY.md) 中的流程，通过邮件私下报告。

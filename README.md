@@ -4,9 +4,9 @@
 
 [![PyPI](https://img.shields.io/pypi/v/autoship)](https://pypi.org/project/autoship/)
 [![Python](https://img.shields.io/pypi/pyversions/autoship)](https://pypi.org/project/autoship/)
-[![License](https://img.shields.io/github/license/autoship-cli/autoship-cli)](./LICENSE)
-[![CI](https://github.com/autoship-cli/autoship-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/autoship-cli/autoship-cli/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/badge/docs-docs.autoship.dev-blue)](https://docs.autoship.dev)
+[![License](https://img.shields.io/github/license/MS33834/autoship-cli)](./LICENSE)
+[![CI](https://github.com/MS33834/autoship-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/MS33834/autoship-cli/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-ms33834.github.io%2Fautoship--cli%2Fdocs-blue)](https://ms33834.github.io/autoship-cli/docs)
 
 [查看文字版演示](docs/demo.md)
 
@@ -17,7 +17,7 @@
 > asciinema rec docs/demo.cast --command "autoship init && autoship clean && autoship commit"
 > ```
 >
-> 官方网站：[autoship.dev](https://autoship.dev)
+> 官方网站：[ms33834.github.io/autoship-cli](https://ms33834.github.io/autoship-cli/)
 
 ## 当前计划
 
@@ -66,7 +66,7 @@ pip install autoship
 ### 从源码安装
 
 ```bash
-git clone https://github.com/autoship-cli/autoship-cli.git
+git clone https://github.com/MS33834/autoship-cli.git
 cd autoship-cli
 uv sync --all-extras --dev
 uv run autoship --help
@@ -76,7 +76,7 @@ uv run autoship --help
 
 各平台预编译二进制可在 GitHub Releases 下载：
 
-- [下载最新版本](https://github.com/autoship-cli/autoship-cli/releases/latest)
+- [下载最新版本](https://github.com/MS33834/autoship-cli/releases/latest)
 
 > 二进制由 CI 自动发布。
 
@@ -113,7 +113,7 @@ autoship upload --target docker --image myapp --tag latest
 
 ## 文档
 
-- 完整文档：[docs.autoship.dev](https://docs.autoship.dev)
+- 完整文档：[ms33834.github.io/autoship-cli/docs](https://ms33834.github.io/autoship-cli/docs)
 - 本地文档：[docs/](./docs/)
 - 命令参考：[docs/commands/index.md](./docs/commands/index.md)
 - 配置说明：[docs/configuration.md](./docs/configuration.md)

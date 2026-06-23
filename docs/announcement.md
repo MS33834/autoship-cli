@@ -26,10 +26,10 @@ autoship verify pytest
 
 ### 链接
 
-- 官网：<https://autoship.dev>
-- 文档：<https://docs.autoship.dev>
-- GitHub：<https://github.com/autoship-cli/autoship-cli>
-- 插件注册表：<https://autoship.dev/registry>
+- 官网：<https://ms33834.github.io/autoship-cli/>
+- 文档：<https://ms33834.github.io/autoship-cli/docs>
+- GitHub：<https://github.com/MS33834/autoship-cli>
+- 插件注册表：<https://ms33834.github.io/autoship-cli/registry>
 
 ---
 
@@ -59,10 +59,10 @@ autoship verify pytest
 
 ### Links
 
-- Website: <https://autoship.dev>
-- Docs: <https://docs.autoship.dev>
-- GitHub: <https://github.com/autoship-cli/autoship-cli>
-- Plugin Registry: <https://autoship.dev/registry>
+- Website: <https://ms33834.github.io/autoship-cli/>
+- Docs: <https://ms33834.github.io/autoship-cli/docs>
+- GitHub: <https://github.com/MS33834/autoship-cli>
+- Plugin Registry: <https://ms33834.github.io/autoship-cli/registry>
 
 ---
 
@@ -82,7 +82,7 @@ Local-first, AI-assisted code shipping for Python teams.
 
 pipx install autoship
 
-https://autoship.dev
+https://ms33834.github.io/autoship-cli/
 #AI #DevTools #OpenSource
 ```
 
@@ -99,8 +99,8 @@ https://autoship.dev
 
 pipx install autoship 即可体验。
 
-官网：https://autoship.dev
-文档：https://docs.autoship.dev
+官网：https://ms33834.github.io/autoship-cli/
+文档：https://ms33834.github.io/autoship-cli/docs
 ```
 
 ### LinkedIn
@@ -115,7 +115,7 @@ Key features:
 • Team configs, audit logs, and privacy-first telemetry
 
 Try it: pipx install autoship
-Read more: https://autoship.dev
+Read more: https://ms33834.github.io/autoship-cli/
 ```
 
 ---
@@ -141,8 +141,8 @@ AutoShip 是一款本地优先、AI 辅助的代码交付工具链，旨在帮�
 - 团队配置、审计日志、隐私合规遥测
 
 安装方式：pipx install autoship
-文档：https://docs.autoship.dev
-GitHub：https://github.com/autoship-cli/autoship-cli
+文档：https://ms33834.github.io/autoship-cli/docs
+GitHub：https://github.com/MS33834/autoship-cli
 
 欢迎试用并反馈问题。
 

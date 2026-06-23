@@ -127,5 +127,5 @@ allow_untrusted_endpoint = false
 
 如有隐私相关问题，请通过以下方式联系：
 
-- GitHub Issues：[https://github.com/autoship-cli/autoship-cli/issues](https://github.com/autoship-cli/autoship-cli/issues)
+- GitHub Issues：[https://github.com/MS33834/autoship-cli/issues](https://github.com/MS33834/autoship-cli/issues)
 - 邮件：team@autoship.dev
