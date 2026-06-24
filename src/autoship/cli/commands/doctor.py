@@ -85,6 +85,19 @@ def check_git(i18n: I18n) -> CheckResult:
 
 
 def check_clean_toolchain(config: AppConfig, i18n: I18n) -> CheckResult:
+    # The default clean toolchain is Python-centric (autoflake/black/isort).
+    # For non-Python projects (javascript, rust, go, ...), checking for those
+    # Python tools would produce spurious warnings, so we skip the check and
+    # surface an informational OK message instead. The "unknown" type falls
+    # back to the Python check because the default config ships with Python
+    # tools and we cannot assume a different language.
+    project_type = config.project_type
+    if project_type not in ("python", "unknown", ""):
+        return CheckResult(
+            "clean-toolchain",
+            Status.OK,
+            i18n._("doctor.clean_skipped_non_python", type=project_type),
+        )
     tools = config.clean.tools
     missing = [tool for tool in tools if shutil.which(tool) is None]
     if missing:

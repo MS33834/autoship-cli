@@ -228,6 +228,7 @@ def list_plugins(
     plugins = registry.list()
     if not plugins:
         typer.echo(i18n._("plugin.no_plugins"))
+        typer.echo(i18n._("plugin.list_search_tip"))
         return
 
     typer.echo(
@@ -240,6 +241,7 @@ def list_plugins(
         typer.echo(
             f"{plugin.name:<30} {plugin.version:<10} {plugin.trust_level.value:<12} {plugin.source}"
         )
+    typer.echo(i18n._("plugin.list_search_tip"))
 
 
 def _publisher_badge(plugin: dict[str, Any]) -> str:

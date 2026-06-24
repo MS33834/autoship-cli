@@ -116,6 +116,18 @@ def sync(
         typer.echo(i18n._("registry.sync_failed"), err=True)
         raise typer.Exit(code=1)
 
+    # Surface the integrity check outcome so users can see that the synced
+    # index passed signature / checksum verification. ``fetch_index`` always
+    # routes through ``_fetch_remote`` -> ``_verify_index``, so reaching this
+    # point means verification succeeded (or no public key was configured, in
+    # which case only the sha256 checksum is validated).
+    if data.get("signature") and config.registry.public_key:
+        typer.echo(i18n._("registry.sync_signature_verified"))
+    elif data.get("sha256"):
+        typer.echo(i18n._("registry.sync_checksum_verified"))
+    else:
+        typer.echo(i18n._("registry.sync_no_signature"))
+
     current_index: dict[str, Any] = {"version": 1, "plugins": []}
     if BUNDLED_REGISTRY_PATH.exists():
         try:

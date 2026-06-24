@@ -24,6 +24,27 @@ def register(parent: typer.Typer) -> None:
 
 _PYTHON_EXTENSIONS = frozenset({".py", ".pyi", ".pyx", ".pxd"})
 
+# Source file extensions handled by the built-in formatter. The built-in
+# whitespace rules (trailing whitespace, blank line collapsing, inline space
+# compression, trailing newline) apply uniformly to all of these languages.
+_SOURCE_EXTENSIONS = frozenset(
+    {
+        ".py", ".pyi", ".pyx", ".pxd",
+        ".js", ".ts", ".jsx", ".tsx",
+        ".rs", ".go", ".java",
+        ".c", ".cpp", ".h", ".rb",
+    }
+)
+
+# Directories that should never be scanned by the built-in formatter.
+_EXCLUDED_DIRS = frozenset(
+    {
+        "__pycache__", ".git", ".venv", "venv", "env",
+        "node_modules", "target", "build", "dist",
+        ".tox", ".mypy_cache", ".ruff_cache", ".pytest_cache",
+    }
+)
+
 
 def _compress_inline_spaces(line: str) -> str:
     """Compress runs of 2+ spaces to a single space, preserving indentation
@@ -143,21 +164,30 @@ def _builtin_format_file(file_path: Path) -> bool:
     return False
 
 
-def _collect_python_files(paths: list[Path], project_root: Path) -> list[Path]:
-    """Collect Python source files from the requested paths."""
+def _collect_source_files(paths: list[Path], project_root: Path) -> list[Path]:
+    """Collect source files from the requested paths.
 
-    def _is_py(p: Path) -> bool:
-        return p.suffix in _PYTHON_EXTENSIONS
+    Covers all extensions in :data:`_SOURCE_EXTENSIONS`. Directories listed in
+    :data:`_EXCLUDED_DIRS` (e.g. ``node_modules``, ``.git``, ``target``) are
+    pruned from the recursive scan so that dependency trees are not formatted.
+    """
+
+    def _is_source(p: Path) -> bool:
+        return p.suffix in _SOURCE_EXTENSIONS
+
+    def _is_excluded(p: Path) -> bool:
+        return any(part in _EXCLUDED_DIRS for part in p.parts)
 
     result: list[Path] = []
     for p in paths:
         target = (project_root / p).resolve() if not p.is_absolute() else p.resolve()
-        if target.is_file() and _is_py(target):
+        if target.is_file() and _is_source(target) and not _is_excluded(target):
             result.append(target)
         elif target.is_dir():
-            result.extend(
-                f for f in target.rglob("*.py") if f.is_file() and "__pycache__" not in f.parts
-            )
+            for ext in _SOURCE_EXTENSIONS:
+                for f in target.rglob(f"*{ext}"):
+                    if f.is_file() and not _is_excluded(f):
+                        result.append(f)
     return result
 
 
@@ -201,16 +231,32 @@ def clean(
         raise ToolChainError(i18n._("clean.preview_failed", exc=exc)) from exc
 
     if not diff.strip():
-        # When external tools are missing, fall back to built-in formatting.
+        # When external tools produce no diff, fall back to built-in formatting
+        # for source files. This covers two cases:
+        #   1. Configured Python tools are missing -> format every source file.
+        #   2. External tools are present but only handle Python -> format the
+        #      non-Python source files (e.g. .js, .rs) that they skip.
         missing = [t for t in config.clean.tools if shutil.which(t) is None]
-        if missing and any(t in config.clean.tools for t in ("autoflake", "black")):
+        source_files = _collect_source_files(paths, config.project_root)
+        fallback_due_to_missing = bool(
+            missing and any(t in config.clean.tools for t in ("autoflake", "black"))
+        )
+        non_python_files = [f for f in source_files if f.suffix not in _PYTHON_EXTENSIONS]
+
+        if fallback_due_to_missing:
             typer.echo(
                 i18n._("clean.builtin_fallback", tools=", ".join(sorted(missing))),
                 err=True,
             )
-            py_files = _collect_python_files(paths, config.project_root)
+            files_to_format: list[Path] = source_files
+        elif non_python_files:
+            files_to_format = non_python_files
+        else:
+            files_to_format = []
+
+        if files_to_format:
             changed = 0
-            for f in py_files:
+            for f in files_to_format:
                 if dry_run:
                     typer.echo(f"[dry-run] would format {f}")
                     changed += 1
@@ -222,10 +268,7 @@ def clean(
                 audit.record("clean.builtin", {"changed": changed})
                 typer.echo(i18n._("clean.builtin_done", count=changed))
                 plugin_manager.call("post_clean", context=context, fail_fast=False)
-            else:
-                audit.record("clean.noop")
-                typer.echo(i18n._("clean.noop"))
-            return
+                return
 
         typer.echo(i18n._("clean.noop"))
         audit.record("clean.noop")

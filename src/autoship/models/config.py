@@ -271,6 +271,7 @@ class AppConfig(BaseModel):
 
     schema_version: int = 1
     project_root: Path = Path(".")
+    project_type: str = "unknown"
     log_level: str = "INFO"
     audit_log_dir: Path | None = None
     locale: str = "auto"
