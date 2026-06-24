@@ -4,6 +4,11 @@
 This script is used by the plugin_review GitHub Actions workflow to ensure
 that every plugin entry in ``src/autoship/registry/plugins.json`` meets the
 minimum metadata and trust requirements.
+
+The canonical source for the plugin registry is ``registry/plugins.json`` at
+the repository root.  ``src/autoship/registry/plugins.json`` is a packaged
+copy that must stay in sync with the canonical source.  This script enforces
+that identity, failing when the two files diverge.
 """
 
 from __future__ import annotations
@@ -12,6 +17,8 @@ import json
 import re
 import sys
 from pathlib import Path
+
+import jsonschema
 
 # SPDX identifiers commonly used by Python packages. Keeping the list small and
 # explicit avoids pulling in extra dependencies in CI.
@@ -164,6 +171,31 @@ def main() -> int:
     if total_errors:
         print(f"Validation failed with {total_errors} error(s).")
         return 1
+
+    # ENH-1: Validate against JSON Schema (non-fatal additional layer)
+    schema_path = Path(__file__).resolve().parent.parent / "registry" / "schema.json"
+    if schema_path.exists():
+        try:
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+            jsonschema.validate(data, schema)
+        except (jsonschema.ValidationError, json.JSONDecodeError) as exc:
+            _error(f"Schema validation error: {exc}")
+            return 1
+    else:
+        _warn(f"Schema file not found: {schema_path}")
+
+    # ENH-5: Ensure canonical registry/plugins.json and packaged copy are in sync
+    canonical_path = Path(__file__).resolve().parent.parent / "registry" / "plugins.json"
+    if canonical_path.exists():
+        canonical_data = canonical_path.read_text(encoding="utf-8")
+        packaged_data = registry_path.read_text(encoding="utf-8")
+        if canonical_data != packaged_data:
+            _error(
+                "registry/plugins.json (canonical) and "
+                "src/autoship/registry/plugins.json (packaged copy) are out of sync. "
+                "Copy the canonical source to the packaged path."
+            )
+            return 1
 
     print(f"Validation passed for {len(plugins)} plugin(s).")
     return 0
