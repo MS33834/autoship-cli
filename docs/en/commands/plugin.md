@@ -22,7 +22,7 @@ autoship plugin [OPTIONS] COMMAND [ARGS]...
 
 ### plugin list
 
-List registered plugins and their trust levels.
+List registered plugins and their trust levels. The output includes a tip to run `autoship plugin search` to browse all available plugins in the registry.
 
 ```bash
 autoship plugin list

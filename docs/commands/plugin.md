@@ -22,7 +22,7 @@ autoship plugin [OPTIONS] COMMAND [ARGS]...
 
 ### plugin list
 
-列出已注册插件及其信任等级。
+列出已注册插件及其信任等级。输出末尾会提示运行 `autoship plugin search` 浏览注册表中的所有可用插件。
 
 ```bash
 autoship plugin list

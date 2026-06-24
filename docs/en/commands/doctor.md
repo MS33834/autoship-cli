@@ -43,6 +43,7 @@ autoship doctor --fail-on-error
 
 - Checks include Python version, Git configuration, model backend connectivity, clean toolchain, plugin external dependencies, and audit/telemetry directory permissions.
 - Results are graded OK / WARNING / ERROR. A missing local model backend is reported as WARNING and does not affect non-AI commands.
+- doctor respects `project_type` to skip irrelevant tool checks. Non-Python projects skip `autoflake` / `black` checks, avoiding unrelated ERROR or WARNING items.
 
 ## Related Commands
 

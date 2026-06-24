@@ -23,6 +23,7 @@ autoship upload [OPTIONS]
 | - | `--repository TEXT` | `testpypi` | PyPI repository 名称 |
 | - | `--repository-url TEXT` | - | PyPI repository 上传 URL |
 | - | `--registry TEXT` | - | Docker registry 前缀（例如 `localhost:5000`） |
+| `-n` | `--dry-run` | `False` | 预览将要上传的内容而不实际执行 |
 
 ## 示例
 

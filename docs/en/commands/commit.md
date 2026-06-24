@@ -18,6 +18,7 @@ autoship commit [OPTIONS]
 |:-:|:-:|:-:|---|
 | `-m` | `--message TEXT` | - | Use the given commit message directly |
 | - | `--edit / --no-edit` | `edit` | Open editor to refine the generated message |
+| `-y` | `--yes` | `False` | Skip interactive confirmations and commit directly |
 
 ## Examples
 
@@ -43,6 +44,7 @@ autoship commit --no-edit
 
 - When `-m` is not provided, AutoShip uses a local model to generate a Conventional Commits style message from the diff and stats.
 - The editor is validated against the configured `allowed_editors` list.
+- Running outside a Git repository prints an error and suggests running `git init` first.
 
 ## Related Commands
 

@@ -51,6 +51,19 @@ autoship clean --yes
 
 - Default tool chain is `autoflake` and `black`; customize via `[clean]` in the config file.
 - `--check` returns a non-zero exit code if any file would be reformatted.
+- When external tools such as `autoflake` / `black` are not available, clean falls back to a built-in formatter automatically.
+
+## Built-in Formatter
+
+When the external toolchain is incomplete, clean uses a built-in formatter that handles the following file types:
+
+`.py` `.pyi` `.pyx` `.pxd` `.js` `.ts` `.jsx` `.tsx` `.rs` `.go` `.java` `.c` `.cpp` `.h` `.rb`
+
+Formatting scope:
+- Strip trailing whitespace from each line
+- Collapse multiple consecutive blank lines into a single blank line
+- Compress runs of 2+ inline spaces into a single space (preserving indentation and string literals)
+- Ensure the file ends with exactly one trailing newline
 
 ## Related Commands
 

@@ -18,6 +18,7 @@ autoship commit [OPTIONS]
 |:-:|:-:|:-:|---|
 | `-m` | `--message TEXT` | - | 直接使用给定的提交信息 |
 | - | `--edit / --no-edit` | `edit` | 是否打开编辑器审阅生成的信息 |
+| `-y` | `--yes` | `False` | 跳过交互式确认直接提交 |
 
 ## 示例
 
@@ -44,6 +45,7 @@ autoship commit --no-edit
 - 使用 `-m` 时不会调用 AI，直接以给定消息提交。
 - 未配置模型时会提示手动编辑提交信息。
 - 提交前会运行 `pre_commit` Hook，可在插件中扩展。
+- 不在 Git 仓库中执行时会报错，提示先运行 `git init`。
 
 ## 相关命令
 

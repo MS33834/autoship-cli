@@ -28,27 +28,27 @@ class TestEnsureDirPermissions:
     """Tests for ensure_dir_permissions."""
 
     def test_creates_directory(self) -> None:
-        with Patcher() as patcher:
+        with Patcher():
             path = Path("/fake/testdir")
             ensure_dir_permissions(path, 0o700)
             assert path.exists()
             assert path.is_dir()
 
     def test_creates_nested_directories(self) -> None:
-        with Patcher() as patcher:
+        with Patcher():
             path = Path("/fake/a/b/c")
             ensure_dir_permissions(path, 0o700)
             assert path.exists()
 
     def test_sets_mode_on_new_directory(self) -> None:
-        with Patcher() as patcher:
+        with Patcher():
             path = Path("/fake/testdir")
             ensure_dir_permissions(path, 0o700)
             current = stat.S_IMODE(path.stat().st_mode)
             assert current == 0o700
 
     def test_tightens_too_broad_permissions(self, caplog) -> None:
-        with Patcher() as patcher:
+        with Patcher():
             path = Path("/fake/testdir")
             path.mkdir(parents=True)
             path.chmod(0o777)

@@ -44,6 +44,7 @@ autoship doctor --fail-on-error
 - 检查项包括：Python 版本、Git 配置、模型后端连通性、clean 工具链、插件外部依赖、审计/遥测目录权限等。
 - 输出分级为 `OK` / `WARNING` / `ERROR`。
 - 本地模型（Ollama/LM Studio）未启动时，`model-backend` 会显示 WARNING，这是正常的，不影响非 AI 命令。
+- doctor 会根据 `project_type` 感知项目类型。非 Python 项目不会检查 `autoflake` / `black` 等 Python 工具链，避免无关的 ERROR 或 WARNING。
 
 ## 相关命令
 

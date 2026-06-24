@@ -13,6 +13,7 @@ from autoship.core.audit_logger import AuditLogger
 from autoship.core.context import CommandContext
 from autoship.core.i18n import I18n, get_i18n_from_ctx
 from autoship.exceptions import ToolChainError
+from autoship.models.config import AppConfig
 from autoship.plugin_manager import manager as plugin_manager
 
 app = typer.Typer()
@@ -46,11 +47,47 @@ _EXCLUDED_DIRS = frozenset(
 )
 
 
-def _compress_inline_spaces(line: str) -> str:
-    """Compress runs of 2+ spaces to a single space, preserving indentation
-    and the contents of string literals (single/double/triple-quoted).
+def _skip_string_literal(content: str, pos: int, quote_char: str) -> tuple[int, str]:
+    """Scan from ``pos`` until the matching closing ``quote_char`` (single or triple).
 
-    The newline (if any) at the end of the line is preserved untouched.
+    Returns ``(new_pos, consumed_text)`` where ``new_pos`` is the index of the
+    first character *after* the closing delimiter.  If the string literal is
+    unterminated the entire remainder of the line is consumed.
+    """
+    n = len(content)
+    result: list[str] = []
+    i = pos
+    while i < n:
+        ch = content[i]
+        triple = content[i : i + 3]
+        if triple == quote_char * 3:
+            result.append(triple)
+            return i + 3, "".join(result)
+        if ch == quote_char:
+            result.append(ch)
+            return i + 1, "".join(result)
+        result.append(ch)
+        i += 1
+    return i, "".join(result)
+
+
+def _compress_inline_spaces(line: str) -> str:
+    """Compress sequences of 2+ consecutive spaces down to a single space.
+
+    Args:
+        line: A source line, possibly ending with ``\\n``.
+
+    Returns:
+        The line with inline space runs compressed.  The following are
+        **preserved unchanged**:
+
+        * leading whitespace (indentation)
+        * the contents of string literals (``'single'``, ``"double"``,
+          ``'''triple-single'''``, ``\"\"\"triple-double\"\"\"``)
+        * a trailing ``\\n`` at the end of the line, if present
+
+        Only space runs that appear **outside** of string literals are
+        compressed; a single space is left unchanged.
     """
     # Split off the trailing newline so it does not interfere with the scan.
     newline = ""
@@ -70,42 +107,20 @@ def _compress_inline_spaces(line: str) -> str:
     result: list[str] = []
     i = 0
     n = len(content)
-    in_string = False
-    string_char = ""  # either ' or "
     while i < n:
         ch = content[i]
-        if in_string:
-            # Handle triple-quote close first.
-            triple = content[i : i + 3]
-            if triple == string_char * 3:
-                result.append(triple)
-                i += 3
-                in_string = False
-                string_char = ""
-                continue
-            if ch == string_char:
-                result.append(ch)
-                i += 1
-                in_string = False
-                string_char = ""
-                continue
-            result.append(ch)
-            i += 1
-            continue
-
-        # Not inside a string literal.
         triple = content[i : i + 3]
         if triple in ('"""', "'''"):
-            string_char = content[i]
             result.append(triple)
-            i += 3
-            in_string = True
+            new_i, text = _skip_string_literal(content, i + 3, content[i])
+            result.append(text)
+            i = new_i
             continue
         if ch in ('"', "'"):
-            string_char = ch
             result.append(ch)
-            i += 1
-            in_string = True
+            new_i, text = _skip_string_literal(content, i + 1, ch)
+            result.append(text)
+            i = new_i
             continue
         if ch == " ":
             # Consume the run of spaces; compress 2+ to a single space.
@@ -191,6 +206,61 @@ def _collect_source_files(paths: list[Path], project_root: Path) -> list[Path]:
     return result
 
 
+def _run_builtin_format_fallback(
+    config: AppConfig,
+    paths: list[Path],
+    project_root: Path,
+    dry_run: bool,
+    verbose: bool,
+    audit: AuditLogger,
+    i18n: I18n,
+    context: CommandContext,
+) -> None:
+    """Fall back to built-in formatting when external tools produce no diff.
+
+    This covers two cases:
+    1. Configured Python tools are missing -> format every source file.
+    2. External tools are present but only handle Python -> format the
+       non-Python source files (e.g. .js, .rs) that they skip.
+    """
+    missing = [t for t in config.clean.tools if shutil.which(t) is None]
+    source_files = _collect_source_files(paths, project_root)
+    fallback_due_to_missing = bool(
+        missing and any(t in config.clean.tools for t in ("autoflake", "black"))
+    )
+    non_python_files = [f for f in source_files if f.suffix not in _PYTHON_EXTENSIONS]
+
+    if fallback_due_to_missing:
+        typer.echo(
+            i18n._("clean.builtin_fallback", tools=", ".join(sorted(missing))),
+            err=True,
+        )
+        files_to_format: list[Path] = source_files
+    elif non_python_files:
+        files_to_format = non_python_files
+    else:
+        files_to_format = []
+
+    if files_to_format:
+        changed = 0
+        for f in files_to_format:
+            if dry_run:
+                typer.echo(f"[dry-run] would format {f}")
+                changed += 1
+            elif _builtin_format_file(f):
+                changed += 1
+                if verbose:
+                    typer.echo(f"Formatted: {f}")
+        if changed:
+            audit.record("clean.builtin", {"changed": changed})
+            typer.echo(i18n._("clean.builtin_done", count=changed))
+            plugin_manager.call("post_clean", context=context, fail_fast=False)
+            return
+
+    typer.echo(i18n._("clean.noop"))
+    audit.record("clean.noop")
+
+
 @app.command()
 def clean(
     ctx: typer.Context,
@@ -231,47 +301,10 @@ def clean(
         raise ToolChainError(i18n._("clean.preview_failed", exc=exc)) from exc
 
     if not diff.strip():
-        # When external tools produce no diff, fall back to built-in formatting
-        # for source files. This covers two cases:
-        #   1. Configured Python tools are missing -> format every source file.
-        #   2. External tools are present but only handle Python -> format the
-        #      non-Python source files (e.g. .js, .rs) that they skip.
-        missing = [t for t in config.clean.tools if shutil.which(t) is None]
-        source_files = _collect_source_files(paths, config.project_root)
-        fallback_due_to_missing = bool(
-            missing and any(t in config.clean.tools for t in ("autoflake", "black"))
+        _run_builtin_format_fallback(
+            config, paths, config.project_root, dry_run,
+            verbose, audit, i18n, context,
         )
-        non_python_files = [f for f in source_files if f.suffix not in _PYTHON_EXTENSIONS]
-
-        if fallback_due_to_missing:
-            typer.echo(
-                i18n._("clean.builtin_fallback", tools=", ".join(sorted(missing))),
-                err=True,
-            )
-            files_to_format: list[Path] = source_files
-        elif non_python_files:
-            files_to_format = non_python_files
-        else:
-            files_to_format = []
-
-        if files_to_format:
-            changed = 0
-            for f in files_to_format:
-                if dry_run:
-                    typer.echo(f"[dry-run] would format {f}")
-                    changed += 1
-                elif _builtin_format_file(f):
-                    changed += 1
-                    if verbose:
-                        typer.echo(f"Formatted: {f}")
-            if changed:
-                audit.record("clean.builtin", {"changed": changed})
-                typer.echo(i18n._("clean.builtin_done", count=changed))
-                plugin_manager.call("post_clean", context=context, fail_fast=False)
-                return
-
-        typer.echo(i18n._("clean.noop"))
-        audit.record("clean.noop")
         return
 
     if verbose or dry_run:
