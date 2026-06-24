@@ -1,7 +1,7 @@
 # AutoShip-CLI 下一阶段任务清单
 
-> 状态：P0 与 P1-1 / P1-2 / P1-3 / P1-4 / P1-5 以及 P2-1 / P2-2 / P2-4 / P2-6 / P2-8 已完成并合并至 `main`。  
-> 本清单供团队承接剩余 **P1（短期内修复）** 与 **P2（中期改进）** 项使用。
+> 状态：P1-1～P1-5 ✅ | P2-1～P2-8 ✅ | P3-1～P3-8 ✅ | P4：进行中  
+> 所有 P1/P2/P3 任务已全部完成并合并至 `main`。
 
 ---
 
@@ -204,7 +204,7 @@ P3 目标是把已完成的 MVP 功能在真实后端、真实仓库、真实 CI
 |------|----------|---------|
 | **AI/模型组** | 本地模型后端、LLM prompt、fallback、token/cost | P3-1 |
 | **发布/集成组** | PyPI/Docker 上传、包分发、版本发布 | P3-2、P3-3、P3-5 |
-| **文档/UX组** | 命令参考、快速上手、错误提示、多语言 | P3-4、P3-6 |
+| **文档/UX组** | 命令参考、快速上手、错误提示、多语言 | P3-4 ✅、P3-6 ✅ |
 | **安全/合规组** | 隐私、遥测、审计、权限 | P3-7 |
 | **生态/插件组** | 插件注册表、发布流程、示例插件 | P3-8 |
 
@@ -246,16 +246,11 @@ P3 目标是把已完成的 MVP 功能在真实后端、真实仓库、真实 CI
 - **相关文件**：`pyproject.toml`、`src/autoship/__main__.py`、`src/autoship/cli/main.py`。
 - **状态**：✅ 已完成。新增 tests/integration/package/ 下 wheel/sdist 安装与 autoship-sdk 依赖验证，完成多角色 review 与修复，review 记录见 `docs/reviews/p3-3-package-distribution.md`。
 
-### P3-4 完整命令参考文档
+### P3-4 完整命令参考文档 ✅
 
 - **Owner**：文档/UX组
-- **问题**：docs/commands.md 缺失或过时，用户无法查全命令参数。
-- **验收标准**：
-  - 每个子命令（init、clean、verify、fix、commit、upload、plugin、doctor、config、registry）都有独立的命令参考页。
-  - 文档中的命令输出与实际 CLI 行为一致。
-  - 提供中文与英文版本，并更新 `docs/demo.md` 中的链接。
-- **相关文件**：`docs/commands/` 或 `docs/commands.md`、各 `src/autoship/cli/commands/*.py`。
-- **依赖**：P3-6 错误提示稳定后文档再定稿。
+- **状态**：✅ 已完成。各子命令独立参考页（init/clean/verify/fix/commit/upload/plugin/doctor/config/registry/metrics）已就绪，中文/英文/日文三语版本完整，review 记录见 `docs/reviews/p3-4-command-reference.md`。
+- **相关文件**：`docs/commands/`、各 `src/autoship/cli/commands/*.py`。
 
 ### P3-5 GitHub Actions CI 流水线 ✅
 
