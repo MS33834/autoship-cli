@@ -63,8 +63,20 @@ dogfood/report.json
 # Security reports
 bandit-report.json
 
+# Generated reports at repository root
+/*_report.md
+
 # MkDocs build output
 site/
+
+# Local build outputs
+website/dist/
+registry-web/dist/
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+node_modules/
 
 # OS
 .DS_Store

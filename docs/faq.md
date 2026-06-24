@@ -126,7 +126,7 @@ autoship plugin trust my-plugin verified
 
 ### 如何开发自己的插件？
 
-参考 [插件开发指南](plugin-development.md) 与示例插件 [`examples/custom-plugin`](../examples/custom-plugin)。
+参考 [插件开发指南](plugin-development.md) 与示例插件 [`examples/custom-plugin`](https://github.com/MS33834/autoship-cli/tree/main/examples/custom-plugin)。
 
 ### 插件可以执行系统命令吗？
 

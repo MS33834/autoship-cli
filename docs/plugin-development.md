@@ -380,7 +380,7 @@ pytest
 
 ### 与本仓库示例的关系
 
-本仓库的 [`examples/custom-plugin/`](../examples/custom-plugin/) 同样实现了 `pre_commit`（检查 `TODO` 文件）与 `on_error`（返回 `FixSuggestion`）。两者的区别仅在于业务逻辑：
+本仓库的 [`examples/custom-plugin/`](https://github.com/MS33834/autoship-cli/tree/main/examples/custom-plugin) 同样实现了 `pre_commit`（检查 `TODO` 文件）与 `on_error`（返回 `FixSuggestion`）。两者的区别仅在于业务逻辑：
 
 - `custom-plugin` 适合学习如何在失败时给出修复建议。
 - 本节的 `no-secret-plugin` 适合学习如何进行轻量级前置检查，并尊重 `dry_run`、使用具体异常、保持项目路径无关。

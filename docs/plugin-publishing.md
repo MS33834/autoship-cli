@@ -4,12 +4,12 @@
 
 ## 1. 发布流程概览
 
-1. 使用 [examples/custom-plugin](../examples/custom-plugin) 作为模板开发插件。
+1. 使用 [examples/custom-plugin](https://github.com/MS33834/autoship-cli/tree/main/examples/custom-plugin) 作为模板开发插件。
 2. 在本地完成测试，确保至少通过 `ruff check`、`pytest` 以及 AutoShip 的 `plugin verify`。
 3. 为插件包生成 sha256 校验和，并可选地生成 PGP 签名。
 4. 将包发布到 PyPI（或 GitHub Release 等可 pip 安装的位置）。
 5. 向本仓库提交 PR，在 `registry/plugins.json` 中新增插件条目。
-6. 维护者审核通过后合并，插件自动出现在 [registry-web](../registry-web)。
+6. 维护者审核通过后合并，插件自动出现在 [插件注册表 Web UI](https://ms33834.github.io/autoship-cli/registry/)。
 
 ## 2. 元数据格式
 
@@ -175,6 +175,6 @@ base64 -w 0 signature.asc
 
 ## 8. 相关资源
 
-- [插件开发示例](../examples/custom-plugin)
+- [插件开发示例](https://github.com/MS33834/autoship-cli/tree/main/examples/custom-plugin)
 - [插件注册表 schema](https://github.com/MS33834/autoship-cli/blob/main/registry/schema.json)
-- [插件注册表 Web UI](../registry-web)
+- [插件注册表 Web UI](https://ms33834.github.io/autoship-cli/registry/)
