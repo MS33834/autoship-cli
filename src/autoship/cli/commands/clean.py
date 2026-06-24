@@ -25,6 +25,82 @@ def register(parent: typer.Typer) -> None:
 _PYTHON_EXTENSIONS = frozenset({".py", ".pyi", ".pyx", ".pxd"})
 
 
+def _compress_inline_spaces(line: str) -> str:
+    """Compress runs of 2+ spaces to a single space, preserving indentation
+    and the contents of string literals (single/double/triple-quoted).
+
+    The newline (if any) at the end of the line is preserved untouched.
+    """
+    # Split off the trailing newline so it does not interfere with the scan.
+    newline = ""
+    body = line
+    if body.endswith("\n"):
+        newline = "\n"
+        body = body[:-1]
+
+    # Preserve leading whitespace (indentation).
+    stripped = body.lstrip(" ")
+    if not stripped:
+        return line
+    indent_len = len(body) - len(stripped)
+    indent = body[:indent_len]
+    content = body[indent_len:]
+
+    result: list[str] = []
+    i = 0
+    n = len(content)
+    in_string = False
+    string_char = ""  # either ' or "
+    while i < n:
+        ch = content[i]
+        if in_string:
+            # Handle triple-quote close first.
+            triple = content[i : i + 3]
+            if triple == string_char * 3:
+                result.append(triple)
+                i += 3
+                in_string = False
+                string_char = ""
+                continue
+            if ch == string_char:
+                result.append(ch)
+                i += 1
+                in_string = False
+                string_char = ""
+                continue
+            result.append(ch)
+            i += 1
+            continue
+
+        # Not inside a string literal.
+        triple = content[i : i + 3]
+        if triple in ('"""', "'''"):
+            string_char = content[i]
+            result.append(triple)
+            i += 3
+            in_string = True
+            continue
+        if ch in ('"', "'"):
+            string_char = ch
+            result.append(ch)
+            i += 1
+            in_string = True
+            continue
+        if ch == " ":
+            # Consume the run of spaces; compress 2+ to a single space.
+            j = i
+            while j < n and content[j] == " ":
+                j += 1
+            run_len = j - i
+            result.append(" " if run_len >= 2 else " " * run_len)
+            i = j
+            continue
+        result.append(ch)
+        i += 1
+
+    return indent + "".join(result) + newline
+
+
 def _builtin_format_file(file_path: Path) -> bool:
     """Apply built-in formatting to a single file.
 
@@ -44,7 +120,11 @@ def _builtin_format_file(file_path: Path) -> bool:
         for line in lines
     ]
 
-    # 2. Collapse multiple consecutive blank lines into a single blank line
+    # 2. Compress runs of 2+ inline spaces into a single space, while
+    #    preserving indentation and string literal contents.
+    lines = [_compress_inline_spaces(line) for line in lines]
+
+    # 3. Collapse multiple consecutive blank lines into a single blank line
     deduped: list[str] = []
     prev_blank = False
     for line in lines:
@@ -54,7 +134,7 @@ def _builtin_format_file(file_path: Path) -> bool:
         deduped.append(line)
         prev_blank = is_blank
 
-    # 3. Ensure file ends with exactly one trailing newline
+    # 4. Ensure file ends with exactly one trailing newline
     new_content = "".join(deduped).rstrip("\n") + "\n"
 
     if new_content != original:

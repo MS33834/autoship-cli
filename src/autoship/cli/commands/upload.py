@@ -38,6 +38,9 @@ def upload(
         None, "--repository-url", help=_i18n._("upload.option.repository_url")
     ),
     registry: str | None = typer.Option(None, "--registry", help=_i18n._("upload.option.registry")),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", "-n", help=_i18n._("upload.option.dry_run")
+    ),
 ) -> None:
     """Upload artifacts to a configured target."""
     from autoship.adapters.upload.pypi import PyPIUploader
@@ -45,7 +48,14 @@ def upload(
     config = ctx.obj["config"]
     i18n: I18n = get_i18n_from_ctx(ctx)
     audit: AuditLogger = ctx.obj["audit_logger"]
-    dry_run: bool = ctx.obj.get("dry_run", False)
+    # Merge the global --dry-run flag with the command-local --dry-run flag.
+    # Direct unit-test invocations may pass a typer.OptionInfo object as the
+    # default; coerce it to a plain bool in that case.
+    if isinstance(dry_run, bool):
+        local_dry_run = dry_run
+    else:
+        local_dry_run = False
+    dry_run = ctx.obj.get("dry_run", False) or local_dry_run
     yes: bool = ctx.obj.get("yes", False)
     verbose: bool = ctx.obj.get("verbose", False)
 

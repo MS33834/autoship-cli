@@ -68,7 +68,11 @@ def export_logs(
     i18n: I18n = get_i18n_from_ctx(ctx)
     audit_logger = get_audit_logger_from_ctx(ctx)
     since_dt = _parse_since(since) if since else None
-    exported_path = audit_logger.export(since=since_dt, output=output)
+    try:
+        exported_path = audit_logger.export(since=since_dt, output=output)
+    except RuntimeError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
     count = 0
     try:
         text = exported_path.read_text()

@@ -542,22 +542,33 @@ def uninstall(
     typer.echo(i18n._("plugin.uninstalled", name=name))
 
 
-@app.command("rate")
+@app.command(
+    "rate",
+    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
+)
 def rate(
     ctx: typer.Context,
     name: str = typer.Argument(..., help="Name of the plugin to rate"),
-    score: float = typer.Argument(..., help="Rating from 1 to 5"),
+    score: str = typer.Argument(..., metavar="SCORE", help="Rating from 1 to 5"),
 ) -> None:
-    """Rate a registered plugin."""
+    """Rate a registered plugin.
+
+    Negative ratings must be passed after ``--`` so the value is not parsed
+    as an option, e.g. ``autoship plugin rate NAME -- -5``.
+    """
     i18n: I18n = get_i18n_from_ctx(ctx)
     registry = PluginRegistry()
     if registry.get(name) is None:
         raise PluginError(i18n._("plugin.not_registered", name=name))
     try:
-        PluginStats().record_rate(name, score)
+        score_value: float = float(score)
     except ValueError as exc:
         raise PluginError(i18n._("plugin.rate_invalid")) from exc
-    typer.echo(i18n._("plugin.rated", name=name, score=score))
+    try:
+        PluginStats().record_rate(name, score_value)
+    except ValueError as exc:
+        raise PluginError(i18n._("plugin.rate_invalid")) from exc
+    typer.echo(i18n._("plugin.rated", name=name, score=score_value))
 
 
 @app.command("stats")

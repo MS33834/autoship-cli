@@ -43,6 +43,10 @@ def commit(
 
     git = GitAdapter(config.project_root)
 
+    if not git.is_git_repo():
+        typer.echo(i18n._("commit.not_git_repo"))
+        raise typer.Exit(code=1)
+
     if not git.has_changes():
         typer.echo(i18n._("commit.nothing"))
         return

@@ -202,7 +202,12 @@ class AuditLogger:
                             continue
                 records.append(entry)
 
-        output.write_text("".join(json.dumps(record) + "\n" for record in records))
+        try:
+            output.write_text("".join(json.dumps(record) + "\n" for record in records))
+        except FileNotFoundError as exc:
+            raise RuntimeError(
+                f"Output directory does not exist: {output.parent}"
+            ) from exc
         ensure_file_permissions(output, 0o600)
         return output
 

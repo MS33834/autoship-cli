@@ -47,6 +47,13 @@ class GitAdapter:
         result = self._run(self._git_cmd("status", "--porcelain"), check=False)
         return result.stdout.strip() != ""
 
+    def is_git_repo(self) -> bool:
+        """Return True if ``repo_root`` is inside a git working tree."""
+        result = self._run(
+            self._git_cmd("rev-parse", "--is-inside-work-tree"), check=False
+        )
+        return result.returncode == 0 and result.stdout.strip() == "true"
+
     def diff(self) -> str:
         """Return the full diff of staged and unstaged changes.
 

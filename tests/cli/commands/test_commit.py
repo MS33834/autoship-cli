@@ -20,7 +20,10 @@ def test_commit_no_changes(project_root, app_config: AppConfig) -> None:
         "yes": True,
         "verbose": False,
     }
-    with patch.object(commit.GitAdapter, "has_changes", return_value=False):
+    with (
+        patch.object(commit.GitAdapter, "is_git_repo", return_value=True),
+        patch.object(commit.GitAdapter, "has_changes", return_value=False),
+    ):
         result = commit.commit(ctx)
     assert result is None
 
@@ -35,6 +38,7 @@ def test_commit_with_message_dry_run(project_root, app_config: AppConfig) -> Non
         "verbose": False,
     }
     with (
+        patch.object(commit.GitAdapter, "is_git_repo", return_value=True),
         patch.object(commit.GitAdapter, "has_changes", return_value=True),
         patch.object(commit.GitAdapter, "diff", return_value="diff"),
         patch.object(commit.GitAdapter, "stats", return_value="stats"),
@@ -52,6 +56,7 @@ def test_commit_generates_message_and_commits(project_root, app_config: AppConfi
         "verbose": False,
     }
     with (
+        patch.object(commit.GitAdapter, "is_git_repo", return_value=True),
         patch.object(commit.GitAdapter, "has_changes", return_value=True),
         patch.object(commit.GitAdapter, "diff", return_value="diff"),
         patch.object(commit.GitAdapter, "stats", return_value="stats"),
@@ -74,6 +79,7 @@ def test_commit_model_failure_fallback(project_root, app_config: AppConfig) -> N
         "verbose": False,
     }
     with (
+        patch.object(commit.GitAdapter, "is_git_repo", return_value=True),
         patch.object(commit.GitAdapter, "has_changes", return_value=True),
         patch.object(commit.GitAdapter, "diff", return_value="diff"),
         patch.object(commit.GitAdapter, "stats", return_value="stats"),
@@ -96,6 +102,7 @@ def test_commit_git_error_raises(project_root, app_config: AppConfig) -> None:
         "verbose": False,
     }
     with (
+        patch.object(commit.GitAdapter, "is_git_repo", return_value=True),
         patch.object(commit.GitAdapter, "has_changes", return_value=True),
         patch.object(commit.GitAdapter, "diff", return_value="diff"),
         patch.object(commit.GitAdapter, "stats", return_value="stats"),
