@@ -10,15 +10,6 @@
       "email": "team@autoship.dev",
       "since": "2026-06-18",
       "plugins": ["security-scan", "docker-ship", "web-search", "typecheck"]
-    },
-    {
-      "id": "alice-chen",
-      "verified": true,
-      "type": "individual",
-      "url": "https://github.com/alice-chen",
-      "email": "alice@example.com",
-      "since": "2026-06-19",
-      "plugins": ["commit-sign"]
     }
   ]
 }

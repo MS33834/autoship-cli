@@ -132,7 +132,7 @@
       "module": "autoship_commit_sign.plugin",
       "version": "0.1.0",
       "description": "自动为生成的 commit 添加 GPG 签名。",
-      "trust_level": "verified",
+      "trust_level": "community",
       "entry_point": "autoship_commit_sign.plugin:CommitSignPlugin",
       "hooks": ["pre_commit"],
       "publisher": {
