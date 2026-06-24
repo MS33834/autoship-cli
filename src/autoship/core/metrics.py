@@ -65,9 +65,13 @@ class Histogram:
 
     def __post_init__(self) -> None:
         self._values = deque[float](maxlen=self.max_samples)
+        # Cache for sorted values: (count_at_cache_time, sorted_list).
+        # Invalidated whenever a new value is observed.
+        self._sorted_cache: tuple[int, list[float]] | None = None
 
     def observe(self, value: float) -> None:
         self._values.append(float(value))
+        self._sorted_cache = None
 
     @property
     def count(self) -> int:
@@ -79,10 +83,24 @@ class Histogram:
             return 0.0
         return sum(self._values) / len(self._values)
 
+    def _sorted(self) -> list[float]:
+        """Return a sorted copy of the current values, using a cache.
+
+        The cache is invalidated by ``observe``. When multiple percentiles are
+        needed (e.g. in ``to_dict``), this avoids re-sorting the same data.
+        """
+        if self._sorted_cache is not None:
+            cached_count, cached_list = self._sorted_cache
+            if cached_count == len(self._values):
+                return cached_list
+        sorted_list = sorted(self._values)
+        self._sorted_cache = (len(sorted_list), sorted_list)
+        return sorted_list
+
     def percentile(self, p: float) -> float:
         if not self._values:
             return 0.0
-        sorted_values = sorted(self._values)
+        sorted_values = self._sorted()
         k = (len(sorted_values) - 1) * (p / 100.0)
         f = int(k)
         c = min(f + 1, len(sorted_values) - 1)
@@ -90,14 +108,32 @@ class Histogram:
             return sorted_values[f]
         return sorted_values[f] + (k - f) * (sorted_values[c] - sorted_values[f])
 
+    def percentiles(self, ps: list[float]) -> list[float]:
+        """Compute multiple percentiles from a single sorted copy."""
+        if not self._values:
+            return [0.0] * len(ps)
+        sorted_values = self._sorted()
+        n = len(sorted_values)
+        result: list[float] = []
+        for p in ps:
+            k = (n - 1) * (p / 100.0)
+            f = int(k)
+            c = min(f + 1, n - 1)
+            if f == c:
+                result.append(sorted_values[f])
+            else:
+                result.append(sorted_values[f] + (k - f) * (sorted_values[c] - sorted_values[f]))
+        return result
+
     def to_dict(self) -> dict[str, Any]:
+        p50, p95, p99 = self.percentiles([50.0, 95.0, 99.0])
         return {
             "type": "histogram",
             "count": self.count,
             "mean": round(self.mean, 4),
-            "p50": round(self.percentile(50.0), 4),
-            "p95": round(self.percentile(95.0), 4),
-            "p99": round(self.percentile(99.0), 4),
+            "p50": round(p50, 4),
+            "p95": round(p95, 4),
+            "p99": round(p99, 4),
             "description": self.description,
         }
 

@@ -408,3 +408,86 @@ def test_plugin_update_with_sha256_downloads_and_verifies() -> None:
     assert "Updated plugin: a -> 2.0.0" in result.output
     mock_install.assert_called_once()
     assert mock_install.call_args[0][1] == str(downloaded)
+
+
+def test_plugin_install_no_sandbox_untrusted_is_blocked() -> None:
+    """--no-sandbox must be hard-rejected for UNTRUSTED plugins."""
+    result = runner.invoke(
+        app,
+        ["plugin", "install", "./local-plugin", "--trust", "untrusted", "--no-sandbox", "--yes"],
+    )
+    assert result.exit_code != 0
+    assert result.exception is not None
+    assert "Refusing to install untrusted plugin" in str(result.exception)
+
+
+def test_plugin_install_no_sandbox_community_requires_name_confirmation() -> None:
+    """--no-sandbox for COMMUNITY plugins requires typing the plugin name."""
+    result = runner.invoke(
+        app,
+        ["plugin", "install", "jira-link", "--no-sandbox", "--yes", "--skip-trust-check"],
+        input="wrong-name\n",
+    )
+    assert result.exit_code == 0
+    assert "DANGER" in result.output
+    assert "aborted" in result.output.lower()
+
+
+def test_plugin_install_no_sandbox_community_proceeds_with_correct_name() -> None:
+    """--no-sandbox for COMMUNITY plugins proceeds when name is typed correctly."""
+    with (
+        patch("autoship.cli.commands.plugin._run_pip_install") as mock_install,
+        patch("autoship.cli.commands.plugin.PluginRegistry"),
+        patch("autoship.cli.commands.plugin.PluginStats"),
+    ):
+        mock_install.return_value = subprocess.CompletedProcess(
+            args=["pip", "install", "jira-link"], returncode=0, stdout="", stderr=""
+        )
+        result = runner.invoke(
+            app,
+            ["plugin", "install", "jira-link", "--no-sandbox", "--yes", "--skip-trust-check"],
+            input="jira-link\n",
+        )
+    assert result.exit_code == 0
+    assert "DANGER" in result.output
+    assert "Installed plugin: jira-link" in result.output
+    # Verify sandbox was NOT used
+    assert mock_install.call_args.kwargs.get("sandbox") is False
+
+
+def test_plugin_install_no_sandbox_verified_is_noop() -> None:
+    """--no-sandbox for VERIFIED plugins is a no-op (sandbox not applied anyway)."""
+    with (
+        patch("autoship.cli.commands.plugin.RegistryIndex") as mock_index,
+        patch("autoship.cli.commands.plugin._run_pip_install") as mock_install,
+        patch("autoship.cli.commands.plugin.PluginRegistry"),
+        patch("autoship.cli.commands.plugin.PluginStats"),
+    ):
+        mock_index.return_value.get.return_value = {
+            "name": "verified-plugin",
+            "package": "verified-plugin",
+            "version": "1.0.0",
+            "trust_level": "verified",
+        }
+        mock_install.return_value = subprocess.CompletedProcess(
+            args=["pip", "install", "verified-plugin"], returncode=0, stdout="", stderr=""
+        )
+        result = runner.invoke(
+            app,
+            ["plugin", "install", "verified-plugin", "--no-sandbox", "--yes", "--skip-trust-check"],
+        )
+    assert result.exit_code == 0
+    assert "Installed plugin: verified-plugin" in result.output
+    # sandbox should be False for verified plugins regardless
+    assert mock_install.call_args.kwargs.get("sandbox") is False
+
+
+def test_plugin_install_no_sandbox_dry_run_shows_warning() -> None:
+    """--no-sandbox with --dry-run for COMMUNITY plugins shows danger warning."""
+    result = runner.invoke(
+        app,
+        ["plugin", "install", "jira-link", "--no-sandbox", "--dry-run"],
+    )
+    assert result.exit_code == 0
+    assert "DANGER" in result.output
+    assert "[dry-run] Would install jira-link" in result.output

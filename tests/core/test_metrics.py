@@ -118,3 +118,32 @@ def test_counter_concurrent_increments_are_accurate(registry: MetricsRegistry) -
     for t in threads:
         t.join()
     assert counter.value == 10000
+
+
+def test_histogram_percentiles_batch_matches_individual(registry: MetricsRegistry) -> None:
+    """percentiles() must return the same values as individual percentile() calls."""
+    hist = registry.histogram("batch_hist", "Batch percentile test")
+    for value in range(1, 101):
+        hist.observe(float(value))
+    ps = [50.0, 95.0, 99.0]
+    batch = hist.percentiles(ps)
+    individual = [hist.percentile(p) for p in ps]
+    assert batch == individual
+
+
+def test_histogram_sorted_cache_invalidated_on_observe(registry: MetricsRegistry) -> None:
+    """After observe(), the sorted cache must be rebuilt."""
+    hist = registry.histogram("cache_hist", "Cache invalidation test")
+    hist.observe(1.0)
+    hist.observe(3.0)
+    # Prime the cache
+    assert hist.percentile(50.0) == 2.0
+    # Add a new value — cache should be invalidated
+    hist.observe(2.0)
+    assert hist.percentile(50.0) == 2.0  # median of [1,2,3] is 2
+
+
+def test_histogram_percentiles_empty(registry: MetricsRegistry) -> None:
+    """percentiles() on an empty histogram returns zeros."""
+    hist = registry.histogram("empty_hist", "Empty histogram")
+    assert hist.percentiles([50.0, 95.0, 99.0]) == [0.0, 0.0, 0.0]

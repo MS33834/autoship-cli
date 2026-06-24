@@ -120,7 +120,7 @@ def test_download_package_returns_path_and_clears_directory(tmp_path: Path) -> N
     with (
         patch("autoship.core.package_verifier.subprocess.run", side_effect=_fake_run),
         patch(
-            "autoship.core.package_verifier._pip_cmd",
+            "autoship.utils.hashing.pip_cmd",
             return_value=["pip"],
         ),
     ):

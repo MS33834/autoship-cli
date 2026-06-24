@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import base64
-import hashlib
 import logging
 import shutil
 import subprocess
@@ -16,6 +15,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 )
 
 from autoship.exceptions import PluginError
+from autoship.utils.hashing import compute_sha256, pip_cmd
 
 logger = logging.getLogger("autoship")
 
@@ -26,22 +26,6 @@ class PackageVerificationError(PluginError):
 
 class PackageDownloadError(PluginError):
     """Raised when a plugin package cannot be downloaded."""
-
-
-def _pip_cmd() -> list[str]:
-    """Return the preferred package installer command (uv or pip)."""
-    if shutil.which("uv"):
-        return ["uv", "pip"]
-    return ["pip"]
-
-
-def compute_sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of a file."""
-    hasher = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(8192), b""):
-            hasher.update(chunk)
-    return hasher.hexdigest()
 
 
 def verify_package(
@@ -96,8 +80,8 @@ def download_package(source_for_pip: str, output_dir: Path) -> Path:
     Raises:
         PackageDownloadError: If the download fails or no file is produced.
     """
-    pip_cmd = _pip_cmd()
-    args = [*pip_cmd, "download", "--no-deps", "--quiet", "-d", str(output_dir), source_for_pip]
+    cmd = pip_cmd()
+    args = [*cmd, "download", "--no-deps", "--quiet", "-d", str(output_dir), source_for_pip]
     try:
         result = subprocess.run(
             args,

@@ -240,3 +240,61 @@ def test_select_backend_honors_fallback_disabled(project_root: Path) -> None:
     high.health.return_value = True
     with patch.object(router, "_gateways", return_value=[low, high]):
         assert router.select_backend(tier=1) is None
+
+
+def test_health_check_caches_within_ttl(project_root: Path) -> None:
+    """Health() should be called at most once per TTL window."""
+    config = AppConfig(project_root=project_root, model={"backends": [_backend()]})
+    router = ModelRouter(config, health_ttl=60.0)
+    gateway = MagicMock()
+    gateway.health.return_value = True
+    gateway.chat.return_value = ChatCompletionResponse(content="ok", model="llama3")
+    with patch.object(router, "_gateways", return_value=[gateway]):
+        router.chat([ChatMessage(role="user", content="hi")], "test")
+        router.chat([ChatMessage(role="user", content="hi2")], "test")
+    # health() should be called once (cached for the second chat)
+    assert gateway.health.call_count == 1
+
+
+def test_health_check_rechecks_after_ttl_expires(project_root: Path) -> None:
+    """Health() should be re-checked after the TTL expires."""
+    config = AppConfig(project_root=project_root, model={"backends": [_backend()]})
+    router = ModelRouter(config, health_ttl=0.0)
+    gateway = MagicMock()
+    gateway.health.return_value = True
+    gateway.chat.return_value = ChatCompletionResponse(content="ok", model="llama3")
+    with patch.object(router, "_gateways", return_value=[gateway]):
+        router.chat([ChatMessage(role="user", content="hi")], "test")
+        router.chat([ChatMessage(role="user", content="hi2")], "test")
+    # With TTL=0, each call should re-probe
+    assert gateway.health.call_count == 2
+
+
+def test_invalidate_health_cache_clears_cache(project_root: Path) -> None:
+    """invalidate_health_cache() forces a fresh health probe."""
+    config = AppConfig(project_root=project_root, model={"backends": [_backend()]})
+    router = ModelRouter(config, health_ttl=60.0)
+    gateway = MagicMock()
+    gateway.health.return_value = True
+    gateway.chat.return_value = ChatCompletionResponse(content="ok", model="llama3")
+    with patch.object(router, "_gateways", return_value=[gateway]):
+        router.chat([ChatMessage(role="user", content="hi")], "test")
+        router.invalidate_health_cache()
+        router.chat([ChatMessage(role="user", content="hi2")], "test")
+    assert gateway.health.call_count == 2
+
+
+def test_chat_invalidates_cache_on_error(project_root: Path) -> None:
+    """Cache entry is dropped when chat() raises, so next call re-probes."""
+    config = AppConfig(project_root=project_root, model={"backends": [_backend()]})
+    router = ModelRouter(config, health_ttl=60.0)
+    gateway = MagicMock()
+    gateway.health.return_value = True
+    gateway.chat.side_effect = ModelGatewayError("boom")
+    with (
+        patch.object(router, "_gateways", return_value=[gateway]),
+        pytest.raises(ModelGatewayError, match="All model backends unhealthy"),
+    ):
+        router.chat([ChatMessage(role="user", content="hi")], "test")
+    # Cache should have been invalidated for this gateway
+    assert router._health_cache == {}

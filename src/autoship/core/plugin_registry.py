@@ -4,40 +4,14 @@ from __future__ import annotations
 
 import json
 import logging
-import stat
 from enum import Enum
 from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from autoship.utils.permissions import ensure_dir_permissions, ensure_file_permissions
+
 logger = logging.getLogger("autoship")
-
-
-def _ensure_dir_permissions(path: Path, mode: int) -> None:
-    """Create ``path`` and enforce ``mode``, warning if it was too broad."""
-    path.mkdir(parents=True, exist_ok=True)
-    if path.exists():
-        _warn_if_too_broad(path, mode)
-        path.chmod(mode)
-
-
-def _ensure_file_permissions(path: Path, mode: int) -> None:
-    """Enforce ``mode`` on ``path``, warning if it was too broad."""
-    if path.exists():
-        _warn_if_too_broad(path, mode)
-    path.chmod(mode)
-
-
-def _warn_if_too_broad(path: Path, mode: int) -> None:
-    """Log a warning when ``path`` has permission bits beyond ``mode``."""
-    current = stat.S_IMODE(path.stat().st_mode)
-    if current & ~mode:
-        logger.warning(
-            "Permissions on %s (%04o) are too broad; tightening to %04o",
-            path,
-            current,
-            mode,
-        )
 
 
 DEFAULT_REGISTRY_DIR = Path.home() / ".config" / "autoship"
@@ -154,9 +128,9 @@ class PluginRegistry:
     def _save(self) -> None:
         """Persist the registry to disk."""
         try:
-            _ensure_dir_permissions(self.registry_dir, 0o700)
+            ensure_dir_permissions(self.registry_dir, 0o700)
             payload = {"plugins": [spec.model_dump(mode="json") for spec in self._plugins.values()]}
             self.registry_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-            _ensure_file_permissions(self.registry_file, 0o600)
+            ensure_file_permissions(self.registry_file, 0o600)
         except OSError as exc:
             logger.warning("Failed to save plugin registry: %s", exc)

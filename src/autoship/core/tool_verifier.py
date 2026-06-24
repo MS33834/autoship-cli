@@ -7,21 +7,12 @@ AutoShip invokes (git, docker, twine, gh, patch, etc.).
 
 from __future__ import annotations
 
-import hashlib
 import shutil
 from pathlib import Path
 
 from autoship.exceptions import ConfigError
 from autoship.models.config import ToolsConfig
-
-
-def _compute_sha256(path: Path) -> str:
-    """Return the SHA-256 hex digest of ``path``."""
-    digest = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(8192), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+from autoship.utils.hashing import compute_sha256
 
 
 class ToolVerifier:
@@ -83,7 +74,7 @@ class ToolVerifier:
             raise ConfigError(f"Tool '{name}' has no configured path and search_path is disabled")
 
         if tool_config.sha256:
-            actual = _compute_sha256(resolved)
+            actual = compute_sha256(resolved)
             expected = tool_config.sha256.lower()
             if actual != expected:
                 raise ConfigError(

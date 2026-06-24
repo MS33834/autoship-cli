@@ -13,6 +13,7 @@ import typer
 from autoship.core.config_center import DEFAULT_CONFIG_NAME
 from autoship.core.i18n import I18n, get_i18n, get_i18n_from_ctx
 from autoship.exceptions import ConfigError
+from autoship.utils.redaction import is_sensitive_key
 
 logger = structlog.get_logger()
 
@@ -22,9 +23,6 @@ app = typer.Typer(
     help=_i18n._("config.help"),
     rich_markup_mode="rich",
 )
-
-# Keys whose values should be redacted when printing configuration.
-SENSITIVE_KEYS = frozenset({"api_key", "siem_token", "base_url", "cx", "public_key"})
 
 try:
     import tomllib  # pyright: ignore[reportMissingImports, reportMissingTypeStubs]
@@ -36,7 +34,7 @@ def _redact(value: Any) -> Any:
     """Recursively redact sensitive dictionary values."""
     if isinstance(value, dict):
         mapping = cast(dict[str, Any], value)
-        return {k: "***" if k in SENSITIVE_KEYS else _redact(v) for k, v in mapping.items()}
+        return {k: "***" if is_sensitive_key(k) else _redact(v) for k, v in mapping.items()}
     if isinstance(value, list):
         sequence = cast(list[Any], value)
         return [_redact(item) for item in sequence]
@@ -82,7 +80,9 @@ def _load_toml(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
     with path.open("rb") as f:
-        data: dict[str, Any] = tomllib.load(f)
+        data: dict[str, Any] = cast(
+            dict[str, Any], tomllib.load(f)  # pyright: ignore[reportUnknownMemberType]
+        )
         return data
 
 

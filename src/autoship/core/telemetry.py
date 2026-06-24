@@ -14,7 +14,6 @@ from __future__ import annotations
 import json
 import os
 import platform
-import re
 import sys
 import time
 import traceback
@@ -27,6 +26,7 @@ import httpx
 import structlog
 
 from autoship.core.metrics import get_registry
+from autoship.utils.redaction import SENSITIVE_VALUE_PATTERNS, is_sensitive_key
 
 logger = structlog.get_logger()
 
@@ -36,30 +36,6 @@ DEFAULT_TIMEOUT_SECONDS = 5.0
 MAX_TIMEOUT_SECONDS = 30.0
 TRUSTED_TELEMETRY_HOSTS = {"telemetry.autoship.dev"}
 
-# Patterns that may indicate personally identifiable or sensitive information.
-_SENSITIVE_KEYS = {
-    "api_key",
-    "apikey",
-    "api-key",
-    "token",
-    "secret",
-    "password",
-    "passwd",
-    "pwd",
-    "authorization",
-    "auth",
-    "cookie",
-    "session",
-    "private_key",
-    "privatekey",
-    "email",
-    "phone",
-}
-_SENSITIVE_VALUE_PATTERNS = [
-    re.compile(r"[a-f0-9]{32,}", re.IGNORECASE),  # hex hashes/tokens
-    re.compile(r"[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{20,}"),  # JWT-like
-    re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"),  # email
-]
 _PATHLIKE_PREFIXES = ("/", "\\", "~", ".", "file:")
 _MAX_STRING_LENGTH = 256
 
@@ -73,23 +49,17 @@ def _looks_like_path(value: str) -> bool:
     return value.startswith(_PATHLIKE_PREFIXES) or (len(value) >= 2 and value[1] == ":")
 
 
-def _is_sensitive_key(key: str) -> bool:
-    """Return True if ``key`` indicates the associated value is sensitive."""
-    lower = key.lower()
-    return any(sensitive in lower for sensitive in _SENSITIVE_KEYS)
-
-
 def _scrub_value(value: object, key: str = "") -> object:
     """Redact a single scalar value that may contain sensitive data."""
     if not isinstance(value, str):
         return value
     if not value:
         return value
-    if _is_sensitive_key(key):
+    if is_sensitive_key(key):
         return "<redacted>"
     if _looks_like_path(value):
         return "<path>"
-    if any(pattern.search(value) for pattern in _SENSITIVE_VALUE_PATTERNS):
+    if any(pattern.search(value) for pattern in SENSITIVE_VALUE_PATTERNS):
         return "<redacted>"
     return value[:_MAX_STRING_LENGTH]
 

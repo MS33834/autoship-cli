@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from autoship.core.telemetry import TelemetryCollector
+from autoship.utils.permissions import ensure_dir_permissions, ensure_file_permissions
 
 logger = logging.getLogger("autoship")
 
@@ -147,7 +148,7 @@ class PluginStats:
 
     def _save(self) -> None:
         try:
-            self.stats_file.parent.mkdir(parents=True, exist_ok=True)
+            ensure_dir_permissions(self.stats_file.parent, 0o700)
             payload = {
                 name: {
                     "installs": stat.installs,
@@ -157,5 +158,6 @@ class PluginStats:
                 for name, stat in self._stats.items()
             }
             self.stats_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            ensure_file_permissions(self.stats_file, 0o600)
         except OSError as exc:
             logger.warning("Failed to save plugin stats: %s", exc)

@@ -67,6 +67,6 @@ autoship upload --target docker --image myapp --tag latest
 
 ## 次のステップ
 
-- 各コマンドの詳細な使い方は [コマンドリファレンス](../commands/index.md) を参照。
-- `.autoship.toml` の設定項目は [設定説明](../configuration.md) を参照。
-- AutoShip を拡張する方法は [プラグイン](../plugins.md) と [プラグイン開発ガイド](../plugin-development.md) を参照。
+- 各コマンドの詳細な使い方は [コマンドリファレンス](./commands/index.md) を参照。
+- `.autoship.toml` の設定項目は [設定説明](configuration.md) を参照。
+- AutoShip を拡張する方法は [プラグイン](plugins.md) と [プラグイン開発ガイド](plugin-development.md) を参照。

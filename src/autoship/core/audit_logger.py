@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import re
-import stat
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,86 +12,22 @@ from typing import Any, cast
 import httpx
 
 from autoship.models.config import AppConfig
+from autoship.utils.permissions import ensure_dir_permissions, ensure_file_permissions
+from autoship.utils.redaction import (
+    SENSITIVE_KEYS,
+    redact_dict,
+    redact_scalar,
+    redact_text,
+)
 
 logger = logging.getLogger("autoship")
 
-
-def _ensure_dir_permissions(path: Path, mode: int) -> None:
-    """Create ``path`` and enforce ``mode``, warning if it was too broad."""
-    path.mkdir(parents=True, exist_ok=True)
-    if path.exists():
-        _warn_if_too_broad(path, mode)
-        path.chmod(mode)
-
-
-def _ensure_file_permissions(path: Path, mode: int) -> None:
-    """Enforce ``mode`` on ``path``, warning if it was too broad."""
-    if path.exists():
-        _warn_if_too_broad(path, mode)
-    path.chmod(mode)
-
-
-def _warn_if_too_broad(path: Path, mode: int) -> None:
-    """Log a warning when ``path`` has permission bits beyond ``mode``."""
-    current = stat.S_IMODE(path.stat().st_mode)
-    if current & ~mode:
-        logger.warning(
-            "Permissions on %s (%04o) are too broad; tightening to %04o",
-            path,
-            current,
-            mode,
-        )
-
-
-# Common sensitive field names that should never be forwarded to a SIEM.
-SENSITIVE_KEYS = frozenset(
-    {
-        "token",
-        "api_key",
-        "password",
-        "secret",
-        "siem_token",
-        "key",
-        "private",
-        "private_key",
-        "credentials",
-        "auth",
-        "authorization",
-        "access_token",
-        "refresh_token",
-    }
-)
-
-# Patterns that indicate a scalar string contains a secret or high-entropy token.
-_SENSITIVE_VALUE_PATTERNS = tuple(
-    re.compile(pattern)
-    for pattern in (
-        # GitHub personal access token (classic)
-        r"ghp_[A-Za-z0-9_]{36}",
-        # GitHub fine-grained personal access token
-        r"github_pat_[A-Za-z0-9_]{22}_[A-Za-z0-9_]{59}",
-        # OpenAI API key
-        r"sk-[a-zA-Z0-9]{48}",
-        # AWS access key id
-        r"AKIA[0-9A-Z]{16}",
-        # PEM/SSH private key block
-        r"-----BEGIN (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----",
-        # JWT (header.payload.signature)
-        r"eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*",
-    )
-)
-
-
-def redact_text(text: str) -> str:
-    """Redact a free-form string when it contains a secret-like pattern.
-
-    This mirrors ``AuditLogger._redact_scalar`` so that unstructured text such
-    as command stdout/stderr can be sanitized without an ``AuditLogger``
-    instance.
-    """
-    if any(pattern.search(text) for pattern in _SENSITIVE_VALUE_PATTERNS):
-        return "***"
-    return text
+# Re-export for backward compatibility (tests and external callers may import from here).
+__all__ = [
+    "AuditLogger",
+    "SENSITIVE_KEYS",
+    "redact_text",
+]
 
 
 # Keys that are safe to retain when ``redact_unknown_fields`` is enabled.
@@ -196,7 +130,7 @@ class AuditLogger:
     def _ensure_log_dir(self) -> None:
         """Create the log directory, tolerating permission errors."""
         try:
-            _ensure_dir_permissions(self.log_dir, 0o700)
+            ensure_dir_permissions(self.log_dir, 0o700)
         except OSError as exc:
             logger.warning("Cannot create audit log directory %s: %s", self.log_dir, exc)
 
@@ -217,7 +151,7 @@ class AuditLogger:
         try:
             with self.log_file.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(entry, default=str) + "\n")
-            _ensure_file_permissions(self.log_file, 0o600)
+            ensure_file_permissions(self.log_file, 0o600)
         except OSError as exc:
             logger.warning("Failed to write audit record for %s: %s", event, exc)
         self._forward_to_siem(entry)
@@ -269,7 +203,7 @@ class AuditLogger:
                 records.append(entry)
 
         output.write_text("".join(json.dumps(record) + "\n" for record in records))
-        _ensure_file_permissions(output, 0o600)
+        ensure_file_permissions(output, 0o600)
         return output
 
     def cleanup(self, retention_days: int | None = None) -> int:
@@ -316,44 +250,14 @@ class AuditLogger:
         if _unknown is None:
             _unknown = self.config.audit.redact_unknown_fields
         if isinstance(value, dict):
-            value_dict = cast(dict[str, Any], value)
-            redacted: dict[str, Any] = {}
-            for key, item in value_dict.items():
-                key_lower = key.lower()
-                if self._is_sensitive_key(key_lower):
-                    redacted[key] = "***"
-                elif key_lower in _SAFE_KEYS or not _unknown:
-                    redacted[key] = self._redact(item, _unknown=_unknown)
-                else:
-                    redacted[key] = self._redact_unknown_value(item)
-            return redacted
+            return redact_dict(
+                cast(dict[str, Any], value),
+                redact_unknown=_unknown,
+                safe_keys=_SAFE_KEYS,
+            )
         if isinstance(value, list):
-            value_list = cast(list[Any], value)
-            return [self._redact(item, _unknown=_unknown) for item in value_list]
-        return self._redact_scalar(value)
-
-    def _is_sensitive_key(self, key: str) -> bool:
-        """Return True if ``key`` is a known sensitive field name."""
-        return key in SENSITIVE_KEYS
-
-    def _redact_scalar(self, value: Any) -> Any:
-        """Redact a scalar value if it contains a secret-like pattern."""
-        if isinstance(value, str):
-            return redact_text(value)
-        return value
-
-    def _redact_unknown_value(self, value: Any) -> Any:
-        """Redact an unknown value recursively.
-
-        Dictionaries and lists are traversed so that any nested unknown fields
-        are also redacted; scalars are replaced with a mask.
-        """
-        if isinstance(value, dict):
-            return self._redact(value, _unknown=True)
-        if isinstance(value, list):
-            value_list = cast(list[Any], value)
-            return [self._redact_unknown_value(item) for item in value_list]
-        return "***"
+            return [self._redact(item, _unknown=_unknown) for item in cast(list[Any], value)]
+        return redact_scalar(value)
 
     def _forward_to_siem(self, entry: dict[str, Any]) -> None:
         """Best-effort forward a single audit record to a configured SIEM.

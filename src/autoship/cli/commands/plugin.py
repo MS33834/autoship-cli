@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import contextlib
 import re
-import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, cast
@@ -24,19 +23,13 @@ from autoship.core.plugin_stats import PluginStats
 from autoship.core.registry_index import RegistryIndex
 from autoship.core.sandbox import SandboxRunner
 from autoship.exceptions import PluginError
+from autoship.utils.hashing import pip_cmd
 
 app = typer.Typer()
 
 
-def _pip_cmd() -> list[str]:
-    """Return the preferred package installer command (uv or pip)."""
-    if shutil.which("uv"):
-        return ["uv", "pip"]
-    return ["pip"]
-
-
 def _run_pip_install(
-    pip_cmd: list[str],
+    cmd: list[str],
     spec: str,
     *,
     upgrade: bool = False,
@@ -44,7 +37,7 @@ def _run_pip_install(
     env_whitelist: list[str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run pip install, optionally inside a sandbox for untrusted plugins."""
-    args = [*pip_cmd, "install", "--quiet"]
+    args = [*cmd, "install", "--quiet"]
     if upgrade:
         args.append("--upgrade")
     args.append(spec)
@@ -68,10 +61,10 @@ def _run_pip_install(
 
 def _installed_version(package: str) -> Version | None:
     """Return the installed version of a package, or None if not installed."""
-    pip_cmd = _pip_cmd()
+    cmd = pip_cmd()
     try:
         result = subprocess.run(
-            [*pip_cmd, "show", package],
+            [*cmd, "show", package],
             check=True,
             capture_output=True,
             text=True,
@@ -146,6 +139,50 @@ def _cleanup_downloaded(path: Path | None) -> None:
         return
     with contextlib.suppress(OSError):
         path.unlink()
+
+
+def _enforce_sandbox_policy(
+    i18n: I18n,
+    plugin_name: str,
+    plugin_trust: TrustLevel,
+    no_sandbox: bool,
+    *,
+    dry_run: bool = False,
+) -> bool:
+    """Validate the ``--no-sandbox`` flag against the plugin trust level.
+
+    Returns ``True`` when the install should run without a sandbox, ``False``
+    when it must run sandboxed. The function may raise ``PluginError`` (for
+    untrusted plugins, which are hard-blocked) or ``typer.Exit`` (when the user
+    declines the explicit unsafe confirmation for community plugins).
+
+    Policy:
+
+    * ``UNTRUSTED``: ``--no-sandbox`` is always rejected.
+    * ``COMMUNITY``: ``--no-sandbox`` requires typing the plugin name to
+      confirm, even when ``--yes`` was supplied. This gate cannot be bypassed
+      non-interactively.
+    * ``VERIFIED``/``BUILTIN``: sandbox is not applied regardless, so the flag
+      is effectively a no-op.
+    """
+    if not no_sandbox:
+        return False
+    if plugin_trust in (TrustLevel.VERIFIED, TrustLevel.BUILTIN):
+        return False
+    if plugin_trust == TrustLevel.UNTRUSTED:
+        raise PluginError(i18n._("plugin.no_sandbox_untrusted_blocked", plugin_name=plugin_name))
+    # COMMUNITY: in dry-run mode, show the warning but do not prompt.
+    if dry_run:
+        typer.echo(i18n._("plugin.no_sandbox_community_warning", plugin_name=plugin_name))
+        return True
+    # COMMUNITY: require an explicit, non-bypassable confirmation.
+    typer.echo(i18n._("plugin.no_sandbox_community_warning", plugin_name=plugin_name))
+    prompt = i18n._("plugin.no_sandbox_confirm")
+    confirmation = typer.prompt(prompt)
+    if confirmation.strip() != plugin_name:
+        typer.echo(i18n._("common.aborted"))
+        raise typer.Exit(code=0)
+    return True
 
 
 def register(parent: typer.Typer) -> None:
@@ -321,22 +358,28 @@ def install(
         typer.echo(i18n._("common.aborted"))
         raise typer.Exit(code=0)
 
+    # Enforce sandbox policy before dry-run return so unsafe combinations
+    # (e.g. --no-sandbox with UNTRUSTED) are rejected even in dry-run mode.
+    skip_sandbox = _enforce_sandbox_policy(
+        i18n, plugin_name, plugin_trust, no_sandbox, dry_run=dry_run
+    )
+
     if dry_run:
         typer.echo(
             i18n._("plugin.install_dry_run", plugin_name=plugin_name, source_for_pip=source_for_pip)
         )
         return
 
-    use_sandbox = not no_sandbox and plugin_trust in (TrustLevel.COMMUNITY, TrustLevel.UNTRUSTED)
+    use_sandbox = not skip_sandbox and plugin_trust in (TrustLevel.COMMUNITY, TrustLevel.UNTRUSTED)
 
-    pip_cmd = _pip_cmd()
+    cmd = pip_cmd()
     config = ctx.obj.get("config")
     install_spec, downloaded_path = _resolve_install_source(
         source_for_pip, indexed, config, i18n, plugin_name, operation="install"
     )
     try:
         result = _run_pip_install(
-            pip_cmd,
+            cmd,
             install_spec,
             sandbox=use_sandbox,
             env_whitelist=capabilities.env
@@ -437,10 +480,10 @@ def uninstall(
         typer.echo(i18n._("plugin.uninstall_dry_run", name=name))
         return
 
-    pip_cmd = _pip_cmd()
+    cmd = pip_cmd()
     try:
         subprocess.run(
-            [*pip_cmd, "uninstall", "--quiet", "-y", name],
+            [*cmd, "uninstall", "--quiet", "-y", name],
             check=True,
             capture_output=True,
             text=True,
@@ -574,7 +617,7 @@ def update(
         typer.echo(i18n._("common.aborted"))
         raise typer.Exit(code=0)
 
-    pip_cmd = _pip_cmd()
+    cmd = pip_cmd()
     config = ctx.obj.get("config")
     for plugin, _installed, latest in updatable:
         source_for_pip = plugin.source
@@ -597,7 +640,10 @@ def update(
             skip_trust_check,
         )
 
-        use_sandbox = not no_sandbox and plugin.trust_level in (
+        skip_sandbox = _enforce_sandbox_policy(
+            i18n, plugin.name, plugin.trust_level, no_sandbox, dry_run=dry_run
+        )
+        use_sandbox = not skip_sandbox and plugin.trust_level in (
             TrustLevel.COMMUNITY,
             TrustLevel.UNTRUSTED,
         )
@@ -607,7 +653,7 @@ def update(
         )
         try:
             result = _run_pip_install(
-                pip_cmd,
+                cmd,
                 install_spec,
                 upgrade=True,
                 sandbox=use_sandbox,

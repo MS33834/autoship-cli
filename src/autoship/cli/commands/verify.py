@@ -6,7 +6,6 @@ import logging
 import re
 import shlex
 import shutil
-import stat
 import subprocess
 from pathlib import Path
 
@@ -19,6 +18,7 @@ from autoship.core.i18n import I18n, get_i18n_from_ctx
 from autoship.exceptions import VerifyError
 from autoship.models.config import VerifyConfig
 from autoship.plugin_manager import manager as plugin_manager
+from autoship.utils.permissions import ensure_dir_permissions, ensure_file_permissions
 
 ERROR_LOG_DIR = Path.home() / ".local" / "state" / "autoship"
 ERROR_LOG_PATH = ERROR_LOG_DIR / "last_error.txt"
@@ -38,39 +38,12 @@ def _write_error_log(stdout: str, stderr: str) -> None:
     tightened and a warning is emitted.
     """
     try:
-        _ensure_dir_permissions(ERROR_LOG_DIR, 0o700)
+        ensure_dir_permissions(ERROR_LOG_DIR, 0o700)
         content = f"STDOUT:\n{redact_text(stdout)}\n\nSTDERR:\n{redact_text(stderr)}"
         ERROR_LOG_PATH.write_text(content, encoding="utf-8")
-        _ensure_file_permissions(ERROR_LOG_PATH, 0o600)
+        ensure_file_permissions(ERROR_LOG_PATH, 0o600)
     except OSError:
         pass
-
-
-def _ensure_dir_permissions(path: Path, mode: int) -> None:
-    """Create ``path`` and enforce ``mode``, warning if it was too broad."""
-    path.mkdir(parents=True, exist_ok=True)
-    if path.exists():
-        _warn_if_too_broad(path, mode)
-        path.chmod(mode)
-
-
-def _ensure_file_permissions(path: Path, mode: int) -> None:
-    """Enforce ``mode`` on ``path``, warning if it was too broad."""
-    if path.exists():
-        _warn_if_too_broad(path, mode)
-    path.chmod(mode)
-
-
-def _warn_if_too_broad(path: Path, mode: int) -> None:
-    """Log a warning when ``path`` has permission bits beyond ``mode``."""
-    current = stat.S_IMODE(path.stat().st_mode)
-    if current & ~mode:
-        logger.warning(
-            "Permissions on %s (%04o) are too broad; tightening to %04o",
-            path,
-            current,
-            mode,
-        )
 
 
 def _validate_verify_command(command: str, verify_config: VerifyConfig, i18n: I18n) -> list[str]:
