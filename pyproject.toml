@@ -94,6 +94,8 @@ pythonVersion = "3.10"
 typeCheckingMode = "strict"
 include = ["src"]
 exclude = ["**/__pycache__", "**/tests"]
+venvPath = "."
+venv = ".venv"
 
 [tool.mypy]
 python_version = "3.10"

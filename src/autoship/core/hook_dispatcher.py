@@ -209,7 +209,17 @@ class HookDispatcher:
 
         try:
             # Preserve PYTHONPATH so the subprocess can find autoship and installed plugins.
-            env_whitelist = ["PATH", "HOME", "USER", "LANG", "LC_ALL", "PYTHONPATH"]
+            env_whitelist = [
+                "PATH",
+                "HOME",
+                "USER",
+                "LANG",
+                "LC_ALL",
+                "PYTHONPATH",
+                "VIRTUAL_ENV",
+                "XDG_CACHE_HOME",
+                "UV_CACHE_DIR",
+            ]
             runner = self._sandbox_runner_factory(network=False, env_whitelist=env_whitelist)
             result = runner.run(
                 [sys.executable, str(script_path), json.dumps(payload)],

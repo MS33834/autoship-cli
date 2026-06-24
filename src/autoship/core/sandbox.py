@@ -78,7 +78,16 @@ class SandboxRunner:
         required: bool = True,
     ) -> None:
         self.network = network
-        self.env_whitelist = env_whitelist or ["PATH", "HOME", "USER", "LANG", "LC_ALL"]
+        self.env_whitelist = env_whitelist or [
+            "PATH",
+            "HOME",
+            "USER",
+            "LANG",
+            "LC_ALL",
+            "VIRTUAL_ENV",
+            "XDG_CACHE_HOME",
+            "UV_CACHE_DIR",
+        ]
         self.working_dir = working_dir
         self.required = required
 

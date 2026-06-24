@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "autoship-commit-policy"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/commit_policy"]
+
+[project.entry-points."autoship.plugins"]
+commit_policy = "commit_policy.plugin:register"

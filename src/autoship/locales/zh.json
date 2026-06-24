@@ -26,6 +26,7 @@
   "commit.model_failed": "模型生成提交信息失败：{exc}",
   "commit.dry_run": "[dry-run] 将使用以下信息提交：\n{message}",
   "commit.done": "已提交：{message}",
+  "commit.pre_commit_failed": "pre-commit hook 拒绝了此次提交：{exc}",
   "commit.editor_error": "编辑器以代码 {code} 退出；提交信息未保存。",
   "commit.editor_disallowed": "编辑器值不被允许：{editor}",
   "commit.editor_unknown": "编辑器 '{editor}' 不在白名单中。允许的编辑器：{allowed}",
@@ -103,6 +104,7 @@
 
   "fix.help": "让 LLM 为上一次的验证失败提供修复建议。",
   "fix.missing_api_key": "LLM provider '{provider}' 需要 API key。请在配置中设置，或通过 AUTOSHIP_LLM__API_KEY 传入。",
+  "fix.model_backend_unavailable": "当前没有可用的模型后端：{exc}。请在 `.autoship.toml` 中配置模型后端，或运行 `autoship init`。",
   "fix.no_error_log": "未在 {path} 找到错误日志。请先运行 `autoship verify`，或传入错误文件。",
   "fix.empty_error_log": "{path} 中的错误日志为空。",
   "fix.thinking": "正在向模型请求修复建议...",

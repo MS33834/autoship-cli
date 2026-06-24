@@ -56,7 +56,6 @@ def commit(
     )
 
     audit.record("commit.start")
-    plugin_manager.call("pre_commit", context=context, fail_fast=False)
 
     diff = git.diff()
     stats = git.stats()
@@ -73,6 +72,18 @@ def commit(
 
     if edit and not yes:
         final_message = _open_editor(i18n, final_message, config.commit.allowed_editors)
+
+    # Make the final message available to pre-commit hooks (e.g. commit-policy
+    # plugins) and allow them to abort the commit.
+    context.extras["message"] = final_message
+    try:
+        plugin_manager.call("pre_commit", context=context, fail_fast=True)
+    except Exception as exc:
+        audit.record("commit.aborted", {"message": final_message, "reason": str(exc)})
+        raise GitError(
+            i18n._("commit.pre_commit_failed", exc=exc),
+            details={"message": final_message},
+        ) from exc
 
     if dry_run:
         typer.echo(i18n._("commit.dry_run", message=final_message))

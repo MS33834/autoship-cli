@@ -38,11 +38,10 @@ def _read_project_name(source: str) -> str | None:
         return None
     try:
         with pyproject.open("rb") as fh:
-            data: dict[str, Any] = tomllib.load(fh)  # type: ignore[assignment]
-        project = data.get("project", {})
+            data = cast("dict[str, Any]", tomllib.load(fh))  # pyright: ignore[reportUnknownMemberType]
+        project = cast("dict[str, Any] | None", data.get("project"))
         if isinstance(project, dict):
-            project_dict = cast("dict[str, Any]", project)
-            return project_dict.get("name")
+            return project.get("name")
         return None
     except (OSError, tomllib.TOMLDecodeError):  # pyright: ignore[reportUnknownMemberType]
         return None
@@ -63,16 +62,20 @@ def _run_pip_install(
     env_whitelist: list[str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run pip install, optionally inside a sandbox for untrusted plugins."""
+    # Local paths must be absolute because the sandbox runs in a temp cwd.
+    spec_path = Path(spec)
+    install_spec = str(spec_path.resolve()) if spec_path.exists() else spec
+
     args = [*cmd, "install", "--quiet"]
     if upgrade:
         args.append("--upgrade")
-    args.append(spec)
+    args.append(install_spec)
 
     if sandbox:
         runner = SandboxRunner(
             network=True,
             env_whitelist=env_whitelist
-            or ["PATH", "HOME", "USER", "LANG", "LC_ALL", "PIP_INDEX_URL"],
+            or ["PATH", "HOME", "USER", "LANG", "LC_ALL", "PIP_INDEX_URL", "VIRTUAL_ENV"],
         )
         result = runner.run(args)
         return subprocess.CompletedProcess(
@@ -409,7 +412,17 @@ def install(
             install_spec,
             sandbox=use_sandbox,
             env_whitelist=capabilities.env
-            + ["PATH", "HOME", "USER", "LANG", "LC_ALL", "PIP_INDEX_URL"],
+            + [
+                "PATH",
+                "HOME",
+                "USER",
+                "LANG",
+                "LC_ALL",
+                "PIP_INDEX_URL",
+                "VIRTUAL_ENV",
+                "XDG_CACHE_HOME",
+                "UV_CACHE_DIR",
+            ],
         )
         if result.returncode != 0:
             raise subprocess.CalledProcessError(

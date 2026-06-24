@@ -60,6 +60,7 @@ benchmarks/report.md
 dogfood/report.md
 dogfood/report.json
 dogfood/real_world/reports/
+dogfood/dev_team_crisis/reports/
 
 # Security reports
 bandit-report.json

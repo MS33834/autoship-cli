@@ -237,8 +237,8 @@ def load_config(
     Priority (high -> low):
         1. CLI overrides
         2. Environment variables (AUTOSHIP_*)
-        3. Project-level ``.autoship.toml``
-        4. Team-level ``.autoship.team.toml``
+        3. Team-level ``.autoship.team.toml``
+        4. Project-level ``.autoship.toml``
         5. Global ``~/.config/autoship/config.toml``
         6. System ``/etc/autoship.toml``
         7. Built-in defaults
@@ -253,15 +253,11 @@ def load_config(
     global_cfg = _load_toml(GLOBAL_CONFIG_FILE)
     merged = _deep_merge(merged, global_cfg)
 
-    # Resolve project root early so team config is looked up there
+    # Resolve project root early so configs are looked up there
     if config_path is not None:
         project_root = config_path.parent
     else:
         project_root = project_root or _find_project_root()
-
-    # Team config
-    team_cfg = _load_toml(project_root / TEAM_CONFIG_NAME)
-    merged = _deep_merge(merged, team_cfg)
 
     # Project config
     if config_path is not None:
@@ -270,6 +266,10 @@ def load_config(
         project_cfg = _load_toml(project_root / DEFAULT_CONFIG_NAME)
 
     merged = _deep_merge(merged, project_cfg)
+
+    # Team config overrides project config
+    team_cfg = _load_toml(project_root / TEAM_CONFIG_NAME)
+    merged = _deep_merge(merged, team_cfg)
 
     # Environment variables (filtered by allowlist)
     env_cfg = _filter_env_cfg(_env_to_dict())

@@ -122,7 +122,7 @@ def fix(
     try:
         response = router.chat(messages, "fix")
     except ModelGatewayError as exc:
-        raise typer.BadParameter(str(exc)) from exc
+        raise typer.BadParameter(i18n._("fix.model_backend_unavailable", exc=exc)) from exc
 
     typer.echo("\n" + response)
 

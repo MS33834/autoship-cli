@@ -26,6 +26,7 @@
   "commit.model_failed": "Model message generation failed: {exc}",
   "commit.dry_run": "[dry-run] Would commit with message:\n{message}",
   "commit.done": "Committed: {message}",
+  "commit.pre_commit_failed": "A pre-commit hook rejected this commit: {exc}",
   "commit.editor_error": "Editor exited with code {code}; commit message was not saved.",
   "commit.editor_disallowed": "Editor value is not allowed: {editor}",
   "commit.editor_unknown": "Editor '{editor}' is not in the allowlist. Allowed editors: {allowed}",
@@ -103,6 +104,7 @@
 
   "fix.help": "Ask an LLM to propose a fix for the last verification failure.",
   "fix.missing_api_key": "LLM provider '{provider}' requires an API key. Set it in config or via AUTOSHIP_LLM__API_KEY.",
+  "fix.model_backend_unavailable": "No healthy model backend is available: {exc}. Configure a backend in `.autoship.toml` or run `autoship init`.",
   "fix.no_error_log": "No error log found at {path}. Run `autoship verify` first or pass an error file.",
   "fix.empty_error_log": "Error log at {path} is empty.",
   "fix.thinking": "Asking the model for a fix...",
