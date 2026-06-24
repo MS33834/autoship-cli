@@ -286,7 +286,7 @@ class AppConfig(BaseModel):
     web_search: WebSearchConfig = Field(default_factory=WebSearchConfig)
     docker_ship: DockerShipConfig = Field(default_factory=DockerShipConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)
-    registry: RegistryConfig = Field(default_factory=RegistryConfig)
+    registry: RegistryConfig = Field(default_factory=lambda: RegistryConfig())
     llm: LlmConfig = Field(default_factory=LlmConfig)
     cache: CacheConfig = Field(default_factory=CacheConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
