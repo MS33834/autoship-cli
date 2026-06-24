@@ -15,7 +15,7 @@ Thank you for your interest in AutoShip-CLI! We welcome and encourage community 
 
 ## Code of Conduct
 
-By participating in this project, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).
+By participating in this project, you agree to abide by our [Code of Conduct](../CODE_OF_CONDUCT.md).
 
 ## How to Contribute
 
@@ -62,4 +62,4 @@ We welcome third-party plugins! Please follow this process to submit:
 
 ## License
 
-By contributing code, you agree that your contributions will be licensed under the same [MIT](LICENSE) license as the project.
+By contributing code, you agree that your contributions will be licensed under the same [MIT](../LICENSE.md) license as the project.
