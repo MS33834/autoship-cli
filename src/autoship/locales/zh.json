@@ -18,6 +18,8 @@
   "clean.preview_failed": "预览清理更改失败：{exc}",
   "clean.not_clean": "代码不干净；请运行 `autoship clean`。",
   "clean.apply_failed": "应用清理更改失败：{exc}",
+  "clean.builtin_fallback": "使用内置格式化器（未找到外部工具：{tools}）",
+  "clean.builtin_done": "内置格式化完成（{count} 个文件已修改）。",
 
   "commit.help": "生成提交信息并提交暂存/未暂存的更改。",
   "commit.option.message": "使用给定的提交信息",
@@ -167,6 +169,7 @@
   "upload.result": "已上传到 {target}",
   "upload.failed": "上传到 {target} 失败：{exc}",
   "upload.dry_run": "[dry-run] 将上传到 {target}：\n{details}",
+  "upload.dry_run_not_configured": "[dry-run] 目标 '{target}' 尚未完整配置：{reason}",
 
   "verify.help": "运行验证命令并捕获错误以进行 AI 辅助修复。",
   "verify.option.fix": "失败时请求模型建议修复",

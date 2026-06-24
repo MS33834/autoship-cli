@@ -23,12 +23,25 @@ def test_upload_pypi_dry_run(project_root, app_config: AppConfig) -> None:
     upload.upload(ctx, target="pypi")
 
 
-def test_upload_unknown_target(project_root, app_config: AppConfig) -> None:
+def test_upload_unknown_target_dry_run(project_root, app_config: AppConfig) -> None:
     ctx = MagicMock()
     ctx.obj = {
         "config": app_config,
         "audit_logger": MagicMock(),
         "dry_run": True,
+        "yes": True,
+        "verbose": False,
+    }
+    # In dry-run mode, unknown targets print a friendly message instead of raising.
+    upload.upload(ctx, target="unknown")
+
+
+def test_upload_unknown_target_no_dry_run(project_root, app_config: AppConfig) -> None:
+    ctx = MagicMock()
+    ctx.obj = {
+        "config": app_config,
+        "audit_logger": MagicMock(),
+        "dry_run": False,
         "yes": True,
         "verbose": False,
     }

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
-from typing import Literal, cast
+from typing import Literal
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator
+from pydantic import AnyHttpUrl, BaseModel, Field, HttpUrl, field_validator
 
 
 class Provider(str, Enum):
@@ -179,9 +179,9 @@ class ModelConfig(BaseModel):
 class RegistryConfig(BaseModel):
     """Configuration for the plugin registry client."""
 
-    url: HttpUrl = cast(
-        HttpUrl,
-        "https://raw.githubusercontent.com/MS33834/autoship-cli/main/registry/plugins.json",
+    url: AnyHttpUrl = Field(
+        default="https://raw.githubusercontent.com/MS33834/autoship-cli/main/registry/plugins.json",
+        validate_default=True,
     )
     cache_enabled: bool = True
     cache_ttl_seconds: int = 3600

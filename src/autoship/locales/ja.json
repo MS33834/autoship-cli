@@ -18,6 +18,8 @@
   "clean.preview_failed": "クリーンアップのプレビューに失敗しました：{exc}",
   "clean.not_clean": "コードがクリーンではありません。`autoship clean` を実行してください。",
   "clean.apply_failed": "クリーンアップの適用に失敗しました：{exc}",
+  "clean.builtin_fallback": "内蔵フォーマッターを使用しています（外部ツールが見つかりません：{tools}）",
+  "clean.builtin_done": "内蔵フォーマットが完了しました（{count} ファイルが変更されました）。",
 
   "commit.help": "コミットメッセージを生成して変更をコミットします。",
   "commit.option.message": "指定されたコミットメッセージを使用",
@@ -77,6 +79,8 @@
   "upload.aborted": "中止しました。",
   "upload.result": "{target} にアップロードしました",
   "upload.failed": "{target} へのアップロードに失敗しました：{exc}",
+  "upload.dry_run": "[dry-run] {target} にアップロードします：\n{details}",
+  "upload.dry_run_not_configured": "[dry-run] ターゲット '{target}' が完全に設定されていません：{reason}",
 
   "verify.help": "検証コマンドを実行し、エラーをキャプチャします。",
   "verify.option.fix": "失敗時にモデルに修正を提案させる",

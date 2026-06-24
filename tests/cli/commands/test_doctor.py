@@ -24,7 +24,13 @@ def test_doctor_json_output() -> None:
     result = runner.invoke(app, ["doctor", "--json"])
     assert result.exit_code in (0, 1)
     assert '"summary"' in result.output
-    assert '"checks"' in result.output
+    assert '"python"' in result.output
+    assert '"git"' in result.output
+    assert '"tools"' in result.output
+    assert '"model"' in result.output
+    assert '"dirs"' in result.output
+    assert '"cache"' in result.output
+    assert '"observability"' in result.output
 
 
 def test_doctor_detects_missing_git() -> None:

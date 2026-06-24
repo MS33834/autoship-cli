@@ -18,6 +18,8 @@
   "clean.preview_failed": "Failed to preview clean changes: {exc}",
   "clean.not_clean": "Code is not clean; run `autoship clean`.",
   "clean.apply_failed": "Failed to apply clean changes: {exc}",
+  "clean.builtin_fallback": "Using built-in formatter (external tools not found: {tools})",
+  "clean.builtin_done": "Built-in formatting complete ({count} file(s) changed).",
 
   "commit.help": "Generate a commit message and commit staged/unstaged changes.",
   "commit.option.message": "Use given commit message",
@@ -167,6 +169,7 @@
   "upload.result": "Uploaded to {target}",
   "upload.failed": "Upload to {target} failed: {exc}",
   "upload.dry_run": "[dry-run] Would upload to {target}:\n{details}",
+  "upload.dry_run_not_configured": "[dry-run] Target '{target}' not fully configured: {reason}",
 
   "verify.help": "Run a verification command and capture errors for AI-assisted fixing.",
   "verify.option.fix": "Ask the model to suggest fixes on failure",

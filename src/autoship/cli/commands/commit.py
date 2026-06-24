@@ -31,13 +31,14 @@ def commit(
     ctx: typer.Context,
     message: str | None = typer.Option(None, "--message", "-m", help="Use given commit message"),
     edit: bool = typer.Option(True, "--edit/--no-edit", help="Open editor to refine message"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip interactive confirmations"),
 ) -> None:
     """Generate a commit message and commit staged/unstaged changes."""
     config = ctx.obj["config"]
     i18n: I18n = get_i18n_from_ctx(ctx)
     audit: AuditLogger = ctx.obj["audit_logger"]
     dry_run: bool = ctx.obj.get("dry_run", False)
-    yes: bool = ctx.obj.get("yes", False)
+    yes = yes or ctx.obj.get("yes", False)
     verbose: bool = ctx.obj.get("verbose", False)
 
     git = GitAdapter(config.project_root)

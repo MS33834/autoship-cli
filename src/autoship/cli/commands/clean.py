@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -19,6 +20,65 @@ app = typer.Typer()
 
 def register(parent: typer.Typer) -> None:
     parent.command(name="clean")(clean)
+
+
+_PYTHON_EXTENSIONS = frozenset({".py", ".pyi", ".pyx", ".pxd"})
+
+
+def _builtin_format_file(file_path: Path) -> bool:
+    """Apply built-in formatting to a single file.
+
+    Returns True if the file was modified.
+    """
+    try:
+        content = file_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return False
+
+    original = content
+    lines = content.splitlines(keepends=True)
+
+    # 1. Strip trailing whitespace from each line
+    lines = [
+        (line.rstrip() + "\n") if line.endswith("\n") else line.rstrip()
+        for line in lines
+    ]
+
+    # 2. Collapse multiple consecutive blank lines into a single blank line
+    deduped: list[str] = []
+    prev_blank = False
+    for line in lines:
+        is_blank = line.strip() == ""
+        if is_blank and prev_blank:
+            continue
+        deduped.append(line)
+        prev_blank = is_blank
+
+    # 3. Ensure file ends with exactly one trailing newline
+    new_content = "".join(deduped).rstrip("\n") + "\n"
+
+    if new_content != original:
+        file_path.write_text(new_content, encoding="utf-8")
+        return True
+    return False
+
+
+def _collect_python_files(paths: list[Path], project_root: Path) -> list[Path]:
+    """Collect Python source files from the requested paths."""
+
+    def _is_py(p: Path) -> bool:
+        return p.suffix in _PYTHON_EXTENSIONS
+
+    result: list[Path] = []
+    for p in paths:
+        target = (project_root / p).resolve() if not p.is_absolute() else p.resolve()
+        if target.is_file() and _is_py(target):
+            result.append(target)
+        elif target.is_dir():
+            result.extend(
+                f for f in target.rglob("*.py") if f.is_file() and "__pycache__" not in f.parts
+            )
+    return result
 
 
 @app.command()
@@ -61,6 +121,32 @@ def clean(
         raise ToolChainError(i18n._("clean.preview_failed", exc=exc)) from exc
 
     if not diff.strip():
+        # When external tools are missing, fall back to built-in formatting.
+        missing = [t for t in config.clean.tools if shutil.which(t) is None]
+        if missing and any(t in config.clean.tools for t in ("autoflake", "black")):
+            typer.echo(
+                i18n._("clean.builtin_fallback", tools=", ".join(sorted(missing))),
+                err=True,
+            )
+            py_files = _collect_python_files(paths, config.project_root)
+            changed = 0
+            for f in py_files:
+                if dry_run:
+                    typer.echo(f"[dry-run] would format {f}")
+                    changed += 1
+                elif _builtin_format_file(f):
+                    changed += 1
+                    if verbose:
+                        typer.echo(f"Formatted: {f}")
+            if changed:
+                audit.record("clean.builtin", {"changed": changed})
+                typer.echo(i18n._("clean.builtin_done", count=changed))
+                plugin_manager.call("post_clean", context=context, fail_fast=False)
+            else:
+                audit.record("clean.noop")
+                typer.echo(i18n._("clean.noop"))
+            return
+
         typer.echo(i18n._("clean.noop"))
         audit.record("clean.noop")
         return

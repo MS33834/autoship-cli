@@ -11,7 +11,7 @@ from autoship.adapters.upload import get_uploader
 from autoship.core.audit_logger import AuditLogger
 from autoship.core.context import CommandContext
 from autoship.core.i18n import I18n, get_i18n, get_i18n_from_ctx
-from autoship.exceptions import UploadError
+from autoship.exceptions import ConfigError, UploadError
 from autoship.plugin_manager import manager as plugin_manager
 
 _i18n = get_i18n()
@@ -86,7 +86,16 @@ def upload(
     audit.record("upload.start", {"target": target, "config": uploader_cfg})
     plugin_manager.call("pre_upload", context=context, fail_fast=False)
 
-    uploader = get_uploader(target, config.project_root, uploader_cfg)
+    try:
+        uploader = get_uploader(target, config.project_root, uploader_cfg)
+    except ConfigError as exc:
+        if dry_run:
+            typer.echo(
+                i18n._("upload.dry_run_not_configured", target=target, reason=str(exc))
+            )
+            audit.record("upload.dry_run_not_configured", {"target": target, "reason": str(exc)})
+            return
+        raise
 
     if not dry_run and not yes and not typer.confirm(i18n._("upload.confirm", target=target)):
         typer.echo(i18n._("upload.aborted"))

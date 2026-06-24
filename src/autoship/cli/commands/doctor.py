@@ -264,17 +264,64 @@ def doctor(
     if json_output:
         import json as _json
 
-        data = {
+        # Group check results into structured sections for intuitive access.
+        checks_index: dict[str, CheckResult] = {c.name: c for c in report.checks}
+
+        def _group(keys: list[str]) -> dict[str, str]:
+            entry: dict[str, str] = {}
+            for k in keys:
+                chk = checks_index.get(k)
+                if chk is not None:
+                    entry["status"] = chk.status.value.lower()
+                    entry["message"] = chk.message
+                    if chk.suggestion:
+                        entry["suggestion"] = chk.suggestion
+            if not entry:
+                entry["status"] = "unknown"
+                entry["message"] = ""
+            return entry
+
+        def _worst(states: list[str]) -> str:
+            for s in ("error", "warning", "ok"):
+                if s in states:
+                    return s
+            return "ok"
+
+        # Gather sub-group statuses
+        py_status = checks_index.get("python", CheckResult("python", Status.OK, ""))
+        git_status = checks_index.get("git", CheckResult("git", Status.OK, ""))
+        tools_status = _worst(
+            [
+                checks_index.get("clean-toolchain", CheckResult("", Status.OK, "")).status.value,
+                checks_index.get("plugin-dependencies", CheckResult("", Status.OK, "")).status.value,
+            ]
+        )
+
+        data: dict[str, object] = {
             "summary": {"ok": ok, "warning": warnings, "error": errors},
-            "checks": [
-                {
-                    "name": c.name,
-                    "status": c.status.value,
-                    "message": c.message,
-                    "suggestion": c.suggestion,
-                }
-                for c in report.checks
-            ],
+            "python": {
+                "status": py_status.status.value.lower(),
+                "version": py_status.message,
+            },
+            "git": {
+                "status": git_status.status.value.lower(),
+                "version": git_status.message,
+            },
+            "tools": {
+                "status": tools_status,
+                "clean": checks_index.get(
+                    "clean-toolchain",
+                    CheckResult("clean-toolchain", Status.OK, ""),
+                ).message,
+                "plugin_deps": checks_index.get(
+                    "plugin-dependencies",
+                    CheckResult("plugin-dependencies", Status.OK, ""),
+                ).message,
+            },
+            "model": _group(["model-backend"]),
+            "dirs": _group(["directories"]),
+            "cache": _group(["cache"]),
+            "observability": _group(["observability"]),
         }
         typer.echo(_json.dumps(data, indent=2, ensure_ascii=False))
         if fail_on_error and errors:
