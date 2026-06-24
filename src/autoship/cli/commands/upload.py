@@ -50,11 +50,8 @@ def upload(
     audit: AuditLogger = ctx.obj["audit_logger"]
     # Merge the global --dry-run flag with the command-local --dry-run flag.
     # Direct unit-test invocations may pass a typer.OptionInfo object as the
-    # default; coerce it to a plain bool in that case.
-    if isinstance(dry_run, bool):
-        local_dry_run = dry_run
-    else:
-        local_dry_run = False
+    # default; coerce it to a plain bool in that case (only True is truthy here).
+    local_dry_run: bool = dry_run is True
     dry_run = ctx.obj.get("dry_run", False) or local_dry_run
     yes: bool = ctx.obj.get("yes", False)
     verbose: bool = ctx.obj.get("verbose", False)
