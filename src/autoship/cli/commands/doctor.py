@@ -17,6 +17,7 @@ from autoship.core.config_center import load_config
 from autoship.core.i18n import I18n, get_i18n_from_ctx
 from autoship.core.metrics import get_registry
 from autoship.core.model_router import ModelRouter
+from autoship.exceptions import ConfigError
 from autoship.models.config import AppConfig
 
 
@@ -83,8 +84,8 @@ def check_git(i18n: I18n) -> CheckResult:
     return CheckResult("git", Status.OK, output)
 
 
-def check_clean_toolchain(i18n: I18n) -> CheckResult:
-    tools = ["autoflake", "black", "isort"]
+def check_clean_toolchain(config: AppConfig, i18n: I18n) -> CheckResult:
+    tools = config.clean.tools
     missing = [tool for tool in tools if shutil.which(tool) is None]
     if missing:
         return CheckResult(
@@ -173,9 +174,9 @@ def check_directories(config: AppConfig, i18n: I18n) -> CheckResult:
     return CheckResult("directories", Status.OK, i18n._("doctor.dirs_ok"))
 
 
-def check_cache(i18n: I18n) -> CheckResult:
+def check_cache(config: AppConfig, i18n: I18n) -> CheckResult:
     try:
-        cache = DiskCache()
+        cache = DiskCache(cache_dir=config.cache.dir)
         cache.set("__doctor_probe__", "ok", ttl=10)
         value = cache.get("__doctor_probe__")
         cache.invalidate("__doctor_probe__")
@@ -220,15 +221,26 @@ def check_observability(i18n: I18n) -> CheckResult:
 
 
 def build_report(i18n: I18n) -> DoctorReport:
-    config = load_config()
     report = DoctorReport()
     report.add(**check_python(i18n).__dict__)
     report.add(**check_git(i18n).__dict__)
-    report.add(**check_clean_toolchain(i18n).__dict__)
-    report.add(**check_model_backend(config, i18n).__dict__)
     report.add(**check_plugin_dependencies(i18n).__dict__)
+
+    try:
+        config = load_config()
+    except ConfigError as exc:
+        report.add(
+            "config",
+            Status.ERROR,
+            i18n._("doctor.config_error", exc=exc),
+            i18n._("error.suggestion.init"),
+        )
+        return report
+
+    report.add(**check_clean_toolchain(config, i18n).__dict__)
+    report.add(**check_model_backend(config, i18n).__dict__)
     report.add(**check_directories(config, i18n).__dict__)
-    report.add(**check_cache(i18n).__dict__)
+    report.add(**check_cache(config, i18n).__dict__)
     report.add(**check_observability(i18n).__dict__)
     return report
 

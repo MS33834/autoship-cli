@@ -117,6 +117,7 @@
   "doctor.help": "Diagnose the environment and dependencies.",
   "doctor.option.json": "Output report as JSON",
   "doctor.option.fail_on_error": "Exit with non-zero code when errors are present",
+  "doctor.config_error": "Configuration error: {exc}",
   "doctor.title": "AutoShip Environment Diagnostics",
   "doctor.suggestion": "        -> {suggestion}",
   "doctor.summary": "Summary: {ok} OK, {warnings} WARNING, {errors} ERROR",

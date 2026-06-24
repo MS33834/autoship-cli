@@ -110,6 +110,7 @@ class HookDispatcher:
         sandbox_runner_factory: type[SandboxRunner] = SandboxRunner,
         no_sandbox: bool = False,
         load_builtins: bool = True,
+        load_entry_points: bool = True,
     ) -> None:
         self.pm = pluggy.PluginManager("autoship")
         self.pm.add_hookspecs(AutoShipHookSpec)
@@ -119,7 +120,8 @@ class HookDispatcher:
         self._builtin_names: set[str] = set()
         if load_builtins:
             self._load_builtin()
-        self._discover_entry_points()
+        if load_entry_points:
+            self._discover_entry_points()
 
     def _load_builtin(self) -> None:
         """Load built-in plugins."""

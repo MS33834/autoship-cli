@@ -3,4 +3,4 @@
 from autoship.cli.main import cli_entrypoint
 
 if __name__ == "__main__":
-    cli_entrypoint()
+    raise SystemExit(cli_entrypoint())

@@ -6,7 +6,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Literal, cast
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 
 class Provider(str, Enum):
@@ -35,6 +35,9 @@ class ModelBackendConfig(BaseModel):
     priority: int = 0
 
 
+SUPPORTED_CLEAN_TOOLS = frozenset({"autoflake", "black", "ruff", "isort"})
+
+
 class CleanConfig(BaseModel):
     """Configuration for the `clean` command."""
 
@@ -42,6 +45,14 @@ class CleanConfig(BaseModel):
     tools: list[str] = ["autoflake", "black"]
     dry_run: bool = False
     exclude: list[str] = Field(default_factory=list)
+
+    @field_validator("tools", mode="after")
+    @classmethod
+    def _validate_tools(cls, tools: list[str]) -> list[str]:
+        unsupported = [tool for tool in tools if tool not in SUPPORTED_CLEAN_TOOLS]
+        if unsupported:
+            raise ValueError(f"Unsupported clean tools: {', '.join(unsupported)}")
+        return tools
 
 
 class CommitConfig(BaseModel):

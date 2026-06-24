@@ -26,7 +26,6 @@ SYSTEM_CONFIG_FILE = Path("/etc/autoship.toml")
 GLOBAL_CONFIG_DIR = Path.home() / ".config" / "autoship"
 GLOBAL_CONFIG_FILE = GLOBAL_CONFIG_DIR / "config.toml"
 ENV_PREFIX = "AUTOSHIP_"
-SUPPORTED_CLEAN_TOOLS = {"autoflake", "black", "isort", "ruff"}
 
 # Environment variables may only override fields explicitly listed here.
 # Sensitive keys are blocked regardless of whether they appear in this list.
@@ -228,14 +227,6 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
     return merged
 
 
-def _validate_clean_tools(cfg: dict[str, Any]) -> None:
-    """Validate that configured cleanup tools are supported."""
-    tools = cfg.get("clean", {}).get("tools", [])
-    unknown = [tool for tool in tools if tool not in SUPPORTED_CLEAN_TOOLS]
-    if unknown:
-        raise ConfigError(f"Unsupported clean tools: {', '.join(unknown)}")
-
-
 def load_config(
     config_path: Path | None = None,
     project_root: Path | None = None,
@@ -289,8 +280,6 @@ def load_config(
         merged = _deep_merge(merged, cli_overrides)
 
     merged["project_root"] = str(project_root)
-
-    _validate_clean_tools(merged)
 
     try:
         config: AppConfig = AppConfig.model_validate(merged)

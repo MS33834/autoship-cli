@@ -139,8 +139,20 @@ def _print_suggestion(i18n: I18n, exc: AutoShipError) -> None:
 def cli_entrypoint() -> int:
     """Top-level entry point used by ``autoship`` console script."""
     logger = structlog.get_logger()
-    config = load_config()
-    i18n = get_i18n(config.locale)
+    start = time.perf_counter()
+    command = _guess_command()
+    exit_code = 0
+    exc_record: BaseException | None = None
+
+    try:
+        config = load_config()
+        i18n = get_i18n(config.locale)
+    except ConfigError as exc:
+        i18n = get_i18n()
+        typer.secho(i18n._("error.prefix", exc=exc), fg=typer.colors.RED, err=True)
+        _print_suggestion(i18n, exc)
+        return exc.code
+
     telemetry = TelemetryCollector(
         enabled=config.telemetry.enabled,
         endpoint=str(config.telemetry.endpoint) if config.telemetry.endpoint else None,
@@ -148,10 +160,6 @@ def cli_entrypoint() -> int:
         allow_untrusted=config.telemetry.allow_untrusted_endpoint,
         batch_size=config.telemetry.batch_size,
     )
-    start = time.perf_counter()
-    command = _guess_command()
-    exit_code = 0
-    exc_record: BaseException | None = None
 
     if _is_unknown_command(command):
         typer.secho(i18n._("cli.unknown_command", command=command), fg=typer.colors.RED, err=True)

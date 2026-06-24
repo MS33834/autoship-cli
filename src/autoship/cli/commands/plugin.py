@@ -28,6 +28,32 @@ from autoship.utils.hashing import pip_cmd
 app = typer.Typer()
 
 
+def _read_project_name(source: str) -> str | None:
+    """Read ``project.name`` from a local ``pyproject.toml`` if present."""
+    path = Path(source)
+    if not path.is_dir():
+        return None
+    pyproject = path / "pyproject.toml"
+    if not pyproject.exists():
+        return None
+    try:
+        with pyproject.open("rb") as fh:
+            data: dict[str, Any] = tomllib.load(fh)  # type: ignore[assignment]
+        project = data.get("project", {})
+        if isinstance(project, dict):
+            project_dict = cast("dict[str, Any]", project)
+            return project_dict.get("name")
+        return None
+    except (OSError, tomllib.TOMLDecodeError):  # pyright: ignore[reportUnknownMemberType]
+        return None
+
+
+try:
+    import tomllib  # pyright: ignore[reportMissingImports, reportMissingTypeStubs]
+except ImportError:  # pragma: no cover
+    import tomli as tomllib  # pyright: ignore[reportMissingImports, reportMissingTypeStubs]
+
+
 def _run_pip_install(
     cmd: list[str],
     spec: str,
@@ -336,7 +362,7 @@ def install(
             typer.echo(f"Publisher: {publisher}")
     else:
         plugin_name = name or Path(source).name
-        package = source
+        package = _read_project_name(source) or plugin_name
         plugin_version = version or "0.0.0"
         plugin_trust = trust or TrustLevel.COMMUNITY
         source_for_pip = source
@@ -401,6 +427,7 @@ def install(
             name=plugin_name,
             version=plugin_version,
             source=source_for_pip,
+            package=package,
             entry_point=indexed.get("entry_point") if indexed else None,
             hooks=indexed.get("hooks", []) if indexed else [],
             trust_level=plugin_trust,
@@ -469,7 +496,8 @@ def uninstall(
     i18n: I18n = get_i18n_from_ctx(ctx)
     registry = PluginRegistry()
 
-    if not registry.get(name):
+    spec = registry.get(name)
+    if spec is None:
         raise PluginError(i18n._("plugin.not_registered", name=name))
 
     if not dry_run and not yes and not typer.confirm(i18n._("plugin.uninstall_confirm", name=name)):
@@ -480,10 +508,15 @@ def uninstall(
         typer.echo(i18n._("plugin.uninstall_dry_run", name=name))
         return
 
+    package = spec.package or name
     cmd = pip_cmd()
+    # ``uv pip uninstall`` does not support the ``-y`` flag that pip uses.
+    args = [*cmd, "uninstall", "--quiet", package]
+    if cmd[0] != "uv":
+        args.append("-y")
     try:
         subprocess.run(
-            [*cmd, "uninstall", "--quiet", "-y", name],
+            args,
             check=True,
             capture_output=True,
             text=True,

@@ -222,13 +222,10 @@ def _cvss_v3_base_score(vector: str) -> float | None:
     a = cia_map.get(metrics["A"])
     if any(metric is None for metric in (av, ac, pr, ui, c, i, a)):
         return None
-    assert av is not None
-    assert ac is not None
-    assert pr is not None
-    assert ui is not None
-    assert c is not None
-    assert i is not None
-    assert a is not None
+    av, ac, pr, ui, c, i, a = cast(
+        tuple[Decimal, Decimal, Decimal, Decimal, Decimal, Decimal, Decimal],
+        (av, ac, pr, ui, c, i, a),
+    )
 
     iss = Decimal("1") - (Decimal("1") - c) * (Decimal("1") - i) * (Decimal("1") - a)
     if scope_changed:

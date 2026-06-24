@@ -59,6 +59,7 @@ class PluginSpec(BaseModel):
     name: str
     version: str = "0.0.0"
     source: str
+    package: str | None = None
     entry_point: str | None = None
     hooks: list[str] = Field(default_factory=list)
     trust_level: TrustLevel = TrustLevel.COMMUNITY

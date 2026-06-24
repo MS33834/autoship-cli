@@ -81,7 +81,8 @@ def _load_toml(path: Path) -> dict[str, Any]:
         return {}
     with path.open("rb") as f:
         data: dict[str, Any] = cast(
-            dict[str, Any], tomllib.load(f)  # pyright: ignore[reportUnknownMemberType]
+            dict[str, Any],
+            tomllib.load(f),  # pyright: ignore[reportUnknownMemberType]
         )
         return data
 
