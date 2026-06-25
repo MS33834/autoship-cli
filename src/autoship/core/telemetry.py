@@ -26,6 +26,7 @@ import httpx
 import structlog
 
 from autoship.core.metrics import get_registry
+from autoship.utils.permissions import ensure_file_permissions
 from autoship.utils.redaction import SENSITIVE_VALUE_PATTERNS, is_sensitive_key
 
 logger = structlog.get_logger()
@@ -243,6 +244,7 @@ class TelemetryCollector:
         try:
             with log_path.open("a", encoding="utf-8") as fh:
                 fh.write(record + "\n")
+            ensure_file_permissions(log_path, 0o600)
         except OSError:
             logger.debug("telemetry.local_write_failed")
 

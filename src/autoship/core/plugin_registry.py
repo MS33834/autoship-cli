@@ -9,7 +9,11 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from autoship.utils.permissions import ensure_dir_permissions, ensure_file_permissions
+from autoship.utils.permissions import (
+    ensure_dir_permissions,
+    ensure_file_permissions,
+    warn_if_too_broad,
+)
 
 logger = logging.getLogger("autoship")
 
@@ -113,6 +117,9 @@ class PluginRegistry:
         """Load the registry from disk."""
         if not self.registry_file.exists():
             return
+        # Warn if registry file permissions are too permissive; the in-memory
+        # data is still loaded so that the CLI remains functional.
+        warn_if_too_broad(self.registry_file, 0o600)
         try:
             data = json.loads(self.registry_file.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:

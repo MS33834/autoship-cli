@@ -20,6 +20,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import urllib.parse
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -56,6 +57,12 @@ class SandboxRunner:
     - Only whitelisted environment variables are inherited.
     - If ``network`` is ``False`` and a supported network namespace tool is
       available, the command is wrapped to block network access.
+
+    **Important**: When ``network`` is ``True``, network access is **not**
+    restricted in any way.  The command runs with the same network access as
+    the parent process.  Full network isolation (e.g. egress filtering) is
+    planned for a future phase; until then, ``network=True`` provides no
+    network-level sandboxing.
 
     See the module docstring for the planned roadmap (filesystem isolation,
     cgroup limits, seccomp-bpf, etc.).
@@ -128,12 +135,28 @@ class SandboxRunner:
         return SandboxResult(returncode=proc.returncode, stdout=proc.stdout, stderr=proc.stderr)
 
     def _build_env(self) -> dict[str, str]:
-        """Return a minimal environment containing only whitelisted variables."""
-        return {key: value for key, value in os.environ.items() if key in self.env_whitelist}
+        """Return a minimal environment containing only whitelisted variables.
+
+        Credentials embedded in ``PIP_INDEX_URL`` (e.g.
+        ``https://user:pass@pypi.example.com/simple``) are stripped before
+        the value is passed into the sandbox so that third-party code cannot
+        exfiltrate them.
+        """
+        env = {key: value for key, value in os.environ.items() if key in self.env_whitelist}
+        if "PIP_INDEX_URL" in env and "@" in env["PIP_INDEX_URL"]:
+            parsed = urllib.parse.urlparse(env["PIP_INDEX_URL"])
+            if parsed.password and parsed.hostname:
+                safe_url = parsed._replace(
+                    netloc=parsed.hostname + (f":{parsed.port}" if parsed.port else "")
+                )
+                env["PIP_INDEX_URL"] = urllib.parse.urlunparse(safe_url)
+        return env
 
     def _wrap_network(self, command: list[str]) -> list[str]:
         """Wrap ``command`` with a network namespace tool when appropriate."""
         if self.network:
+            # network=True → no network restriction at all; the command runs
+            # with the same network access as the parent process.
             return command
 
         if shutil.which("unshare"):

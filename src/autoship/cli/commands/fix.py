@@ -18,6 +18,7 @@ from autoship.models.config import (
     ModelBackendConfig,
     Provider,
 )
+from autoship.utils.redaction import redact_text
 
 app = typer.Typer()
 
@@ -102,6 +103,7 @@ def fix(
         raise typer.BadParameter(i18n._("fix.no_error_log", path=str(source)))
 
     error_context = source.read_text(encoding="utf-8")
+    error_context = redact_text(error_context)
     if not error_context.strip():
         raise typer.BadParameter(i18n._("fix.empty_error_log", path=str(source)))
 

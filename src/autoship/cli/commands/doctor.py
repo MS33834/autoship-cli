@@ -17,7 +17,6 @@ from autoship.core.config_center import load_config
 from autoship.core.i18n import I18n, get_i18n_from_ctx
 from autoship.core.metrics import get_registry
 from autoship.core.model_router import ModelRouter
-from autoship.core.registry_client import get_registry_client
 from autoship.exceptions import ConfigError
 from autoship.models.config import AppConfig
 

@@ -63,8 +63,6 @@ _SAFE_KEYS = frozenset(
         "output",
         "result",
         "details",
-        "config",
-        "args",
         "cwd",
         "project_type",
         "detected",
@@ -95,6 +93,14 @@ class AuditLogger:
     Logs are written to ``~/.autoship/logs/audit.{YYYY-MM-DD}.jsonl``
     by default, or to ``config.audit_log_dir`` / ``config.audit.log_dir``
     when provided. Each command invocation shares a single ``trace_id``.
+
+    **Tamper Resistance**: This logger provides log integrity at the application
+    level (append-only writes, restrictive file permissions). It does **not**
+    provide cryptographic tamper evidence (no HMAC chaining, no write-ahead
+    log with checksums). An attacker with filesystem access to the log
+    directory can modify, truncate, or delete audit records. For stronger
+    guarantees, forward logs to a remote SIEM and rely on that system's
+    immutability guarantees.
     """
 
     def __init__(self, config: AppConfig) -> None:
@@ -215,6 +221,13 @@ class AuditLogger:
         """Remove audit log files older than the retention period.
 
         Returns the number of files removed.
+
+        **Limitation**: Retention is based on file modification time
+        (``st_mtime``), which is the last time the file was **written to**.
+        Files that are touched or restored without a new audit entry will
+        have an updated mtime and may be retained longer than expected.
+        This is a pragmatic trade-off for performance; timestamp extraction
+        from every record would require parsing every file in full.
         """
         if retention_days is None:
             retention_days = self.config.audit.retention_days

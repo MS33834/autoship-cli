@@ -70,7 +70,6 @@ ENV_ALLOWLIST = frozenset(
         "cache.enabled",
         "cache.ttl",
         "cache.dir",
-        "registry.url",
         "registry.cache_enabled",
         "registry.cache_ttl_seconds",
         "registry.public_key",

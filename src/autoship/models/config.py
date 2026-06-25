@@ -6,7 +6,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Literal
 
-from pydantic import AnyHttpUrl, BaseModel, Field, HttpUrl, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 
 class Provider(str, Enum):
@@ -179,7 +179,7 @@ class ModelConfig(BaseModel):
 class RegistryConfig(BaseModel):
     """Configuration for the plugin registry client."""
 
-    url: AnyHttpUrl = Field(
+    url: HttpUrl = Field(
         default="https://raw.githubusercontent.com/MS33834/autoship-cli/main/registry/plugins.json",
         validate_default=True,
     )

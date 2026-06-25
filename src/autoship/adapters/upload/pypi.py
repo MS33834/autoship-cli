@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
@@ -25,6 +26,11 @@ class PyPIUploader(UploadAdapter):
         *,
         tool_verifier: ToolVerifier | None = None,
     ) -> None:
+        if not re.fullmatch(r"[a-zA-Z0-9\-]+", repository):
+            raise ValueError(
+                f"Invalid repository name: {repository!r}. "
+                "Only alphanumeric characters and hyphens are allowed."
+            )
         self.project_root = project_root
         self.repository = repository
         self.repository_url = repository_url

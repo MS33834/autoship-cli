@@ -179,12 +179,25 @@ def _builtin_format_file(file_path: Path) -> bool:
     return False
 
 
+def _is_within_project(path: Path, project_root: Path) -> bool:
+    """Return True when ``path`` resolves to a location inside ``project_root``."""
+    try:
+        resolved = path.resolve()
+        root = project_root.resolve()
+        return resolved.is_relative_to(root)
+    except (OSError, ValueError, RuntimeError):
+        return False
+
+
 def _collect_source_files(paths: list[Path], project_root: Path) -> list[Path]:
     """Collect source files from the requested paths.
 
     Covers all extensions in :data:`_SOURCE_EXTENSIONS`. Directories listed in
     :data:`_EXCLUDED_DIRS` (e.g. ``node_modules``, ``.git``, ``target``) are
     pruned from the recursive scan so that dependency trees are not formatted.
+
+    Paths that resolve outside ``project_root`` are silently skipped to
+    prevent path-traversal attacks (e.g. ``../../etc/passwd``).
     """
 
     def _is_source(p: Path) -> bool:
@@ -196,12 +209,14 @@ def _collect_source_files(paths: list[Path], project_root: Path) -> list[Path]:
     result: list[Path] = []
     for p in paths:
         target = (project_root / p).resolve() if not p.is_absolute() else p.resolve()
+        if not _is_within_project(target, project_root):
+            continue
         if target.is_file() and _is_source(target) and not _is_excluded(target):
             result.append(target)
         elif target.is_dir():
             for ext in _SOURCE_EXTENSIONS:
                 for f in target.rglob(f"*{ext}"):
-                    if f.is_file() and not _is_excluded(f):
+                    if f.is_file() and not _is_excluded(f) and _is_within_project(f, project_root):
                         result.append(f)
     return result
 
