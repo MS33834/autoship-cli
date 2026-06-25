@@ -4,8 +4,14 @@ title = "AutoShip CLI gitleaks config"
 useDefault = true
 
 [allowlist]
-description = "Test fixtures with fake secrets"
+description = "Test/dogfood fixtures with fake (non-prod) secrets"
 paths = [
   '''tests/test_audit_logger.py''',
   '''tests/core/test_telemetry.py''',
+  '''tests/core/test_model_router.py''',
+  '''tests/adapters/test_openai.py''',
+  '''tests/adapters/test_openrouter.py''',
+  '''tests/cli/commands/test_verify.py''',
+  '''dogfood/real_world/phase_a.py''',
+  '''dogfood/real_world/phase_c.py''',
 ]
