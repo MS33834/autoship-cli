@@ -147,10 +147,13 @@ def verify(
         _handle_error(context, exc, audit, i18n)
         raise VerifyError(i18n._("verify.run_failed", exc=exc)) from exc
 
+    stdout_redacted = redact_text(result.stdout)
+    stderr_redacted = redact_text(result.stderr)
+
     if verbose:
-        typer.echo(result.stdout)
+        typer.echo(stdout_redacted)
     if result.stderr:
-        typer.secho(result.stderr, fg=typer.colors.YELLOW, err=True)
+        typer.secho(stderr_redacted, fg=typer.colors.YELLOW, err=True)
 
     if result.returncode != 0:
         _write_error_log(result.stdout, result.stderr)
@@ -159,8 +162,8 @@ def verify(
             {
                 "command": command,
                 "returncode": result.returncode,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
+                "stdout": stdout_redacted,
+                "stderr": stderr_redacted,
             },
         )
         error = VerifyError(
@@ -169,7 +172,11 @@ def verify(
                 code=result.returncode,
                 command=command,
             ),
-            details={"command": command, "stdout": result.stdout, "stderr": result.stderr},
+            details={
+                "command": command,
+                "stdout": stdout_redacted,
+                "stderr": stderr_redacted,
+            },
         )
         _handle_error(context, error, audit, i18n)
         raise error

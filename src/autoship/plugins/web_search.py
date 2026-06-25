@@ -19,6 +19,7 @@ from autoship.adapters.web_search import (
     WebSearchResult,
     format_results,
 )
+from autoship.core.audit_logger import redact_text
 from autoship.core.context import CommandContext
 from autoship.core.fix import FixSuggestion
 from autoship.core.metrics import get_registry
@@ -137,8 +138,9 @@ def _build_query(error: Exception) -> str:
     """Create a concise search query from an error."""
     if isinstance(error, VerifyError):
         command = error.details.get("command", "")
-        stderr = error.details.get("stderr", "")
-        return f"{command} {stderr[:200]}".strip()
+        stderr_raw = error.details.get("stderr", "")
+        stderr = redact_text(stderr_raw)[:200]
+        return f"{command} {stderr}".strip()
     return str(error)[:200]
 
 

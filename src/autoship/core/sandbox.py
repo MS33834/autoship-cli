@@ -125,44 +125,7 @@ class SandboxRunner:
         except (OSError, FileNotFoundError) as exc:
             return SandboxResult(returncode=-1, stdout="", stderr=str(exc))
 
-        if wrapped != command and proc.returncode != 0 and self._is_tool_failure(proc.stderr):
-            logger.warning(
-                "Network sandbox tool failed (%s); retrying without network isolation",
-                proc.stderr.strip(),
-            )
-            try:
-                proc = subprocess.run(
-                    command,
-                    cwd=cwd,
-                    env=env,
-                    input=input_text,
-                    capture_output=True,
-                    text=True,
-                    timeout=timeout,
-                )
-            except subprocess.TimeoutExpired as exc:
-                return SandboxResult(
-                    returncode=-1,
-                    stdout=_decode_stream(exc.stdout) or "",
-                    stderr=_decode_stream(exc.stderr) or "Sandbox execution timed out",
-                )
-            except (OSError, FileNotFoundError) as exc:
-                return SandboxResult(returncode=-1, stdout="", stderr=str(exc))
-
         return SandboxResult(returncode=proc.returncode, stdout=proc.stdout, stderr=proc.stderr)
-
-    @staticmethod
-    def _is_tool_failure(stderr: str) -> bool:
-        """Return True when stderr indicates the sandbox tool itself failed."""
-        indicators = [
-            "Operation not permitted",
-            "unshare failed",
-            "firejail failed",
-            "permission denied",
-            "No such file or directory",
-        ]
-        text = stderr.lower()
-        return any(indicator.lower() in text for indicator in indicators)
 
     def _build_env(self) -> dict[str, str]:
         """Return a minimal environment containing only whitelisted variables."""

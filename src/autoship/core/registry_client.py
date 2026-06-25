@@ -23,6 +23,10 @@ from autoship.utils.permissions import ensure_dir_permissions, ensure_file_permi
 
 logger = logging.getLogger("autoship")
 
+# Track whether the missing-public-key warning has already been emitted
+# so users are not spammed on every registry access.
+_missing_key_warned: bool = False
+
 
 DEFAULT_CACHE_DIR = Path.home() / ".cache" / "autoship"
 DEFAULT_CACHE_FILE = DEFAULT_CACHE_DIR / "registry.json"
@@ -100,6 +104,8 @@ class RegistryClient:
             RegistryError: If the sha256 hash does not match or if signature
                 verification fails / is required but missing.
         """
+        global _missing_key_warned
+
         payload = self._canonical_payload(data)
 
         expected_sha256 = data.get("sha256")
@@ -128,6 +134,13 @@ class RegistryClient:
         elif public_key_b64 is not None and signature_b64 is None:
             raise RegistryError(
                 "Registry index is not signed but a public key is configured",
+            )
+        elif signature_b64 is not None and not _missing_key_warned:
+            _missing_key_warned = True
+            logger.warning(
+                "Registry index contains a signature but no public_key is "
+                "configured — signature verification is skipped. Set "
+                "`registry.public_key` in your config to enable verification."
             )
 
     def _fetch_remote(self) -> dict[str, Any] | None:

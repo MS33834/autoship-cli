@@ -33,6 +33,24 @@ class WebSearchError(Exception):
     """Raised when a web search request fails."""
 
 
+def _format_search_error(provider: str, exc: Exception) -> str:
+    """Return a redacted, provider-agnostic error message for *exc*.
+
+    ``httpx.HTTPError`` string representations may contain request URLs
+    that include API keys or search engine IDs, so this helper avoids
+    interpolating the raw exception text into user-facing messages.
+    """
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"{provider} search returned HTTP {exc.response.status_code}"
+    if isinstance(exc, httpx.TimeoutException):
+        return f"{provider} search request timed out"
+    if isinstance(exc, httpx.RequestError):
+        return f"{provider} search request failed"
+    if isinstance(exc, ValueError):
+        return f"{provider} search returned invalid JSON"
+    return f"{provider} search request failed"
+
+
 def _search_cache_key(provider: str, query: str, max_results: int) -> str:
     """Return a SHA256 cache key for a search query."""
     payload = json.dumps(
@@ -126,7 +144,7 @@ class WebSearchAdapter:
             response = httpx.get(url, timeout=self.timeout, follow_redirects=True)
             response.raise_for_status()
         except httpx.HTTPError as exc:
-            raise WebSearchError(f"Web search request failed: {exc}") from exc
+            raise WebSearchError(_format_search_error("DuckDuckGo", exc)) from exc
 
         results = self._parse_duckduckgo(response.text, max_results)
         if self.cache is not None:
@@ -207,7 +225,7 @@ class BraveSearchAdapter:
             )
             response.raise_for_status()
         except httpx.HTTPError as exc:
-            raise WebSearchError(f"Brave search request failed: {exc}") from exc
+            raise WebSearchError(_format_search_error("Brave", exc)) from exc
 
         payload = cast(_BraveSearchResponse, response.json())
         results = self._parse_brave(payload, max_results)
@@ -273,7 +291,7 @@ class GoogleSearchAdapter:
             )
             response.raise_for_status()
         except httpx.HTTPError as exc:
-            raise WebSearchError(f"Google search request failed: {exc}") from exc
+            raise WebSearchError(_format_search_error("Google", exc)) from exc
 
         payload = cast(_GoogleSearchResponse, response.json())
         return self._parse_google(payload, max_results)
@@ -328,7 +346,7 @@ class SearxngSearchAdapter:
             )
             response.raise_for_status()
         except httpx.HTTPError as exc:
-            raise WebSearchError(f"SearXNG search request failed: {exc}") from exc
+            raise WebSearchError(_format_search_error("SearXNG", exc)) from exc
 
         payload = cast(_SearxngSearchResponse, response.json())
         return self._parse_searxng(payload, max_results)

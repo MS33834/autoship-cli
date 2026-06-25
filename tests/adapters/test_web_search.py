@@ -52,7 +52,7 @@ def test_search_http_error_raises() -> None:
     adapter = WebSearchAdapter()
     with (
         patch.object(httpx, "get", side_effect=httpx.ConnectError("no network")),
-        pytest.raises(WebSearchError, match="Web search request failed"),
+        pytest.raises(WebSearchError, match="DuckDuckGo search request failed"),
     ):
         adapter.search("pytest error")
 

@@ -122,6 +122,8 @@ def _resolve_install_source(
     i18n: I18n,
     plugin_name: str,
     operation: str = "install",
+    *,
+    trust_level: TrustLevel = TrustLevel.COMMUNITY,
 ) -> tuple[str, Path | None]:
     """Download and verify a package when the registry provides a checksum.
 
@@ -133,6 +135,10 @@ def _resolve_install_source(
     public_key_b64 = _public_key_b64(config)
 
     if sha256_hex is None:
+        if trust_level == TrustLevel.COMMUNITY:
+            typer.echo(
+                i18n._("plugin.install_no_checksum", plugin_name=plugin_name), err=True
+            )
         return source_for_pip, None
 
     try:
@@ -406,7 +412,13 @@ def install(
     cmd = pip_cmd()
     config = ctx.obj.get("config")
     install_spec, downloaded_path = _resolve_install_source(
-        source_for_pip, indexed, config, i18n, plugin_name, operation="install"
+        source_for_pip,
+        indexed,
+        config,
+        i18n,
+        plugin_name,
+        operation="install",
+        trust_level=plugin_trust,
     )
     try:
         result = _run_pip_install(
@@ -467,6 +479,21 @@ def _confirm_trust(
     skip_trust_check: bool,
 ) -> None:
     """Prompt the user when installing plugins that are not fully trusted."""
+    # VERIFIED plugins that lack a sha256 checksum always show a strong
+    # warning.  With --yes the warning is still printed but the install
+    # proceeds without an interactive prompt; without --yes the user must
+    # explicitly confirm.
+    if (
+        plugin_trust == TrustLevel.VERIFIED
+        and indexed
+        and not indexed.get("sha256")
+        and not indexed.get("signature")
+    ):
+        typer.echo(i18n._("plugin.install_unverified_signature", plugin_name=plugin_name))
+        if not yes and not typer.confirm(i18n._("plugin.install_trust_confirm"), abort=False):
+            typer.echo(i18n._("common.aborted"))
+            raise typer.Exit(code=0)
+
     if skip_trust_check or yes:
         return
 
@@ -487,17 +514,6 @@ def _confirm_trust(
             typer.echo(i18n._("common.aborted"))
             raise typer.Exit(code=0)
         return
-
-    if (
-        plugin_trust == TrustLevel.VERIFIED
-        and indexed
-        and not indexed.get("sha256")
-        and not indexed.get("signature")
-    ):
-        typer.echo(i18n._("plugin.install_unverified_signature", plugin_name=plugin_name))
-        if not typer.confirm(i18n._("plugin.install_trust_confirm"), abort=False):
-            typer.echo(i18n._("common.aborted"))
-            raise typer.Exit(code=0)
 
 
 @app.command("uninstall")
@@ -708,7 +724,13 @@ def update(
         )
 
         install_spec, downloaded_path = _resolve_install_source(
-            source_for_pip, indexed, config, i18n, plugin.name, operation="update"
+            source_for_pip,
+            indexed,
+            config,
+            i18n,
+            plugin.name,
+            operation="update",
+            trust_level=plugin.trust_level,
         )
         try:
             result = _run_pip_install(

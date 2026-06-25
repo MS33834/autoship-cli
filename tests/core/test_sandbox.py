@@ -98,38 +98,6 @@ def test_decode_stream_passes_through_str() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _is_tool_failure
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    "stderr",
-    [
-        "Operation not permitted",
-        "unshare failed: cannot create namespace",
-        "firejail failed to start",
-        "permission denied for /tmp/sandbox",
-        "No such file or directory",
-    ],
-)
-def test_is_tool_failure_detects_known_indicators(stderr: str) -> None:
-    assert SandboxRunner._is_tool_failure(stderr) is True
-
-
-@pytest.mark.parametrize(
-    "stderr",
-    [
-        "ModuleNotFoundError: No module named 'requests'",
-        "SyntaxError: invalid syntax",
-        "command exited with code 1",
-        "",
-    ],
-)
-def test_is_tool_failure_returns_false_for_clean_errors(stderr: str) -> None:
-    assert SandboxRunner._is_tool_failure(stderr) is False
-
-
-# ---------------------------------------------------------------------------
 # Timeout handling
 # ---------------------------------------------------------------------------
 

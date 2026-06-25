@@ -17,6 +17,7 @@ from autoship.core.config_center import load_config
 from autoship.core.i18n import I18n, get_i18n_from_ctx
 from autoship.core.metrics import get_registry
 from autoship.core.model_router import ModelRouter
+from autoship.core.registry_client import get_registry_client
 from autoship.exceptions import ConfigError
 from autoship.models.config import AppConfig
 
@@ -233,6 +234,19 @@ def check_observability(i18n: I18n) -> CheckResult:
     )
 
 
+def check_registry_signature(config: AppConfig, i18n: I18n) -> CheckResult:
+    """Warn when the registry public_key is not configured."""
+    public_key = config.registry.public_key if config.registry else None
+    if not public_key:
+        return CheckResult(
+            "registry-signature",
+            Status.WARNING,
+            i18n._("doctor.registry_sig_unconfigured"),
+            i18n._("doctor.registry_sig_suggestion"),
+        )
+    return CheckResult("registry-signature", Status.OK, i18n._("doctor.registry_sig_ok"))
+
+
 def build_report(i18n: I18n) -> DoctorReport:
     report = DoctorReport()
     report.add(**check_python(i18n).__dict__)
@@ -254,6 +268,7 @@ def build_report(i18n: I18n) -> DoctorReport:
     report.add(**check_model_backend(config, i18n).__dict__)
     report.add(**check_directories(config, i18n).__dict__)
     report.add(**check_cache(config, i18n).__dict__)
+    report.add(**check_registry_signature(config, i18n).__dict__)
     report.add(**check_observability(i18n).__dict__)
     return report
 

@@ -217,7 +217,7 @@ def test_brave_search_http_error_raises() -> None:
             return_value=httpx.Response(401, text="Unauthorized")
         )
         adapter = BraveSearchAdapter(api_key="bad-key")
-        with pytest.raises(WebSearchError, match="Brave search request failed"):
+        with pytest.raises(WebSearchError, match="Brave search returned HTTP 401"):
             adapter.search("pytest error", max_results=2)
 
     assert route.called
@@ -305,7 +305,7 @@ def test_google_search_http_error_raises() -> None:
             return_value=httpx.Response(403, text="Forbidden")
         )
         adapter = GoogleSearchAdapter(api_key="bad-key", cx="bad-cx")
-        with pytest.raises(WebSearchError, match="Google search request failed"):
+        with pytest.raises(WebSearchError, match="Google search returned HTTP 403"):
             adapter.search("pytest error", max_results=2)
 
     assert route.called
@@ -379,7 +379,7 @@ def test_searxng_search_http_error_raises() -> None:
             return_value=httpx.Response(500, text="Internal Server Error")
         )
         adapter = SearxngSearchAdapter(instance_url="https://searx.example.com")
-        with pytest.raises(WebSearchError, match="SearXNG search request failed"):
+        with pytest.raises(WebSearchError, match="SearXNG search returned HTTP 500"):
             adapter.search("pytest error", max_results=2)
 
     assert route.called
