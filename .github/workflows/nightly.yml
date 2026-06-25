@@ -116,6 +116,7 @@ jobs:
           path: dist/*
 
       - name: Build executable
+        shell: bash
         run: |
           uv run pyinstaller --onefile --name autoship src/autoship/__main__.py
           mkdir -p dist/bin
@@ -126,6 +127,7 @@ jobs:
           fi
 
       - name: Generate SHA256 checksum
+        shell: bash
         run: |
           uv run python - <<'PY'
           import hashlib
