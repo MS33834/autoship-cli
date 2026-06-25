@@ -320,7 +320,9 @@ def doctor(
         tools_status = _worst(
             [
                 checks_index.get("clean-toolchain", CheckResult("", Status.OK, "")).status.value,
-                checks_index.get("plugin-dependencies", CheckResult("", Status.OK, "")).status.value,
+                checks_index.get(
+                    "plugin-dependencies", CheckResult("", Status.OK, "")
+                ).status.value,
             ]
         )
 

@@ -38,9 +38,7 @@ def upload(
         None, "--repository-url", help=_i18n._("upload.option.repository_url")
     ),
     registry: str | None = typer.Option(None, "--registry", help=_i18n._("upload.option.registry")),
-    dry_run: bool = typer.Option(
-        False, "--dry-run", "-n", help=_i18n._("upload.option.dry_run")
-    ),
+    dry_run: bool = typer.Option(False, "--dry-run", "-n", help=_i18n._("upload.option.dry_run")),
 ) -> None:
     """Upload artifacts to a configured target."""
     from autoship.adapters.upload.pypi import PyPIUploader
@@ -97,9 +95,7 @@ def upload(
         uploader = get_uploader(target, config.project_root, uploader_cfg)
     except ConfigError as exc:
         if dry_run:
-            typer.echo(
-                i18n._("upload.dry_run_not_configured", target=target, reason=str(exc))
-            )
+            typer.echo(i18n._("upload.dry_run_not_configured", target=target, reason=str(exc)))
             audit.record("upload.dry_run_not_configured", {"target": target, "reason": str(exc)})
             return
         raise

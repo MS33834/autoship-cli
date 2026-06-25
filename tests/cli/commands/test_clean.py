@@ -207,9 +207,7 @@ class TestCompressInlineSpaces:
 class TestBuiltinFormatFile:
     """Tests for the _builtin_format_file helper."""
 
-    def test_formats_file_with_trailing_whitespace_and_blank_lines(
-        self, tmp_path: Path
-    ) -> None:
+    def test_formats_file_with_trailing_whitespace_and_blank_lines(self, tmp_path: Path) -> None:
         """File with trailing whitespace, blank lines, and inline double spaces."""
         f = tmp_path / "test.py"
         f.write_text("def foo():  \n\n\n    x  =  1\n    return  x\n")
@@ -400,9 +398,7 @@ class TestCollectSourceFiles:
 class TestCleanBuiltinFallback:
     """Integration tests exercising the built-in formatting path."""
 
-    def test_builtin_format_when_tools_missing(
-        self, tmp_path: Path, app_config: AppConfig
-    ) -> None:
+    def test_builtin_format_when_tools_missing(self, tmp_path: Path, app_config: AppConfig) -> None:
         """When autoflake/black are missing, all source files get builtin formatting."""
         app_config.project_root = tmp_path
 
@@ -426,9 +422,7 @@ class TestCleanBuiltinFallback:
 
         assert f.read_text() == "def foo():\n\n    x = 1\n    return x\n"
 
-    def test_builtin_format_non_python_files(
-        self, tmp_path: Path, app_config: AppConfig
-    ) -> None:
+    def test_builtin_format_non_python_files(self, tmp_path: Path, app_config: AppConfig) -> None:
         """External tools handle Python; built-in handles JS/RS etc."""
         app_config.project_root = tmp_path
 
@@ -452,9 +446,7 @@ class TestCleanBuiltinFallback:
 
         assert f.read_text() == "function foo() {\n\n    var x = 1;\n}\n"
 
-    def test_dry_run_does_not_modify_files(
-        self, tmp_path: Path, app_config: AppConfig
-    ) -> None:
+    def test_dry_run_does_not_modify_files(self, tmp_path: Path, app_config: AppConfig) -> None:
         """In dry-run mode, builtin formatting does NOT write to disk."""
         app_config.project_root = tmp_path
 
@@ -479,9 +471,7 @@ class TestCleanBuiltinFallback:
 
         assert f.read_text() == original
 
-    def test_noop_when_nothing_to_format(
-        self, tmp_path: Path, app_config: AppConfig
-    ) -> None:
+    def test_noop_when_nothing_to_format(self, tmp_path: Path, app_config: AppConfig) -> None:
         """No tools missing and no non-Python files → no-op path."""
         app_config.project_root = tmp_path
 
@@ -502,9 +492,7 @@ class TestCleanBuiltinFallback:
 
         ctx.obj["audit_logger"].record.assert_any_call("clean.noop")
 
-    def test_verbose_shows_formatted_filename(
-        self, tmp_path: Path, app_config: AppConfig
-    ) -> None:
+    def test_verbose_shows_formatted_filename(self, tmp_path: Path, app_config: AppConfig) -> None:
         """In verbose mode, builtin formatting prints the formatted filename."""
         app_config.project_root = tmp_path
 
@@ -527,10 +515,7 @@ class TestCleanBuiltinFallback:
         ):
             clean.clean(ctx, paths=[Path(".")], check=False)
 
-        formatted_calls = [
-            c for c in mock_echo.call_args_list
-            if "Formatted:" in str(c)
-        ]
+        formatted_calls = [c for c in mock_echo.call_args_list if "Formatted:" in str(c)]
         assert len(formatted_calls) >= 1
 
     def test_noop_when_builtin_makes_no_changes(
@@ -560,9 +545,7 @@ class TestCleanBuiltinFallback:
 
         ctx.obj["audit_logger"].record.assert_any_call("clean.noop")
 
-    def test_verbose_shows_diff_from_tools(
-        self, tmp_path: Path, app_config: AppConfig
-    ) -> None:
+    def test_verbose_shows_diff_from_tools(self, tmp_path: Path, app_config: AppConfig) -> None:
         """When external tools produce a diff and verbose is on, diff is echoed."""
         app_config.project_root = tmp_path
 
@@ -583,9 +566,7 @@ class TestCleanBuiltinFallback:
 
         # Test passes if no exception — the diff is echoed (covered by line 278)
 
-    def test_dry_run_shows_diff_from_tools(
-        self, tmp_path: Path, app_config: AppConfig
-    ) -> None:
+    def test_dry_run_shows_diff_from_tools(self, tmp_path: Path, app_config: AppConfig) -> None:
         """When external tools produce a diff and dry_run is on, diff is echoed."""
         app_config.project_root = tmp_path
 
@@ -610,4 +591,3 @@ class TestCleanBuiltinFallback:
         assert len(diff_calls) >= 1
         # apply is still called in external tool dry_run mode
         mock_apply.assert_called_once()
-

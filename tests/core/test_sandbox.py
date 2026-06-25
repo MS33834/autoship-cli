@@ -106,7 +106,9 @@ def test_sandbox_timeout_produces_error_result() -> None:
     import subprocess
 
     runner = SandboxRunner(network=True)
-    with patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired(cmd=["sleep"], timeout=0.1)):
+    with patch.object(
+        subprocess, "run", side_effect=subprocess.TimeoutExpired(cmd=["sleep"], timeout=0.1)
+    ):
         result = runner.run(["sleep", "10"], timeout=0.1)
     assert result.returncode == -1
     assert "timed out" in result.stderr.lower()

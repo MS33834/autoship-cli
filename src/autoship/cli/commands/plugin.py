@@ -136,9 +136,7 @@ def _resolve_install_source(
 
     if sha256_hex is None:
         if trust_level == TrustLevel.COMMUNITY:
-            typer.echo(
-                i18n._("plugin.install_no_checksum", plugin_name=plugin_name), err=True
-            )
+            typer.echo(i18n._("plugin.install_no_checksum", plugin_name=plugin_name), err=True)
         return source_for_pip, None
 
     try:

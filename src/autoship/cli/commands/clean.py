@@ -30,19 +30,40 @@ _PYTHON_EXTENSIONS = frozenset({".py", ".pyi", ".pyx", ".pxd"})
 # compression, trailing newline) apply uniformly to all of these languages.
 _SOURCE_EXTENSIONS = frozenset(
     {
-        ".py", ".pyi", ".pyx", ".pxd",
-        ".js", ".ts", ".jsx", ".tsx",
-        ".rs", ".go", ".java",
-        ".c", ".cpp", ".h", ".rb",
+        ".py",
+        ".pyi",
+        ".pyx",
+        ".pxd",
+        ".js",
+        ".ts",
+        ".jsx",
+        ".tsx",
+        ".rs",
+        ".go",
+        ".java",
+        ".c",
+        ".cpp",
+        ".h",
+        ".rb",
     }
 )
 
 # Directories that should never be scanned by the built-in formatter.
 _EXCLUDED_DIRS = frozenset(
     {
-        "__pycache__", ".git", ".venv", "venv", "env",
-        "node_modules", "target", "build", "dist",
-        ".tox", ".mypy_cache", ".ruff_cache", ".pytest_cache",
+        "__pycache__",
+        ".git",
+        ".venv",
+        "venv",
+        "env",
+        "node_modules",
+        "target",
+        "build",
+        "dist",
+        ".tox",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".pytest_cache",
     }
 )
 
@@ -151,10 +172,7 @@ def _builtin_format_file(file_path: Path) -> bool:
     lines = content.splitlines(keepends=True)
 
     # 1. Strip trailing whitespace from each line
-    lines = [
-        (line.rstrip() + "\n") if line.endswith("\n") else line.rstrip()
-        for line in lines
-    ]
+    lines = [(line.rstrip() + "\n") if line.endswith("\n") else line.rstrip() for line in lines]
 
     # 2. Compress runs of 2+ inline spaces into a single space, while
     #    preserving indentation and string literal contents.
@@ -317,8 +335,14 @@ def clean(
 
     if not diff.strip():
         _run_builtin_format_fallback(
-            config, paths, config.project_root, dry_run,
-            verbose, audit, i18n, context,
+            config,
+            paths,
+            config.project_root,
+            dry_run,
+            verbose,
+            audit,
+            i18n,
+            context,
         )
         return
 
