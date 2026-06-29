@@ -201,7 +201,7 @@ jobs:
         run: uv run cyclonedx-py environment -o dist/bin/sbom.json --pyproject pyproject.toml
 
       - name: Upload binary artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: binary-${{ matrix.os }}
           path: dist/bin/*
