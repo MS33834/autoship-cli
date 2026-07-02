@@ -16,11 +16,19 @@ each affected command is reported as SKIP and the script exits 0 — CI
 environments without the CLI installed should not fail the pipeline.
 
 Stdlib only. Used by the CI ``docs`` job.
+
+The ``--help`` output is rendered by typer/click. With ``rich`` installed typer
+draws a decorated panel (``╭─ Options ─`` with ``│ --xxx`` rows); without
+``rich`` it falls back to plain click text (an ``Options:`` section with
+``  --xxx  description`` rows, and a ``Commands:`` section for groups). Both
+layouts are parsed, and the subprocess environment is pinned so the captured
+help is identical in a local TTY and in CI's non-TTY context.
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import pathlib
 import re
 import subprocess
@@ -40,9 +48,19 @@ COMMANDS: tuple[str, ...] = (
     "config",
 )
 OPTION_RE = re.compile(r"--[a-zA-Z][a-zA-Z0-9-]*")
-# A subcommand row inside the "Commands" section of a typer group's --help.
-# Matches lines like ``│ show    Display collected runtime metrics.``.
-SUBCOMMAND_RE = re.compile(r"^│\s+([a-zA-Z][a-zA-Z0-9_-]*)\s")
+# Leading decoration of an option row: whitespace, rich box-drawing characters,
+# and typer's required-option marker (``*``). Stripping this lets a row be
+# matched whether it is rendered inside a panel (``│ *  --target ...``) or as
+# plain click text (``  --target ...``).
+OPTION_LEAD_RE = re.compile(r"^[\s│┃┆┇┊┋║╭╮╰╯─━┄┅┈┉╟╢╞╡]*\*?\s*")
+# ANSI color/style escape sequences (defensively stripped from captured help,
+# e.g. when a downstream library forces terminal mode in CI).
+ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+# A subcommand row: an optional box vertical bar, indent, the name, then either
+# 2+ spaces (gap before its description) or end of line. Works for both the
+# rich panel layout (``│ list   ...``) and plain click text (``  list   ...``)
+# while ignoring wrapped description continuation lines.
+SUBCOMMAND_RE = re.compile(r"^[│┃]?\s*([a-zA-Z][a-zA-Z0-9_-]*)(?:\s{2,}|$)")
 # Typer/click built-in options that are not documented per-command.
 BUILTIN_OPTIONS: frozenset[str] = frozenset({"--help", "--install-completion", "--show-completion"})
 # Global / built-in options that are not reliably surfaced by a subcommand's
@@ -53,27 +71,54 @@ IGNORED_OPTIONS: frozenset[str] = frozenset(
 )
 
 
+def _strip_ansi(text: str) -> str:
+    return ANSI_RE.sub("", text)
+
+
 def parse_help_options(text: str) -> set[str]:
-    """Extract long option names (``--xxx``) from typer --help output."""
-    found: set[str] = {match.group(0) for match in OPTION_RE.finditer(text)}
-    return found - BUILTIN_OPTIONS
+    """Extract long option names (``--xxx``) from typer --help output.
+
+    Works for both the rich panel layout (``│ --type TEXT  ...`` and the
+    required-marker form ``│ *  --target ...``) and the plain click layout
+    (``  --type TEXT  ...``). Only lines that begin with a dash after stripping
+    leading decoration are inspected, so option-like tokens appearing in prose
+    descriptions are not picked up. All long options on such a line are
+    collected so a toggle rendered as ``--edit  --no-edit`` yields both.
+    """
+    options: set[str] = set()
+    for line in _strip_ansi(text).splitlines():
+        stripped = OPTION_LEAD_RE.sub("", line)
+        if not stripped.startswith("-"):
+            continue
+        for match in OPTION_RE.finditer(stripped):
+            options.add(match.group(0))
+    return options - BUILTIN_OPTIONS
 
 
 def parse_subcommands(text: str) -> list[str]:
     """Extract subcommand names from a typer group's ``--help`` output.
 
-    Typer renders the subcommand list inside a rich box titled ``Commands``
-    (``╭─ Commands ─...``). Each row looks like ``│ show   <description>``.
-    Returns the subcommand names in display order; empty for leaf commands.
+    Handles both the rich panel layout (header ``╭─ Commands ─`` with ``│ name``
+    rows closed by ``╰``) and the plain click layout (``Commands:`` header with
+    ``  name`` rows). Returns the subcommand names in display order; empty for
+    leaf commands.
     """
     subcommands: list[str] = []
     in_commands = False
-    for line in text.splitlines():
+    for line in _strip_ansi(text).splitlines():
         if not in_commands:
-            if "Commands" in line and "╭" in line:
+            stripped = line.strip()
+            if stripped == "Commands:" or ("Commands" in line and ("╭" in line or "─" in line)):
                 in_commands = True
             continue
-        if line.lstrip().startswith("╰"):
+        stripped = line.strip()
+        # End of the Commands section: blank line, panel border/close, a new
+        # panel header, or the next plain click section header (e.g. Options:).
+        if not stripped:
+            break
+        if stripped[0] in "╰╮╭":
+            break
+        if re.fullmatch(r"[A-Za-z][A-Za-z ]*:", stripped):
             break
         match = SUBCOMMAND_RE.match(line)
         if match:
@@ -93,11 +138,33 @@ def parse_md_options(text: str) -> set[str]:
     return options
 
 
+def _help_env() -> dict[str, str]:
+    """Environment for deterministic, TTY-independent ``--help`` output.
+
+    Forces consistent rendering regardless of whether the surrounding process
+    is a TTY or runs inside GitHub Actions (where ``GITHUB_ACTIONS`` makes
+    typer force terminal mode). Width is pinned so wrapping is stable across
+    environments.
+    """
+    env = os.environ.copy()
+    env["NO_COLOR"] = "1"
+    env["TERM"] = "dumb"
+    env["COLUMNS"] = "120"
+    # Typer forces rich terminal mode when any of these are set; drop them so
+    # the captured help is identical locally and in CI.
+    env.pop("FORCE_COLOR", None)
+    env.pop("PY_COLORS", None)
+    env.pop("GITHUB_ACTIONS", None)
+    env["_TYPER_FORCE_DISABLE_TERMINAL"] = "1"
+    return env
+
+
 def run_help(command_args: list[str]) -> str | None:
     """Run ``uv run autoship <command...> --help`` and return stdout. None on failure."""
     try:
         result = subprocess.run(
             ["uv", "run", "autoship", *command_args, "--help"],
+            env=_help_env(),
             capture_output=True,
             text=True,
             check=True,
@@ -115,7 +182,7 @@ def collect_cli_options(command: str) -> set[str] | None:
     subcommand list, then ``autoship <command> <sub> --help`` for each
     subcommand and unions the options. This is needed because typer only lists
     a group's direct options in the group ``--help``; subcommand options
-    (e.g. ``plugin install --trust``) are documented per-subcommand.
+    (e.g. ``plugin update --all``) are documented per-subcommand.
     Returns ``None`` when the CLI is unavailable.
     """
     group_help = run_help([command])
