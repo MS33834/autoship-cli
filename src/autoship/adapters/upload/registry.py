@@ -10,12 +10,22 @@ from autoship.adapters.upload.base import UploadAdapter
 from autoship.adapters.upload.docker import DockerUploader
 from autoship.adapters.upload.github import GitHubUploader
 from autoship.adapters.upload.pypi import PyPIUploader
+from autoship.core.tool_verifier import ToolVerifier
 from autoship.exceptions import ConfigError
+from autoship.models.config import ToolsConfig
 
-_Registry = dict[str, Callable[[Path, dict[str, Any]], UploadAdapter]]
+_Registry = dict[
+    str,
+    Callable[..., UploadAdapter],
+]
 
 
-def _docker_factory(root: Path, cfg: dict[str, Any]) -> DockerUploader:
+def _docker_factory(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    tool_verifier: ToolVerifier | None = None,
+) -> DockerUploader:
     image = cfg.get("image")
     if not image:
         raise ConfigError("Upload target 'docker' requires '--image'")
@@ -24,10 +34,16 @@ def _docker_factory(root: Path, cfg: dict[str, Any]) -> DockerUploader:
         image=image,
         tag=cfg.get("tag", "latest"),
         registry=cfg.get("registry"),
+        tool_verifier=tool_verifier,
     )
 
 
-def _github_factory(root: Path, cfg: dict[str, Any]) -> GitHubUploader:
+def _github_factory(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    tool_verifier: ToolVerifier | None = None,
+) -> GitHubUploader:
     tag = cfg.get("tag")
     if not tag:
         raise ConfigError("Upload target 'github' requires '--tag'")
@@ -35,27 +51,56 @@ def _github_factory(root: Path, cfg: dict[str, Any]) -> GitHubUploader:
         root,
         tag=tag,
         artifacts=cfg.get("artifacts"),
+        tool_verifier=tool_verifier,
+    )
+
+
+def _pypi_factory(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    tool_verifier: ToolVerifier | None = None,
+) -> PyPIUploader:
+    return PyPIUploader(
+        root,
+        repository=cfg.get("repository", "testpypi"),
+        repository_url=cfg.get("repository_url"),
+        tool_verifier=tool_verifier,
     )
 
 
 _UPLOADERS: _Registry = {
-    "pypi": lambda root, cfg: PyPIUploader(
-        root,
-        repository=cfg.get("repository", "testpypi"),
-        repository_url=cfg.get("repository_url"),
-    ),
+    "pypi": _pypi_factory,
     "docker": _docker_factory,
     "github": _github_factory,
 }
 
 
-def register_uploader(name: str, factory: Callable[[Path, dict[str, Any]], UploadAdapter]) -> None:
+def register_uploader(name: str, factory: Callable[..., UploadAdapter]) -> None:
     """Register a custom upload adapter factory."""
     _UPLOADERS[name] = factory
 
 
-def get_uploader(name: str, project_root: Path, cfg: dict[str, Any] | None = None) -> UploadAdapter:
-    """Return an upload adapter instance for the named target."""
+def get_uploader(
+    name: str,
+    project_root: Path,
+    cfg: dict[str, Any] | None = None,
+    *,
+    tools: ToolsConfig | None = None,
+) -> UploadAdapter:
+    """Return an upload adapter instance for the named target.
+
+    When ``tools`` is provided the matching ``ToolVerifier`` is forwarded to
+    each uploader so that pinned binary paths / hashes from ``config.tools``
+    are honoured by the actual subprocess invocations.
+    """
     if name not in _UPLOADERS:
         raise ConfigError(f"Unknown upload target: {name}")
-    return _UPLOADERS[name](project_root, cfg or {})
+    verifier = ToolVerifier(tools) if tools else None
+    factory = _UPLOADERS[name]
+    try:
+        return factory(project_root, cfg or {}, tool_verifier=verifier)
+    except TypeError:
+        # Backwards-compatible path for custom factories registered without
+        # the ``tool_verifier`` keyword argument.
+        return factory(project_root, cfg or {})

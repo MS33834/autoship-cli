@@ -11,6 +11,7 @@ from autoship.core.fix import FixSuggestion
 from autoship.core.model_router import ModelRouter
 from autoship.exceptions import ModelGatewayError, VerifyError
 from autoship.hookspec import hookimpl
+from autoship.utils.redaction import redact_paths
 
 _DIFF_BLOCK_RE = re.compile(r"```diff\s*\n(.*?)\n```\s*(?:\n|$)", re.DOTALL)
 
@@ -38,6 +39,14 @@ class BuiltinPlugins:
         elif isinstance(error, subprocess.CalledProcessError):
             stdout = error.stdout or ""
             stderr = error.stderr or ""
+
+        # Mask absolute local paths before sending stdout/stderr to the model
+        # so that the user's project layout is not leaked to the remote backend.
+        project_root = getattr(context, "project_root", None)
+        if project_root is None:
+            project_root = getattr(getattr(context, "config", None), "project_root", None)
+        stdout = redact_paths(stdout, project_root)
+        stderr = redact_paths(stderr, project_root)
 
         command = context.extras.get("verify_command", "")
         prompt = (

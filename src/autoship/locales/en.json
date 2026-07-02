@@ -6,7 +6,7 @@
   "option.dry_run": "Show actions without executing",
   "option.yes": "Skip interactive confirmations",
   "option.config_path": "Path to config file",
-  "option.lang": "Output language (en, zh, auto)",
+  "option.lang": "Output language (en, zh, ja, auto)",
 
   "clean.help": "Clean and format the project code.",
   "clean.option.check": "Exit with error if changes are needed",
@@ -222,11 +222,6 @@
   "config.telemetry_set": "Telemetry {state}. Configuration written to {target}",
 
   "upload.repository_url_invalid": "--repository-url must use HTTPS or point to localhost/127.0.0.1",
-  "upload.option.target": "Upload target, e.g. pypi/docker/github",
-  "upload.option.image": "Docker image name",
-  "upload.option.tag": "Docker image tag or GitHub release tag",
-  "upload.option.artifact": "Artifacts to upload",
-  "upload.option.registry": "Docker registry prefix (e.g. localhost:5000)",
 
   "plugin.rate_invalid": "Rating must be between 1 and 5",
 

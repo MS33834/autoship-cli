@@ -16,6 +16,7 @@ from autoship.core.audit_logger import AuditLogger
 from autoship.core.context import CommandContext
 from autoship.core.i18n import I18n, get_i18n_from_ctx
 from autoship.core.model_router import ModelRouter
+from autoship.core.tool_verifier import ToolVerifier
 from autoship.exceptions import GitError, ModelGatewayError
 from autoship.plugin_manager import manager as plugin_manager
 
@@ -41,7 +42,7 @@ def commit(
     yes = yes or ctx.obj.get("yes", False)
     verbose: bool = ctx.obj.get("verbose", False)
 
-    git = GitAdapter(config.project_root)
+    git = GitAdapter(config.project_root, tool_verifier=ToolVerifier(config.tools))
 
     if not git.is_git_repo():
         typer.echo(i18n._("commit.not_git_repo"))

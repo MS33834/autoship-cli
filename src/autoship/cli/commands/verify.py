@@ -15,8 +15,9 @@ from autoship.core.audit_logger import AuditLogger, redact_text
 from autoship.core.context import CommandContext
 from autoship.core.fix import FixSuggestion
 from autoship.core.i18n import I18n, get_i18n_from_ctx
-from autoship.exceptions import VerifyError
-from autoship.models.config import VerifyConfig
+from autoship.core.tool_verifier import ToolVerifier
+from autoship.exceptions import ConfigError, VerifyError
+from autoship.models.config import ToolsConfig, VerifyConfig
 from autoship.plugin_manager import manager as plugin_manager
 from autoship.utils.permissions import ensure_dir_permissions, ensure_file_permissions
 
@@ -237,7 +238,7 @@ def _present_suggestion(
         typer.echo(i18n._("verify.patch_not_applied"))
         return
 
-    applied, reason = _apply_patch(context.project_root, suggestion.patch)
+    applied, reason = _apply_patch(context.project_root, suggestion.patch, context.config.tools)
     if applied:
         audit.record(
             "verify.fix.applied",
@@ -252,18 +253,32 @@ def _present_suggestion(
         typer.secho(i18n._("verify.patch_failed", reason=reason), fg=typer.colors.YELLOW, err=True)
 
 
-def _apply_patch(project_root: Path, patch: str) -> tuple[bool, str | None]:
+def _apply_patch(
+    project_root: Path,
+    patch: str,
+    tools: ToolsConfig | None = None,
+) -> tuple[bool, str | None]:
     """Apply a unified diff patch to the project.
 
     Prefers ``git apply`` and falls back to the ``patch`` command so patches
     can still be applied when the working tree differs from HEAD. Returns a
     tuple of ``(success, reason)`` so callers can explain failures.
+
+    When ``tools`` is provided the pinned binary paths / hashes from
+    ``config.tools`` are honoured via :class:`ToolVerifier`.
     """
     last_reason: str | None = None
 
-    if shutil.which("git"):
+    verifier = ToolVerifier(tools) if tools else ToolVerifier()
+
+    try:
+        git = verifier.resolve("git")
+    except ConfigError:
+        git = None
+
+    if git:
         check = subprocess.run(
-            ["git", "apply", "--check"],
+            [git, "apply", "--check"],
             input=patch,
             cwd=project_root,
             capture_output=True,
@@ -271,7 +286,7 @@ def _apply_patch(project_root: Path, patch: str) -> tuple[bool, str | None]:
         )
         if check.returncode == 0:
             apply = subprocess.run(
-                ["git", "apply"],
+                [git, "apply"],
                 input=patch,
                 cwd=project_root,
                 capture_output=True,
@@ -283,9 +298,14 @@ def _apply_patch(project_root: Path, patch: str) -> tuple[bool, str | None]:
         else:
             last_reason = check.stderr.strip() or "git apply --check failed"
 
-    if shutil.which("patch"):
+    try:
+        patch_cmd = verifier.resolve("patch")
+    except ConfigError:
+        patch_cmd = None
+
+    if patch_cmd:
         proc = subprocess.run(
-            ["patch", "-p1"],
+            [patch_cmd, "-p1"],
             input=patch,
             cwd=project_root,
             capture_output=True,

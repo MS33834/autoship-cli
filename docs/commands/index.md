@@ -12,7 +12,7 @@ AutoShip CLI 的所有命令遵循统一的生命周期：读取配置、调用 
 | `-n` | `--dry-run` | `False` | 仅预览操作，不真正执行 |
 | `-y` | `--yes` | `False` | 跳过交互式确认 |
 | `-c` | `--config PATH` | - | 指定配置文件路径 |
-| - | `--lang TEXT` | `auto` | 输出语言（`en`、`zh`、`auto`） |
+| - | `--lang TEXT` | `auto` | 输出语言（`en`、`zh`、`ja`、`auto`） |
 | - | `--install-completion` | - | 为当前 shell 安装自动补全 |
 | - | `--show-completion` | - | 显示当前 shell 的自动补全脚本 |
 

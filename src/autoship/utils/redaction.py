@@ -12,6 +12,7 @@ redaction behaviour never diverges between subsystems.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any, cast
 
 # ── Sensitive key names ──────────────────────────────────────────────
@@ -94,6 +95,33 @@ def redact_text(text: str) -> str:
     if any(pattern.search(text) for pattern in SENSITIVE_VALUE_PATTERNS):
         return "***"
     return text
+
+
+def redact_paths(text: str, project_root: Path | None = None, *, redact_home: bool = True) -> str:
+    """Mask absolute local paths that may leak from stdout/stderr.
+
+    The project root absolute path prefix (when provided and present in
+    ``text``) is replaced with ``.`` so that file references become relative.
+    Afterwards the user's home directory prefix is replaced with ``~`` so that
+    paths under the home directory (but outside the project) are not disclosed
+    in full either.
+
+    The function is intentionally conservative: it only rewrites leading path
+    prefixes, never substrings in the middle of a token, so command output is
+    still useful for debugging. It is a pure function and safe to call on any
+    string.
+    """
+    result = text
+    if project_root is not None:
+        root_str = str(project_root.resolve())
+        # Avoid replacing the empty string when ``project_root`` resolves to "".
+        if root_str and root_str in result:
+            result = result.replace(root_str, ".")
+    if redact_home:
+        home_str = str(Path.home())
+        if home_str and home_str in result:
+            result = result.replace(home_str, "~")
+    return result
 
 
 def redact_scalar(value: Any) -> Any:

@@ -21,6 +21,7 @@ from autoship.adapters.upload.github import GitHubUploader
 from autoship.adapters.upload.pypi import PyPIUploader
 from autoship.adapters.upload.registry import register_uploader
 from autoship.exceptions import ConfigError
+from autoship.models.config import ToolConfig, ToolsConfig
 
 
 def test_get_pypi_uploader(tmp_path: Path) -> None:
@@ -81,4 +82,54 @@ def test_register_custom_uploader(tmp_path: Path) -> None:
 
     register_uploader("custom", lambda root, cfg: CustomUploader())
     uploader = get_uploader("custom", tmp_path)
+    assert isinstance(uploader, CustomUploader)
+
+
+def test_get_pypi_uploader_forwards_tools_to_verifier(tmp_path: Path) -> None:
+    """A configured ``tools`` must reach the uploader's ``ToolVerifier``."""
+    tools = ToolsConfig(twine=ToolConfig(path="/usr/bin/twine"))
+    uploader = get_uploader("pypi", tmp_path, tools=tools)
+    assert isinstance(uploader, PyPIUploader)
+    assert uploader._verifier.config is tools
+
+
+def test_get_docker_uploader_forwards_tools_to_verifier(tmp_path: Path) -> None:
+    tools = ToolsConfig(docker=ToolConfig(path="/usr/bin/docker"))
+    uploader = get_uploader("docker", tmp_path, {"image": "app"}, tools=tools)
+    assert isinstance(uploader, DockerUploader)
+    assert uploader._verifier.config is tools
+
+
+def test_get_github_uploader_forwards_tools_to_verifier(tmp_path: Path) -> None:
+    tools = ToolsConfig(gh=ToolConfig(path="/usr/bin/gh"))
+    uploader = get_uploader("github", tmp_path, {"tag": "v1.0.0"}, tools=tools)
+    assert isinstance(uploader, GitHubUploader)
+    assert uploader._verifier.config is tools
+
+
+def test_get_uploader_without_tools_uses_default_verifier(tmp_path: Path) -> None:
+    """Without ``tools`` the uploader gets a default (empty) ToolsConfig."""
+    uploader = get_uploader("pypi", tmp_path)
+    assert isinstance(uploader, PyPIUploader)
+    # The default verifier has no pinned paths.
+    assert uploader._verifier.config.twine.path is None
+
+
+def test_register_custom_uploader_without_tool_verifier_kwarg_still_works(
+    tmp_path: Path,
+) -> None:
+    """Legacy factories that don't accept ``tool_verifier=`` still function."""
+
+    class CustomUploader(UploadAdapter):
+        name = "legacy"
+
+        def validate(self) -> None:
+            pass
+
+        def upload(self, *, dry_run: bool = False, verbose: bool = False) -> UploadResult:
+            return UploadResult(success=True, target="legacy")
+
+    register_uploader("legacy", lambda root, cfg: CustomUploader())
+    tools = ToolsConfig(git=ToolConfig(path="/usr/bin/git"))
+    uploader = get_uploader("legacy", tmp_path, tools=tools)
     assert isinstance(uploader, CustomUploader)

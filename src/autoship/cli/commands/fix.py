@@ -11,14 +11,16 @@ from pydantic import HttpUrl
 from autoship.adapters.model_gateway import ChatMessage
 from autoship.core.i18n import I18n, get_i18n_from_ctx
 from autoship.core.model_router import ModelRouter
-from autoship.exceptions import ModelGatewayError
+from autoship.core.tool_verifier import ToolVerifier
+from autoship.exceptions import ConfigError, ModelGatewayError
 from autoship.models.config import (
     AppConfig,
     LlmProvider,
     ModelBackendConfig,
     Provider,
+    ToolsConfig,
 )
-from autoship.utils.redaction import redact_text
+from autoship.utils.redaction import redact_paths, redact_text
 
 app = typer.Typer()
 
@@ -104,6 +106,7 @@ def fix(
 
     error_context = source.read_text(encoding="utf-8")
     error_context = redact_text(error_context)
+    error_context = redact_paths(error_context, config.project_root)
     if not error_context.strip():
         raise typer.BadParameter(i18n._("fix.empty_error_log", path=str(source)))
 
@@ -130,7 +133,7 @@ def fix(
 
     patch = _extract_patch(response)
     if patch and (yes or typer.confirm(i18n._("fix.apply_patch"))):
-        _apply_patch(config.project_root, patch, i18n)
+        _apply_patch(config.project_root, patch, i18n, config.tools)
 
 
 def _build_prompt(error_context: str, project_root: Path) -> tuple[str, list[str]]:
@@ -271,8 +274,12 @@ def _patch_paths_are_safe(project_root: Path, patch: str) -> bool:
     return True
 
 
-def _apply_patch(project_root: Path, patch: str, i18n: I18n) -> None:
-    import shutil
+def _apply_patch(
+    project_root: Path,
+    patch: str,
+    i18n: I18n,
+    tools: ToolsConfig | None = None,
+) -> None:
     import subprocess
 
     if not _patch_paths_are_safe(project_root, patch):
@@ -283,11 +290,18 @@ def _apply_patch(project_root: Path, patch: str, i18n: I18n) -> None:
         )
         return
 
+    verifier = ToolVerifier(tools) if tools else ToolVerifier()
+
     last_reason: str | None = None
 
-    if shutil.which("git"):
+    try:
+        git = verifier.resolve("git")
+    except ConfigError:
+        git = None
+
+    if git:
         check = subprocess.run(
-            ["git", "apply", "--check"],
+            [git, "apply", "--check"],
             input=patch,
             cwd=project_root,
             capture_output=True,
@@ -295,7 +309,7 @@ def _apply_patch(project_root: Path, patch: str, i18n: I18n) -> None:
         )
         if check.returncode == 0:
             apply = subprocess.run(
-                ["git", "apply"],
+                [git, "apply"],
                 input=patch,
                 cwd=project_root,
                 capture_output=True,
@@ -308,9 +322,14 @@ def _apply_patch(project_root: Path, patch: str, i18n: I18n) -> None:
         else:
             last_reason = check.stderr.strip() or "git apply --check failed"
 
-    if shutil.which("patch"):
+    try:
+        patch_cmd = verifier.resolve("patch")
+    except ConfigError:
+        patch_cmd = None
+
+    if patch_cmd:
         proc = subprocess.run(
-            ["patch", "-p1"],
+            [patch_cmd, "-p1"],
             input=patch,
             cwd=project_root,
             capture_output=True,

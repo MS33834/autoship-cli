@@ -25,35 +25,18 @@
 >
 > Official site: [ms33834.github.io/autoship-cli](https://ms33834.github.io/autoship-cli/)
 
-## Current Plan
+## Roadmap
 
-> See [TASKS.md](./TASKS.md) for details. The main progress is mirrored below so it is not lost between sessions.
-
-| Phase | Task | Status |
-|-------|------|--------|
-| P1 | Registry index signature / integrity verification (P1-1) | ✅ Done |
-| P1 | Plugin installation sha256 / signature verification (P1-2) | ✅ Done |
-| P1 | Audit log redaction strategy enhancement (P1-3) | ✅ Done |
-| P1 | `commit` command EDITOR validation (P1-4) | ✅ Done |
-| P1 | `verify` failure log redaction and permission tightening (P1-5) | ✅ Done |
-| P2 | File permission tightening (P2-1) | ✅ Done |
-| P2 | `fix` command file path restriction (P2-2) | ✅ Done |
-| P2 | External tool PATH protection (P2-3) | ✅ Done |
-| P2 | `docker_ship` plugin `build_args` validation (P2-4) | ✅ Done |
-| P2 | Environment variable override configuration allowlist (P2-5) | ✅ Done |
-| P2 | SIEM forwarding failure alert (P2-6) | ✅ Done |
-| P2 | Telemetry endpoint validation (P2-7) | ✅ Done |
-| P2 | Model gateway error redaction (P2-8) | ✅ Done |
-| P3 | Real AI backend integration test (P3-1) | ✅ Done |
-| P3 | Real upload integration (PyPI / Docker) (P3-2) | ✅ Done |
-| P3 | Package distribution verification (P3-3) | ✅ Done |
-| P3 | Full command reference documentation (P3-4) | ✅ Done |
-| P3 | GitHub Actions CI pipeline (P3-5) | ✅ Done |
-| P3 | Error messages and UX polish (P3-6) | ✅ Done |
-| P3 | Telemetry and privacy compliance (P3-7) | ✅ Done |
-| P3 | Plugin store and release workflow (P3-8) | ✅ Done |
-
-Next step: **continue P4 release-readiness work**.
+> **Shipped**: P1–P3 + P4-1 (security hardening, plugin store, real AI/upload
+> integration, CI pipeline, telemetry privacy, automated changelog). A full
+> back-rotation audit passed: 670 tests green, 87.88% coverage, ruff + pyright
+> + bandit clean. See [`FEATURES.md`](./FEATURES.md) for the delivered
+> capability summary.
+>
+> **Next**: P4-2 → P4-6 (public docs site, community plugins, perf/scale,
+> security audit, launch) and the P5 forward expansion. The living roadmap
+> with checkboxes — updated and mirrored to both remotes on every change —
+> lives in [`PLAN.md`](./PLAN.md).
 
 ## Installation
 
@@ -114,7 +97,7 @@ autoship upload --target docker --image myapp --tag latest
 - **Security scanning**: Runs dependency vulnerability and code security scans before commit.
 - **Audit logging**: Records command execution, model calls, and configuration changes with structured export and auto cleanup.
 - **Environment diagnostics**: `autoship doctor` checks Python, Git, model backends, toolchains, and directory permissions in one command.
-- **Multi-language CLI**: Built-in English and Chinese support via `--lang zh|en` or the `locale` config option.
+- **Multi-language CLI**: Built-in English, Chinese, and Japanese support via `--lang zh|en|ja` or the `locale` config option.
 - **Telemetry off by default**: Anonymous usage data is only reported after explicit opt-in.
 
 ## Documentation

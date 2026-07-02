@@ -92,7 +92,7 @@ def upload(
     plugin_manager.call("pre_upload", context=context, fail_fast=False)
 
     try:
-        uploader = get_uploader(target, config.project_root, uploader_cfg)
+        uploader = get_uploader(target, config.project_root, uploader_cfg, tools=config.tools)
     except ConfigError as exc:
         if dry_run:
             typer.echo(i18n._("upload.dry_run_not_configured", target=target, reason=str(exc)))

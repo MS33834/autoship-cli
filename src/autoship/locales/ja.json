@@ -6,7 +6,7 @@
   "option.dry_run": "操作を表示のみで実行しない",
   "option.yes": "対話的な確認をスキップ",
   "option.config_path": "設定ファイルのパス",
-  "option.lang": "出力言語（en, zh, auto）",
+  "option.lang": "出力言語（en, zh, ja, auto）",
   "clean.help": "プロジェクトコードをクリーンアップしてフォーマットします。",
   "clean.option.check": "変更が必要な場合エラーで終了",
   "clean.option.yes": "対話的な確認をスキップ",

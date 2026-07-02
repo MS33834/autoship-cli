@@ -72,6 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `OllamaGateway.chat` now correctly converts HTTP errors, JSON parse errors, and timeouts
   into `ModelGatewayError`.
+- The `--check` argument of the `clean` command uses a real boolean default value when
+  invoked directly.
 
 ### Changed
 

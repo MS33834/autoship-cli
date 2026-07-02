@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from unittest.mock import patch
 
@@ -59,10 +60,34 @@ def test_get_i18n_uses_environment_when_no_arg(monkeypatch: pytest.MonkeyPatch) 
     assert i18n._("clean.noop") == "已经是干净的。"
 
 
-def test_locale_files_are_shipped() -> None:
+def test_locale_files_are_shiped() -> None:
     locales_dir = Path(__file__).resolve().parents[2] / "src" / "autoship" / "locales"
     assert (locales_dir / "en.json").exists()
     assert (locales_dir / "zh.json").exists()
+    assert (locales_dir / "ja.json").exists()
+
+
+def test_locale_files_have_no_duplicate_keys() -> None:
+    """Each locale file must not declare the same key twice (JSON silently keeps the last)."""
+    locales_dir = Path(__file__).resolve().parents[2] / "src" / "autoship" / "locales"
+    for name in ("en.json", "zh.json", "ja.json"):
+        text = (locales_dir / name).read_text(encoding="utf-8")
+        # Count key occurrences by scanning the raw text for top-level ``"key":`` lines.
+        keys = re.findall(r'^\s*"([^"]+)"\s*:', text, flags=re.MULTILINE)
+        duplicates = {k for k in keys if keys.count(k) > 1}
+        assert not duplicates, f"{name} has duplicate keys: {sorted(duplicates)}"
+
+
+def test_locale_files_share_identical_key_sets() -> None:
+    """zh / en / ja locales must expose the same set of translation keys."""
+    import json
+
+    locales_dir = Path(__file__).resolve().parents[2] / "src" / "autoship" / "locales"
+    keys: dict[str, set[str]] = {}
+    for name in ("en.json", "zh.json", "ja.json"):
+        data = json.loads((locales_dir / name).read_text(encoding="utf-8"))
+        keys[name] = set(data.keys())
+    assert keys["en.json"] == keys["zh.json"] == keys["ja.json"]
 
 
 def test_i18n_class_basic_usage() -> None:

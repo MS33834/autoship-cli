@@ -8,8 +8,12 @@ import respx
 
 from autoship.adapters.model_gateway import ChatCompletionRequest, ChatMessage
 from autoship.adapters.providers.azure_openai import AzureOpenAIGateway
+from autoship.adapters.providers.llama_cpp import LlamaCppGateway
+from autoship.adapters.providers.lm_studio import LmStudioGateway
 from autoship.adapters.providers.ollama import OllamaGateway
 from autoship.adapters.providers.openai import OpenAIGateway
+from autoship.adapters.providers.openrouter import OpenRouterGateway
+from autoship.adapters.providers.vllm import VllmGateway
 from autoship.exceptions import ModelGatewayError
 from autoship.models.config import ModelBackendConfig, Provider
 
@@ -17,6 +21,19 @@ OPENAI_BASE_URL = "https://api.openai.com/v1"
 AZURE_BASE_URL = "https://my-resource.openai.azure.com/openai/deployments/my-deployment"
 AZURE_API_VERSION = "2024-02-01"
 OLLAMA_BASE_URL = "http://localhost:11434"
+LM_STUDIO_BASE_URL = "http://127.0.0.1:1234/v1"
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+VLLM_BASE_URL = "http://127.0.0.1:8000/v1"
+LLAMA_CPP_BASE_URL = "http://127.0.0.1:8080/v1"
+ALL_BASE_URLS = (
+    OPENAI_BASE_URL,
+    AZURE_BASE_URL,
+    OLLAMA_BASE_URL,
+    LM_STUDIO_BASE_URL,
+    OPENROUTER_BASE_URL,
+    VLLM_BASE_URL,
+    LLAMA_CPP_BASE_URL,
+)
 
 
 class _LeakyConnectError(httpx.ConnectError):
@@ -59,18 +76,64 @@ def _ollama_gateway() -> OllamaGateway:
     return OllamaGateway(cfg)
 
 
+def _lm_studio_gateway() -> LmStudioGateway:
+    cfg = ModelBackendConfig(
+        provider=Provider.LM_STUDIO,
+        base_url=LM_STUDIO_BASE_URL,
+        model="qwen2.5",
+        timeout=5.0,
+    )
+    return LmStudioGateway(cfg)
+
+
+def _openrouter_gateway() -> OpenRouterGateway:
+    cfg = ModelBackendConfig(
+        provider=Provider.OPENROUTER,
+        base_url=OPENROUTER_BASE_URL,
+        api_key="test-api-key",
+        model="auto",
+        timeout=5.0,
+    )
+    return OpenRouterGateway(cfg)
+
+
+def _vllm_gateway() -> VllmGateway:
+    cfg = ModelBackendConfig(
+        provider=Provider.VLLM,
+        base_url=VLLM_BASE_URL,
+        model="qwen2.5",
+        timeout=5.0,
+    )
+    return VllmGateway(cfg)
+
+
+def _llama_cpp_gateway() -> LlamaCppGateway:
+    cfg = ModelBackendConfig(
+        provider=Provider.LLAMA_CPP,
+        base_url=LLAMA_CPP_BASE_URL,
+        model="qwen2.5",
+        timeout=5.0,
+    )
+    return LlamaCppGateway(cfg)
+
+
 def _request() -> ChatCompletionRequest:
     return ChatCompletionRequest(messages=[ChatMessage(role="user", content="hi")])
 
 
-@pytest.mark.parametrize(
-    ("gateway", "endpoint"),
-    [
-        (_openai_gateway(), f"{OPENAI_BASE_URL}/chat/completions"),
-        (_azure_gateway(), f"{AZURE_BASE_URL}/chat/completions"),
-        (_ollama_gateway(), f"{OLLAMA_BASE_URL}/chat/completions"),
-    ],
-)
+# (gateway factory, chat-completions endpoint, provider name) for every provider.
+_PROVIDER_CASES = [
+    (_openai_gateway(), f"{OPENAI_BASE_URL}/chat/completions", "OpenAI"),
+    (_azure_gateway(), f"{AZURE_BASE_URL}/chat/completions", "Azure OpenAI"),
+    (_ollama_gateway(), f"{OLLAMA_BASE_URL}/chat/completions", "Ollama"),
+    (_lm_studio_gateway(), f"{LM_STUDIO_BASE_URL}/chat/completions", "LM Studio"),
+    (_openrouter_gateway(), f"{OPENROUTER_BASE_URL}/chat/completions", "OpenRouter"),
+    (_vllm_gateway(), f"{VLLM_BASE_URL}/chat/completions", "vLLM"),
+    (_llama_cpp_gateway(), f"{LLAMA_CPP_BASE_URL}/chat/completions", "llama.cpp"),
+]
+
+
+@pytest.mark.parametrize(("gateway", "endpoint"), [(c[0], c[1]) for c in _PROVIDER_CASES])
 def test_chat_request_error_does_not_leak_base_url(gateway, endpoint: str) -> None:
     """Connection errors must not embed the backend URL in the exception text."""
     with respx.mock:
@@ -84,19 +147,14 @@ def test_chat_request_error_does_not_leak_base_url(gateway, endpoint: str) -> No
             gateway.chat(_request())
 
     message = str(exc_info.value)
-    assert OPENAI_BASE_URL not in message
-    assert AZURE_BASE_URL not in message
-    assert OLLAMA_BASE_URL not in message
+    for base_url in ALL_BASE_URLS:
+        assert base_url not in message
     assert "test-api-key" not in message
 
 
 @pytest.mark.parametrize(
     ("gateway", "endpoint", "provider_name"),
-    [
-        (_openai_gateway(), f"{OPENAI_BASE_URL}/chat/completions", "OpenAI"),
-        (_azure_gateway(), f"{AZURE_BASE_URL}/chat/completions", "Azure OpenAI"),
-        (_ollama_gateway(), f"{OLLAMA_BASE_URL}/chat/completions", "Ollama"),
-    ],
+    _PROVIDER_CASES,
 )
 def test_chat_timeout_error_message(gateway, endpoint: str, provider_name: str) -> None:
     with respx.mock:
@@ -107,11 +165,7 @@ def test_chat_timeout_error_message(gateway, endpoint: str, provider_name: str) 
 
 @pytest.mark.parametrize(
     ("gateway", "endpoint", "provider_name"),
-    [
-        (_openai_gateway(), f"{OPENAI_BASE_URL}/chat/completions", "OpenAI"),
-        (_azure_gateway(), f"{AZURE_BASE_URL}/chat/completions", "Azure OpenAI"),
-        (_ollama_gateway(), f"{OLLAMA_BASE_URL}/chat/completions", "Ollama"),
-    ],
+    _PROVIDER_CASES,
 )
 def test_chat_http_status_error_message(gateway, endpoint: str, provider_name: str) -> None:
     with respx.mock:
@@ -122,11 +176,7 @@ def test_chat_http_status_error_message(gateway, endpoint: str, provider_name: s
 
 @pytest.mark.parametrize(
     ("gateway", "endpoint", "provider_name"),
-    [
-        (_openai_gateway(), f"{OPENAI_BASE_URL}/chat/completions", "OpenAI"),
-        (_azure_gateway(), f"{AZURE_BASE_URL}/chat/completions", "Azure OpenAI"),
-        (_ollama_gateway(), f"{OLLAMA_BASE_URL}/chat/completions", "Ollama"),
-    ],
+    _PROVIDER_CASES,
 )
 def test_chat_invalid_json_error_message(gateway, endpoint: str, provider_name: str) -> None:
     with respx.mock:

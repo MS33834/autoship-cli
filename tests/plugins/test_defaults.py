@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from autoship.core.context import CommandContext
 from autoship.core.fix import FixSuggestion
-from autoship.exceptions import SecurityScanError
+from autoship.exceptions import SecurityScanError, VerifyError
+from autoship.models.config import AppConfig
 from autoship.plugins.defaults import _parse_suggestion, plugin
 
 
@@ -96,3 +98,43 @@ def test_pre_commit_propagates_security_scan_error(command_context: CommandConte
         pytest.raises(SecurityScanError, match="scan failed"),
     ):
         plugin.pre_commit(command_context)
+
+
+def test_on_error_redacts_absolute_project_paths_from_prompt(tmp_path: Path) -> None:
+    """stdout/stderr absolute paths must be masked before reaching the model."""
+    config = AppConfig(project_root=tmp_path)
+    context = CommandContext(
+        command="verify",
+        project_root=tmp_path,
+        config=config,
+        extras={"fix": True, "verify_command": "pytest"},
+    )
+    absolute_ref = f"{tmp_path}/tests/test_x.py:123 failed"
+    error = VerifyError(
+        "verify failed",
+        details={
+            "stdout": absolute_ref,
+            "stderr": f"see {tmp_path}/src/app.py",
+        },
+    )
+
+    mock_router = MagicMock()
+    mock_router.chat.return_value = "Try again."
+    with patch("autoship.plugins.defaults.ModelRouter", return_value=mock_router):
+        plugin.on_error(context, error)
+
+    mock_router.chat.assert_called_once()
+    messages = mock_router.chat.call_args[0][0]
+    user_prompt = messages[1].content
+    assert str(tmp_path) not in user_prompt
+    assert "./tests/test_x.py:123 failed" in user_prompt
+    assert "./src/app.py" in user_prompt
+
+
+def test_on_error_returns_none_when_fix_not_requested(
+    command_context: CommandContext,
+) -> None:
+    """When ``fix`` is not requested, ``on_error`` short-circuits."""
+    command_context.extras["fix"] = False
+    result = plugin.on_error(command_context, VerifyError("nope"))
+    assert result is None

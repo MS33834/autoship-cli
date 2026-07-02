@@ -12,7 +12,7 @@ These options apply to all commands and are usually placed before the subcommand
 | `-n` | `--dry-run` | `False` | Preview actions without executing |
 | `-y` | `--yes` | `False` | Skip interactive confirmations |
 | `-c` | `--config PATH` | - | Path to configuration file |
-| - | `--lang TEXT` | `auto` | Output language (`en`, `zh`, `auto`) |
+| - | `--lang TEXT` | `auto` | Output language (`en`, `zh`, `ja`, `auto`) |
 | - | `--install-completion` | - | Install shell completion |
 | - | `--show-completion` | - | Show shell completion script |
 

@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from autoship.cli.commands import fix as fix_module
 from autoship.cli.main import app
+from autoship.exceptions import ConfigError
+from autoship.models.config import ToolConfig, ToolsConfig
 
 runner = CliRunner()
 
@@ -198,3 +202,132 @@ def test_patch_paths_are_safe_rejects_absolute_paths(tmp_path: Path) -> None:
 def test_patch_paths_are_safe_rejects_traversal(tmp_path: Path) -> None:
     patch = "--- a/../etc/passwd\n+++ b/../etc/passwd\n@@ -1 +1 @@\n-old\n+new"
     assert fix_module._patch_paths_are_safe(tmp_path, patch) is False
+
+
+def _make_fake_binary(path: Path) -> Path:
+    """Create a small executable file used as a stand-in for a pinned tool."""
+    path.write_bytes(b"#!/bin/sh\necho ok\n")
+    path.chmod(0o755)
+    return path
+
+
+def test_apply_patch_with_pinned_git_path_uses_pinned_binary(tmp_path: Path) -> None:
+    """A pinned ``tools.git.path`` must head the git subprocess command."""
+    fake_git = _make_fake_binary(tmp_path / "fake-git")
+    tools = ToolsConfig(git=ToolConfig(path=str(fake_git)))
+
+    patch_text = "--- a/file.txt\n+++ b/file.txt\n@@ -1 +1 @@\n-old\n+new"
+    i18n_mock = MagicMock()
+    i18n_mock._ = MagicMock(return_value="ok")
+
+    check = MagicMock(returncode=0)
+    apply = MagicMock(returncode=0)
+
+    with patch("subprocess.run", side_effect=[check, apply]) as mock_run:
+        fix_module._apply_patch(tmp_path, patch_text, i18n_mock, tools)
+
+    assert mock_run.call_count == 2
+    git_check_cmd = mock_run.call_args_list[0][0][0]
+    assert git_check_cmd[0] == str(fake_git.resolve())
+    assert git_check_cmd[1:] == ["apply", "--check"]
+    git_apply_cmd = mock_run.call_args_list[1][0][0]
+    assert git_apply_cmd[0] == str(fake_git.resolve())
+
+
+def test_apply_patch_with_wrong_sha256_skips_git_and_falls_back(tmp_path: Path) -> None:
+    """A wrong ``tools.git.sha256`` skips git and falls back to patch."""
+    fake_git = _make_fake_binary(tmp_path / "fake-git")
+    real_digest = hashlib.sha256(fake_git.read_bytes()).hexdigest()
+    wrong_digest = "0" * 64
+    assert real_digest != wrong_digest
+
+    tools = ToolsConfig(git=ToolConfig(path=str(fake_git), sha256=wrong_digest))
+
+    patch_text = "--- a/file.txt\n+++ b/file.txt\n@@ -1 +1 @@\n-old\n+new"
+    i18n_mock = MagicMock()
+    i18n_mock._ = MagicMock(return_value="ok")
+
+    proc = MagicMock(returncode=0)
+
+    with (
+        patch("shutil.which", return_value="/usr/bin/patch"),
+        patch("subprocess.run", return_value=proc) as mock_run,
+    ):
+        fix_module._apply_patch(tmp_path, patch_text, i18n_mock, tools)
+
+    # git was never invoked because the pinned hash mismatched.
+    assert mock_run.call_count == 1
+    patch_cmd = mock_run.call_args[0][0]
+    assert patch_cmd[0] == "patch"
+    assert patch_cmd[1:] == ["-p1"]
+
+
+def test_apply_patch_with_wrong_sha256_and_no_patch_warns(tmp_path: Path) -> None:
+    """When both git (bad hash) and patch are unavailable, warn instead of raising."""
+    fake_git = _make_fake_binary(tmp_path / "fake-git")
+    wrong_digest = "0" * 64
+    tools = ToolsConfig(git=ToolConfig(path=str(fake_git), sha256=wrong_digest))
+
+    patch_text = "--- a/file.txt\n+++ b/file.txt\n@@ -1 +1 @@\n-old\n+new"
+    i18n_mock = MagicMock()
+    i18n_mock._ = MagicMock(return_value="no tool")
+
+    with (
+        patch("shutil.which", return_value=None),
+        patch("subprocess.run") as mock_run,
+    ):
+        # Must not raise: the ConfigError from the sha256 mismatch is caught.
+        fix_module._apply_patch(tmp_path, patch_text, i18n_mock, tools)
+
+    mock_run.assert_not_called()
+
+
+def test_apply_patch_wrong_sha256_resolve_raises_config_error(tmp_path: Path) -> None:
+    """A direct ``ToolVerifier.resolve`` raises ConfigError on a hash mismatch.
+
+    This documents the contract that ``_apply_patch`` relies on: a wrong
+    ``sha256`` produces a ``ConfigError`` (which ``_apply_patch`` then swallows
+    so the patch fallback can run).
+    """
+    from autoship.core.tool_verifier import ToolVerifier
+
+    fake_git = _make_fake_binary(tmp_path / "fake-git")
+    tools = ToolsConfig(git=ToolConfig(path=str(fake_git), sha256="0" * 64))
+
+    with pytest.raises(ConfigError, match="SHA-256 mismatch"):
+        ToolVerifier(tools).resolve("git")
+
+
+def test_fix_redacts_absolute_project_root_from_prompt(tmp_path: Path, monkeypatch) -> None:
+    """The prompt sent to the model must not contain the absolute project root."""
+    _write_config_with_api_key(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    error_log = tmp_path / "error.txt"
+    absolute_ref = f"{tmp_path}/tests/test_x.py:123 failed"
+    error_log.write_text(absolute_ref, encoding="utf-8")
+
+    mock_router = MagicMock()
+    mock_router.chat.return_value = "No patch needed."
+    with patch("autoship.cli.commands.fix._model_router", return_value=mock_router):
+        result = runner.invoke(app, ["fix", str(error_log), "--yes"])
+
+    assert result.exit_code == 0
+    mock_router.chat.assert_called_once()
+    messages = mock_router.chat.call_args[0][0]
+    user_prompt = messages[1].content
+    assert str(tmp_path) not in user_prompt
+    assert "./tests/test_x.py:123 failed" in user_prompt
+
+
+def test_build_prompt_redacts_when_called_with_redacted_context(tmp_path: Path) -> None:
+    """``_build_prompt`` itself does not reintroduce absolute project paths.
+
+    This complements ``test_fix_redacts_absolute_project_root_from_prompt`` by
+    pinning the contract at the helper level: once the caller has run
+    ``redact_paths``, the resulting prompt must stay free of the absolute root.
+    """
+    redacted = "./tests/test_x.py:123 failed"
+    prompt, _ = fix_module._build_prompt(redacted, tmp_path)
+    assert str(tmp_path) not in prompt
+    assert "./tests/test_x.py:123 failed" in prompt

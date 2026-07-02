@@ -6,7 +6,7 @@
   "option.dry_run": "仅显示操作而不执行",
   "option.yes": "跳过交互式确认",
   "option.config_path": "配置文件路径",
-  "option.lang": "输出语言（en, zh, auto）",
+  "option.lang": "输出语言（en, zh, ja, auto）",
 
   "clean.help": "清理并格式化项目代码。",
   "clean.option.check": "如需更改则以错误退出",
@@ -222,11 +222,6 @@
   "config.telemetry_set": "遥测已{state}。配置已写入 {target}",
 
   "upload.repository_url_invalid": "--repository-url 必须使用 HTTPS，或指向 localhost/127.0.0.1",
-  "upload.option.target": "上传目标，例如 pypi/docker/github",
-  "upload.option.image": "Docker 镜像名称",
-  "upload.option.tag": "Docker 镜像标签或 GitHub 发布标签",
-  "upload.option.artifact": "要上传的产物",
-  "upload.option.registry": "Docker 仓库前缀（例如 localhost:5000）",
 
   "plugin.rate_invalid": "评分必须在 1 到 5 之间",
 
