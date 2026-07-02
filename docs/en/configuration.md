@@ -1,3 +1,6 @@
+---
+title: Configuration
+---
 # Configuration
 
 AutoShip uses `.autoship.toml` as the project-level configuration file. Running `autoship init` creates a default configuration based on the project type and hardware.

@@ -16,7 +16,7 @@
 
 [テキスト版デモを見る](docs/demo.md)
 
-> テキスト版デモの準備ができました：[docs/demo.md を見る](docs/demo.md)。
+> デモは近日公開予定、[デモスクリプト](docs/demo.md) をご確認ください。
 > asciinema の録画が完了したら、以下のコマンドで生成された `docs/demo.cast` に置き換わります：
 >
 > ```bash

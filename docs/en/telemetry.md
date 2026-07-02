@@ -1,3 +1,6 @@
+---
+title: Telemetry & Privacy
+---
 # Telemetry & Privacy
 
 AutoShip has telemetry **disabled by default**. Only after you explicitly enable it will anonymous usage statistics be collected and sent.

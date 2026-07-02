@@ -1,3 +1,6 @@
+---
+title: Privacy Policy
+---
 # Privacy Policy
 
 AutoShip adheres to the principles of **local-first** and **disabled by default**: unless you explicitly enable it, no usage data is collected, uploaded, or shared.

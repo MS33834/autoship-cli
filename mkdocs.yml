@@ -40,6 +40,8 @@ theme:
 
 nav:
   - 首页: index.md
+  - 快速开始: quickstart.md
+  - 为什么选 AutoShip: why-autoship.md
   - 命令参考:
       - 概览: commands/index.md
       - init: commands/init.md
@@ -59,6 +61,8 @@ nav:
   - 插件: plugins.md
   - 插件开发指南: plugin-development.md
   - 常见问题: faq.md
+  - 故障排查: troubleshooting.md
+  - 已知问题: known-issues.md
   - 插件发布指南: plugin-publishing.md
   - Changelog: changelog.md
   - 贡献指南: contributing.md
@@ -89,6 +93,10 @@ markdown_extensions:
       permalink: true
 
 plugins:
+  - search:
+      lang:
+        - en
+        - ja
   - i18n:
       docs_structure: folder
       languages:

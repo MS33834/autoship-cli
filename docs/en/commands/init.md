@@ -1,3 +1,6 @@
+---
+title: init
+---
 # init
 
 Initialize an AutoShip configuration file for the current project.

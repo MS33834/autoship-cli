@@ -1,3 +1,6 @@
+---
+title: upload
+---
 # upload
 
 Upload artifacts to a configured target.

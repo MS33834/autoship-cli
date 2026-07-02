@@ -1,3 +1,6 @@
+---
+title: upload
+---
 # upload
 
 アーティファクトを設定されたターゲットにアップロードします。PyPI、Docker、GitHub Release をサポートしています。

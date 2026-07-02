@@ -1,3 +1,6 @@
+---
+title: FAQ
+---
 # Frequently Asked Questions (FAQ)
 
 ## General
@@ -176,3 +179,56 @@ You can use `--edit` to open the editor and modify the generated message, or adj
 ### How do I reset the AutoShip configuration?
 
 Delete `.autoship.toml` in the project root directory and run `autoship init` again.
+
+## Quickstart-related
+
+### Why does `verify --fix` in the Quickstart report "no AI backend configured"?
+
+`verify --fix` requires an available AI model to generate fix suggestions. The "5-Minute No-AI Version" of the Quickstart does not configure any model backend, so calling `verify --fix` directly raises "no AI backend configured".
+
+- To verify without fixing: use `autoship verify pytest` (without `--fix`);
+- To try the fix flow: configure Ollama following the "+5-Minute AI Version" in the [Quickstart](quickstart.md).
+- This is by design, not a bug. See [Known Issues](known-issues.md).
+
+### After finishing the Quickstart, how do I configure full AI features?
+
+1. Install and start [Ollama](https://ollama.com/);
+2. Pull a model: `ollama pull qwen2.5-coder:1.5b` (or a larger one);
+3. Configure the `[model]` section in `.autoship.toml` with `backend = "ollama"`;
+4. Run `autoship doctor` to confirm the backend is reachable;
+5. Try `autoship verify --fix pytest` and `autoship commit` (AI-generated message).
+
+For the full set of options (including cloud models), see [Model Configuration](models.md).
+
+### How do I choose a model?
+
+Choose by scenario:
+
+- **Beginner / low-spec machine**: local Ollama + `qwen2.5-coder:1.5b` or `phi3:mini` — fast and low VRAM.
+- **High-quality local**: `qwen2.5-coder:7b`, `deepseek-coder:6.7b` — needs 8GB+ VRAM.
+- **High-quality cloud**: OpenAI `gpt-4o-mini` / `gpt-4o`, Anthropic Claude, Azure OpenAI — needs network and API key.
+- **Privacy-first**: always use local models; never configure a cloud provider.
+
+See the selection table in [Model Configuration](models.md).
+
+### Troubleshooting plugin installation failures
+
+When `autoship plugin install <name>` fails, investigate in this order:
+
+1. Network: can you reach PyPI? Does `pip install <name>` succeed?
+2. Trust level: unreviewed plugins need confirmation or an explicit `autoship plugin trust <name> community`;
+3. Permissions: if the plugin declares `shell = true`, you must allow it in the interactive confirmation;
+4. Compatibility: does the plugin's declared AutoShip version range cover your current version (`autoship --version`)?
+5. Logs: `autoship --verbose plugin install <name>` for detailed errors.
+
+See [Troubleshooting](troubleshooting.md).
+
+### Three-language documentation sync strategy
+
+- **Source language**: Chinese (zh) is the source; en/ja are translations;
+- **Sync window**: new content lands in zh first; en/ja typically follow within hours to a few days;
+- **CI check**: the i18n completeness check compares the file lists across the three languages and warns on missing pages or entries;
+- **Command code blocks are not translated**: shell / toml / yaml code blocks stay in English across all three languages; only comments and prose are localized;
+- **Relative links**: cross-page links use relative paths and the three-language directory structure stays consistent (`docs/`, `docs/en/`, `docs/ja/`).
+
+If you notice translation lag or gaps, please open an issue at [GitHub Issues](https://github.com/MS33834/autoship-cli/issues).

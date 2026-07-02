@@ -1,3 +1,6 @@
+---
+title: doctor
+---
 # doctor
 
 現在の環境が AutoShip の実行要件を満たしているか診断します。

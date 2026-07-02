@@ -1,3 +1,6 @@
+---
+title: Changelog
+---
 # Changelog
 
 本文書は [Keep a Changelog](https://keepachangelog.com/ja/1.0.0/) 形式に従い、[Semantic Versioning](https://semver.org/lang/ja/) に準拠します。

@@ -1,3 +1,6 @@
+---
+title: デモスクリプトと録画ガイド
+---
 # デモスクリプトと録画ガイド
 
 このページでは AutoShip-CLI の asciinema デモ録画スクリプトを提供します。スクリプトの内容を保存した後、[asciinema](https://asciinema.org/) を使用して録画し、`website/demo.cast` としてエクスポートできます。
@@ -8,6 +11,13 @@
 - フォント：等幅フォント。Fira Code または JetBrains Mono を推奨
 - テーマ：ダーク背景、高コントラスト
 - 画面クリアコマンド：`clear`
+
+## 録画環境
+
+- Python 3.12
+- Ollama 0.5.x
+- モデル：`qwen2.5-coder:1.5b`
+- OS：Ubuntu 22.04（または macOS 14）
 
 ## デモスクリプト
 

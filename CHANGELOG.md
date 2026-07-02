@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- P4-2 public documentation site: trilingual (zh/en/ja) Quickstart, Why AutoShip
+  comparison page, Troubleshooting guide, and Known Issues page.
+- MkDocs search configured with CJK language support (en/ja) for Chinese and
+  Japanese keyword search.
+- Landing page hero with value proposition ("your code, never in the cloud"),
+  install command block, and CTA buttons on all three locale index pages.
+- `robots.txt` for SEO, served from the GitHub Pages root.
+- CI docs job: `mkdocs build --strict`, `check_i18n_sync.py`,
+  `sync_command_docs.py --check`, and `scan_docs_secrets.py --check` as gates.
+- `website.yml` deploy build now runs `mkdocs build --strict` (double gate with
+  the CI docs job).
+- Nightly external link checker (lychee) workflow for docs/website/README links.
+- "Remote repository health check" section in CONTRIBUTING.md — mandatory
+  before/after every phase: PR/Issue triage, branch cleanup, CI green check,
+  GitCode mirror sync, Dependabot advisory review.
+- `docs/reviews/p4-2-public-docs-site-plan.md` detailed execution plan with
+  multi-role review record (architect/PM/dev-lead/security/test).
+
+### Changed
+
+- Unified upgrade of 6 GitHub Actions across all workflows: `setup-uv` v3→v7,
+  `upload-artifact` v4→v7, `download-artifact` v4→v8, `setup-node` v4→v6,
+  `deploy-pages` v4→v5 (closes Dependabot PRs #38–#42).
+- `website.yml` deploy build runs `mkdocs build --strict`.
+- `docs/demo.md` recording script aligned with Quickstart command sequence;
+  added redaction showcase segment and recording environment spec.
+- All `docs/en/` and `docs/ja/` markdown files now carry `title:` front matter
+  so the navigation bar shows localized labels instead of Chinese.
+- Fixed 4 cross-locale broken links in `website/index*.html` and
+  `plugins*.html` (en/ja pages were linking to the zh default locale).
+
+### Fixed
+
+- `mkdocs build --strict` now passes with 0 warnings (CODE_OF_CONDUCT.md and
+  LICENSE.md links converted to absolute GitHub URLs).
+- i18n structural parity: `demo.md`, `commands/clean.md`, `commands/metrics.md`
+  en/ja aligned to zh heading/code-block counts.
+- `scripts/validate_registry.py` and `scripts/release_changelog.py` pyright
+  strict-mode issues resolved.
+
 ## [1.0.0] - 2026-06-19
 
 ### Added

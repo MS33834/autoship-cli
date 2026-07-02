@@ -92,7 +92,7 @@ convention = "google"
 [tool.pyright]
 pythonVersion = "3.10"
 typeCheckingMode = "strict"
-include = ["src"]
+include = ["src", "scripts"]
 exclude = ["**/__pycache__", "**/tests"]
 venvPath = "."
 venv = ".venv"

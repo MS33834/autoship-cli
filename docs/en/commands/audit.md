@@ -1,3 +1,6 @@
+---
+title: audit
+---
 # audit
 
 Export or clean up audit logs.

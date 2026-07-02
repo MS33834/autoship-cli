@@ -14,6 +14,7 @@ const files = [
   'plugins.zh.html',
   'plugins.ja.html',
   'styles.css',
+  'robots.txt',
 ];
 
 fs.mkdirSync(distDir, { recursive: true });

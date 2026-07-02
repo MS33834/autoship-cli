@@ -91,25 +91,39 @@ docs, verifiable security, active plugin ecosystem, and a real launch.
 
 ### P4-2 Public documentation site
 
-- **Owner**: Docs / UX
+- **Owner**: Docs / UX（主），Release/Integration（CI），Security/Compliance（审查），Performance/Test（构建验证）
 - **Acceptance**: a deployed, searchable, trilingual docs site with quickstart,
   command reference, plugin dev guide, model config, privacy, FAQ; CI auto-
   deploys on push to `main`.
 - **Related files**: `docs/`, `docs/en/`, `docs/ja/`, `mkdocs.yml`,
-  `.github/workflows/docs.yml` (to be added if absent).
+  `.github/workflows/website.yml`, `website/`, `README*.md`.
+- **Detailed plan**: see [`docs/reviews/p4-2-public-docs-site-plan.md`](./docs/reviews/p4-2-public-docs-site-plan.md)
+  for the full sub-task checklist (9 sections, ~50 items) including the
+  Dependabot PR triage, mkdocs strict CI gate, trilingual quickstart/models/
+  plugin tutorial, asciinema demo, and multi-role review.
 
-Tasks:
+> Reality check: `website.yml` already auto-deploys to GitHub Pages on `main`
+> push (CI green); `mkdocs.yml` already has i18n zh/en/ja + mike configured.
+> P4-2 work is therefore **content + strict-gate + demo + Dep cleanup**, not
+> greenfield CI setup.
 
-- [ ] Confirm MkDocs Material builds locally (`uv run mkdocs serve`) with no broken links.
-- [ ] Add/verify `.github/workflows/docs.yml` auto-deploy to GitHub Pages on `main` push.
-- [ ] Wire custom domain (optional) or finalize `ms33834.github.io/autoship-cli`.
-- [ ] Enable MkDocs search + versioned docs (mike) once 1.0 is tagged.
-- [ ] Add a trilingual **Quickstart** that mirrors `docs/demo.md` end-to-end.
-- [ ] Record `docs/demo.cast` (asciinema) and embed it on the landing page.
-- [ ] Add screenshots/GIFs for `init`, `clean`, `commit`, `verify --fix`, `upload --dry-run`.
-- [ ] Cross-link every command reference page from the README badges.
-- [ ] Add a **Plugin development tutorial** (walk through `create_plugin` → publish).
-- [ ] Add a **Model configuration guide** covering all 7 backends + fallback.
+Tasks (mirrored from the detailed plan; check both here and the plan file):
+
+- [x] **0** Triage 5 open Dependabot PRs (#38–#42): unified upgrade on one branch, verify CI, merge, close PRs
+- [x] **1** `mkdocs build --strict` passes with 0 warning; add strict gate to `ci.yml` (independent docs job) + `website.yml` deploy
+- [x] **2** Trilingual Quickstart + Why AutoShip + Troubleshooting + Known Issues + FAQ update + front matter titles complete (zh/en/ja)
+- [x] **3** `docs/demo.md` recording script aligned + redaction showcase + recording env spec; landing page hero + CTA on 3 locale index pages; cross-locale link fixes (4 links in website/*.html)
+- [x] **4** README ↔ docs site cross-links; edit-this-page links verified; CONTRIBUTING.md health-check section added
+- [x] **5** Search CJK (en/ja lang) configured; mike versioning deferred (documented migration path)
+- [x] **6** `website.yml` deploy with `--strict`; smoke-test checklist + `robots.txt` + SEO ready (deploy verification pending push)
+- [x] **7** Multi-role review (architect/PM/dev-lead/security/test) executed pre-implementation; findings addressed in supplementary tasks
+- [x] **8** Full gate green: ruff + pyright + mkdocs strict + i18n sync + command docs sync + docs secret scan + pytest (656 passed, 87.88% coverage)
+- [x] **9** PLAN.md checkboxes flipped, CHANGELOG `[Unreleased]` updated, dual-remote sync pending commit
+
+> **Note**: `docs/demo.cast` (asciinema recording) and screenshots/GIFs require
+> human recording in a GUI environment — deferred. The demo script and
+> recording environment spec are ready in `docs/demo.md`. New-user live test
+> (task 7.7) also deferred to post-merge community feedback.
 
 ### P4-3 Community plugin collection & review
 
@@ -237,10 +251,26 @@ uv run pyright
 uv run pytest -q
 uv run bandit -r src -ll
 uv run pip-audit --desc
+uv run mkdocs build --strict --site-dir /tmp/mkdocs-build
 ```
 
 Target: 0 ruff errors, 0 pyright errors, all tests green, coverage ≥85%,
-bandit clean, no known CVEs.
+bandit clean, no known CVEs, mkdocs strict 0 warning.
+
+### Remote repository health check (mandatory before & after every phase)
+
+> Documented in [`CONTRIBUTING.md`](./CONTRIBUTING.md) § "远程仓库健康检查".
+> Every developer MUST run this check before starting work, before each
+> commit, and after each push.
+
+1. **PRs**: any open PR (including Dependabot)? CI green? conflicts?
+2. **Issues**: any untriaged issue? bug labeled but unfixed?
+3. **Branches**: stale feature branches? GitCode mirror in sync with GitHub?
+4. **CI**: main branch all workflows green (CI/E2E/Nightly/Deploy Website)?
+5. **Security**: Dependabot advisories? `pip-audit` clean?
+
+Never stack new commits on red CI. Never leave GitCode mirror behind.
+Record the check result in the commit message or review doc.
 
 ### Dual-remote sync
 

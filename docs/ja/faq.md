@@ -1,3 +1,6 @@
+---
+title: よくある質問（FAQ）
+---
 # よくある質問（FAQ）
 
 ## 一般的な質問
@@ -176,3 +179,56 @@ autoship audit cleanup
 ### AutoShip の設定をリセットするには？
 
 プロジェクトルートディレクトリの `.autoship.toml` を削除し、再度 `autoship init` を実行してください。
+
+## クイックスタート関連
+
+### クイックスタートの `verify --fix` が「no AI backend configured」と報告されるのはなぜ？
+
+`verify --fix` には修正提案を生成するための AI モデルが必須です。クイックスタートの「5 分で試す AI なし版」ではモデルバックエンドを未設定のため、`verify --fix` を呼ぶと「no AI backend configured」となります。
+
+- 検証のみでよい場合：`autoship verify pytest`（`--fix` なし）を使用；
+- 修正フローを試す場合：[クイックスタート](quickstart.md) の「+5 分で試す AI あり版」に従い Ollama を設定。
+- これは仕様でありバグではありません。詳しくは [既知の問題](known-issues.md) を参照。
+
+### クイックスタート完了後、完全な AI 機能を試すにはどう設定すればよい？
+
+1. [Ollama](https://ollama.com/) をインストールして起動；
+2. モデルを取得：`ollama pull qwen2.5-coder:1.5b`（より大きなモデルでも可）；
+3. `.autoship.toml` の `[model]` セクションで `backend = "ollama"` を設定；
+4. `autoship doctor` でバックエンド到達性を確認；
+5. `autoship verify --fix pytest` と `autoship commit`（AI 生成メッセージ）を試す。
+
+クラウドモデルを含む全オプションは [モデル設定](models.md) を参照。
+
+### モデルはどう選べばよい？
+
+シーン別に選択：
+
+- **入門 / 低スペック機**：ローカル Ollama + `qwen2.5-coder:1.5b` または `phi3:mini`。高速で VRAM 使用量が低い。
+- **高品質ローカル**：`qwen2.5-coder:7b`、`deepseek-coder:6.7b`。VRAM 8GB+ 必要。
+- **高品質クラウド**：OpenAI `gpt-4o-mini` / `gpt-4o`、Anthropic Claude、Azure OpenAI。ネットワークと API キーが必要。
+- **プライバシー優先**：常にローカルモデルを使用し、クラウド provider は設定しない。
+
+選定表は [モデル設定](models.md) を参照。
+
+### プラグインインストール失敗のトラブルシューティング
+
+`autoship plugin install <name>` が失敗する場合、以下の順で確認：
+
+1. ネットワーク：PyPI に到達可能か？`pip install <name>` は成功するか？
+2. 信頼レベル：未レビューのプラグインは確認プロンプトで許可するか、明示的に `autoship plugin trust <name> community` を実行；
+3. 権限：プラグインが `shell = true` を宣言する場合、対話確認で許可が必要；
+4. 互換性：プラグインが宣言する AutoShip バージョン範囲が現バージョン（`autoship --version`）をカバーするか；
+5. ログ：`autoship --verbose plugin install <name>` で詳細エラーを確認。
+
+詳しくは [トラブルシューティング](troubleshooting.md) を参照。
+
+### 三言語ドキュメントの同期戦略
+
+- **ソース言語**：中国語（zh）がソースで、en/ja は翻訳；
+- **同期ウィンドウ**：新内容は先に zh に反映され、en/ja は通常数時間〜数日で追従；
+- **CI 検証**：i18n 完全性チェックが三言語のファイル一覧を比較し、ページや項目の欠落を警告；
+- **コマンドコードブロックは翻訳しない**：shell / toml / yaml コードブロックは三言語すべてで英語のまま、コメントと本文のみローカライズ；
+- **リンクの相対パス**：ページ間リンクは相対パスを使用し、三言語のディレクトリ構造は一致（`docs/`、`docs/en/`、`docs/ja/`）。
+
+翻訳の遅れや欠落に気付いた場合は [GitHub Issues](https://github.com/MS33834/autoship-cli/issues) で報告してください。

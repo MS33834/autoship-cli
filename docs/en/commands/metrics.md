@@ -1,3 +1,6 @@
+---
+title: metrics
+---
 # metrics
 
 Inspect runtime metrics.
@@ -54,16 +57,22 @@ Show metrics:
 autoship metrics show
 ```
 
-Show metrics as JSON and reset:
+Show metrics as JSON:
 
 ```bash
-autoship metrics show --json --reset
+autoship metrics show --json
 ```
 
-Export metrics:
+Export to the default path:
 
 ```bash
-autoship metrics export --output ./metrics.json
+autoship metrics export
+```
+
+Export to a specific path and reset metrics:
+
+```bash
+autoship metrics export --output ./metrics.json --reset
 ```
 
 ## Output Notes / Common Errors

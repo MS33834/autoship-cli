@@ -176,3 +176,56 @@ autoship audit cleanup
 ### 如何重置 AutoShip 配置？
 
 删除项目根目录的 `.autoship.toml` 并重新运行 `autoship init`。
+
+## 快速开始相关
+
+### Quickstart 的 `verify --fix` 为什么报错说没有 AI 后端？
+
+`verify --fix` 必须有可用 AI 模型才能生成修复建议。Quickstart 的「5 分钟无 AI 版」并未配置任何模型后端，因此直接调用 `verify --fix` 会报「no AI backend configured」。
+
+- 若只想验证不修复：用 `autoship verify pytest`（不带 `--fix`）；
+- 若要体验修复：按 Quickstart 的「+5 分钟带 AI 版」配置 Ollama，详见 [快速开始](quickstart.md)。
+- 这是设计行为，非 bug，详见 [已知问题](known-issues.md)。
+
+### Quickstart 跑完想体验完整 AI 功能怎么配？
+
+1. 安装并启动 [Ollama](https://ollama.com/)；
+2. 拉取一个模型：`ollama pull qwen2.5-coder:1.5b`（也可换更大模型）；
+3. 在 `.autoship.toml` 中配置 `[model]` 段，`backend = "ollama"`；
+4. 运行 `autoship doctor` 确认后端可达；
+5. 体验 `autoship verify --fix pytest` 与 `autoship commit`（AI 生成 message）。
+
+完整选项（含云端模型）见 [模型配置](models.md)。
+
+### 如何选模型？
+
+按场景选择：
+
+- **入门 / 低配机器**：本地 Ollama + `qwen2.5-coder:1.5b` 或 `phi3:mini`，速度快、显存占用低。
+- **本地高质量**：`qwen2.5-coder:7b`、`deepseek-coder:6.7b`，需要 8GB+ 显存。
+- **云端高质量**：OpenAI `gpt-4o-mini` / `gpt-4o`、Anthropic Claude、Azure OpenAI，需联网与 API key。
+- **隐私优先**：始终用本地模型，绝不配置云端 provider。
+
+详见 [模型配置](models.md) 的选型表。
+
+### 插件安装失败排查
+
+`autoship plugin install <name>` 失败时按以下顺序排查：
+
+1. 网络：能否访问 PyPI？`pip install <name>` 是否成功；
+2. 信任等级：未审核的插件需先确认提示或显式 `autoship plugin trust <name> community`；
+3. 权限：插件若声明 `shell = true`，需在交互确认中允许；
+4. 兼容性：插件声明的 AutoShip 版本范围是否覆盖当前版本（`autoship --version`）；
+5. 日志：`autoship --verbose plugin install <name>` 查看详细错误。
+
+详见 [故障排查](troubleshooting.md)。
+
+### 三语文档同步策略说明
+
+- **源语言**：中文（zh）为源，en/ja 为翻译；
+- **同步窗口**：新内容先在 zh 落地，en/ja 通常在数小时到数天内同步；
+- **CI 校验**：i18n 完整性检查会对比三语文件清单，缺页或缺条目会告警；
+- **命令代码块不翻译**：三语中的 shell / toml / yaml 代码块保持英文，仅注释与说明文字本地化；
+- **链接相对路径**：跨页链接使用相对路径，三语目录结构保持一致（`docs/`、`docs/en/`、`docs/ja/`）。
+
+如发现翻译滞后或缺漏，欢迎在 [GitHub Issues](https://github.com/MS33834/autoship-cli/issues) 提交。

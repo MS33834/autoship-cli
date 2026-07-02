@@ -1,3 +1,6 @@
+---
+title: plugin
+---
 # plugin
 
 Manage plugins.

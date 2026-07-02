@@ -1,3 +1,6 @@
+---
+title: Command Reference
+---
 # Command Reference
 
 AutoShip CLI commands follow a unified lifecycle: load configuration, invoke `pre_*` hooks, execute the command body, invoke `post_*` hooks, and record audit logs. This reference provides the full syntax, arguments, options, and examples for every command.

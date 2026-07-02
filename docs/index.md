@@ -1,8 +1,22 @@
 # AutoShip CLI
 
-> 本地优先的智能交付助手（Local-first intelligent delivery assistant）
+> 你的代码，从不上云
 
-AutoShip-CLI 帮助开发者自动化项目开发后的清理、验证、提交与上传流程。所有核心处理默认在本地完成，代码无需上传云端。
+<div align="center">
+
+**本地优先的智能交付助手**
+
+清理 · 验证 · 提交 · 上传，全程不离开你的机器
+
+```bash
+pipx install autoship
+```
+
+[5 分钟快速开始](quickstart.md) · [为什么选 AutoShip](why-autoship.md)
+
+</div>
+
+---
 
 ## 核心特性
 

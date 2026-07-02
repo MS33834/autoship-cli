@@ -1,3 +1,6 @@
+---
+title: Plugins
+---
 # Plugins
 
 AutoShip-CLI uses [pluggy](https://pluggy.readthedocs.io/) to implement its plugin architecture. Plugins extend command behavior by declaring lifecycle hooks — for example, running extra checks before `verify`, or providing AI fix suggestions when a command fails.

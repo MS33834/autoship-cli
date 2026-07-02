@@ -1,3 +1,6 @@
+---
+title: verify
+---
 # verify
 
 Run a verification command and capture errors for AI-assisted fixing.

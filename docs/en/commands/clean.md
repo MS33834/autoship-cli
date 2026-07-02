@@ -1,3 +1,6 @@
+---
+title: clean
+---
 # clean
 
 Clean and format project code.
@@ -45,6 +48,16 @@ Skip confirmation:
 
 ```bash
 autoship clean --yes
+```
+
+Expected output example:
+
+```text
+reformatted /path/to/project/hello.py
+
+All done! ✨ 🍰 ✨
+1 file reformatted.
+Clean complete.
 ```
 
 ## Output Notes / Common Errors

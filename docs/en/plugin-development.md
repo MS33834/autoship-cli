@@ -1,3 +1,6 @@
+---
+title: Plugin Development Guide
+---
 # Plugin Development Guide
 
 AutoShip-CLI's plugin system is based on [pluggy](https://pluggy.readthedocs.io/). You only need to implement the hooks defined in `autoship.hookspec.AutoShipHookSpec` and register the plugin object to the `autoship.plugins` entry point.

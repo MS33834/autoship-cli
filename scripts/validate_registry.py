@@ -17,6 +17,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 import jsonschema
 
@@ -42,7 +43,17 @@ VALID_LICENSES = {
 }
 
 TRUST_LEVELS = {"builtin", "verified", "community", "untrusted"}
-REQUIRED_FIELDS = {"name", "package", "version", "description", "trust_level", "entry_point", "maintainer", "license", "publisher"}
+REQUIRED_FIELDS = {
+    "name",
+    "package",
+    "version",
+    "description",
+    "trust_level",
+    "entry_point",
+    "maintainer",
+    "license",
+    "publisher",
+}
 
 
 def _error(message: str) -> None:
@@ -58,7 +69,7 @@ def validate_version(version: str) -> bool:
     return bool(re.match(r"^\d+(\.\d+)*(?:[a-zA-Z]+\d+)?$", version))
 
 
-def validate_plugin(plugin: dict, index: int, names: set[str]) -> int:
+def validate_plugin(plugin: dict[str, Any], index: int, names: set[str]) -> int:
     """Validate a single plugin entry. Returns the number of errors."""
     errors = 0
     prefix = f"Plugin #{index}"
@@ -124,17 +135,18 @@ def validate_plugin(plugin: dict, index: int, names: set[str]) -> int:
             _error(f"{prefix} 'permissions' must be an object")
             errors += 1
         else:
+            typed_permissions = cast(dict[str, Any], permissions)
             for key, expected_type in (
                 ("filesystem", str),
                 ("network", bool),
                 ("shell", bool),
                 ("git", bool),
             ):
-                value = permissions.get(key)
+                value = typed_permissions.get(key)
                 if value is not None and not isinstance(value, expected_type):
                     _error(f"{prefix} 'permissions.{key}' must be a {expected_type.__name__}")
                     errors += 1
-            env = permissions.get("env")
+            env = typed_permissions.get("env")
             if env is not None and not isinstance(env, list):
                 _error(f"{prefix} 'permissions.env' must be a list")
                 errors += 1
@@ -143,7 +155,9 @@ def validate_plugin(plugin: dict, index: int, names: set[str]) -> int:
 
 
 def main() -> int:
-    registry_path = Path(__file__).resolve().parents[1] / "src" / "autoship" / "registry" / "plugins.json"
+    registry_path = (
+        Path(__file__).resolve().parents[1] / "src" / "autoship" / "registry" / "plugins.json"
+    )
     if not registry_path.exists():
         _error(f"Registry index not found: {registry_path}")
         return 1
@@ -158,15 +172,16 @@ def main() -> int:
     if not isinstance(plugins, list):
         _error("'plugins' must be a list")
         return 1
+    typed_plugins = cast(list[object], plugins)
 
     names: set[str] = set()
     total_errors = 0
-    for idx, plugin in enumerate(plugins, start=1):
+    for idx, plugin in enumerate(typed_plugins, start=1):
         if not isinstance(plugin, dict):
             _error(f"Plugin #{idx} is not an object")
             total_errors += 1
             continue
-        total_errors += validate_plugin(plugin, idx, names)
+        total_errors += validate_plugin(cast(dict[str, Any], plugin), idx, names)
 
     if total_errors:
         print(f"Validation failed with {total_errors} error(s).")
@@ -197,7 +212,7 @@ def main() -> int:
             )
             return 1
 
-    print(f"Validation passed for {len(plugins)} plugin(s).")
+    print(f"Validation passed for {len(typed_plugins)} plugin(s).")
     return 0
 
 

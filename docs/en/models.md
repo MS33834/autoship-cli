@@ -1,3 +1,6 @@
+---
+title: Model Configuration & Backends
+---
 # Model Configuration & Backends
 
 AutoShip's AI features (such as generating commit messages and error-fix suggestions) are dispatched uniformly through the **model routing layer**. You can configure multiple backends in `.autoship.toml`, and the system will automatically select one based on model tier, priority, and availability.

@@ -44,7 +44,7 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Build docs
-        run: uv run mkdocs build --site-dir website/dist/docs
+        run: uv run mkdocs build --strict --site-dir website/dist/docs
 
       - name: Setup Node.js
         uses: actions/setup-node@v6

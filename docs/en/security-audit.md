@@ -1,3 +1,6 @@
+---
+title: Security Audit & Penetration Testing
+---
 # Security Audit & Penetration Testing
 
 This document records AutoShip-CLI's security audit process, tool configuration, and historical results, for reference by security teams, auditors, and advanced users.

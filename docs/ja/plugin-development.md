@@ -1,3 +1,6 @@
+---
+title: プラグイン開発ガイド
+---
 # プラグイン開発ガイド
 
 AutoShip-CLI のプラグインシステムは [pluggy](https://pluggy.readthedocs.io/) に基づいています。`autoship.hookspec.AutoShipHookSpec` で定義されたフックを実装し、プラグインオブジェクトを `autoship.plugins` entry point に登録するだけです。

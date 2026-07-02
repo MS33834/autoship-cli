@@ -16,7 +16,7 @@
 
 [查看文字版演示](docs/demo.md)
 
-> 文字版演示已就绪：[查看 docs/demo.md](docs/demo.md)。
+> 演示即将上线，查看[演示脚本](docs/demo.md)。
 > asciinema 视频录制完成后将替换为以下命令生成的 `docs/demo.cast`：
 >
 > ```bash

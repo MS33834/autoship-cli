@@ -81,11 +81,11 @@ def insert_entry(content: str, entry: str, version: str) -> str:
     """
     del version  # the entry already carries the heading; kept for a stable API
     lines = content.splitlines()
-    headings = [
-        (i, VERSION_HEADING_RE.match(line).group(1))
-        for i, line in enumerate(lines)
-        if VERSION_HEADING_RE.match(line)
-    ]
+    headings: list[tuple[int, str]] = []
+    for i, line in enumerate(lines):
+        match = VERSION_HEADING_RE.match(line)
+        if match:
+            headings.append((i, match.group(1)))
     released = [(i, name) for i, name in headings if name != UNRELEASED]
     has_unreleased = any(name == UNRELEASED for _, name in headings)
 

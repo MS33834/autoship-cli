@@ -9,6 +9,13 @@
 - 主题：深色背景，高对比度
 - 清屏命令：`clear`
 
+## 录制环境
+
+- Python 3.12
+- Ollama 0.5.x
+- 模型：`qwen2.5-coder:1.5b`
+- 操作系统：Ubuntu 22.04（或 macOS 14）
+
 ## 演示脚本
 
 ```bash
@@ -37,25 +44,27 @@ autoship doctor
 
 # 5. 清理代码
 clear
-echo "$ autoship clean"
+echo "$ autoship clean --yes"
 autoship clean --yes
 
-# 6. 验证
+# 6. 生成提交信息并提交
+#    autoship commit 会自动 stage 改动，无需手动 git add
 clear
-echo "$ autoship verify python --version"
-autoship verify python --version
+echo "$ autoship commit"
+autoship commit
 
-# 7. 插件列表
+# 7. 运行测试验证
 clear
-echo "$ autoship plugin list"
-autoship plugin list
+echo "$ autoship verify pytest"
+autoship verify pytest
 
-# 8. 生成提交信息（演示模式，不实际提交）
+# 8. 安全卖点：日志中的凭证会被自动脱敏
+#    token 形如 sk-*** 不会被写入日志，可放心开启 verbose 排查
 clear
-echo "$ git diff --cached | autoship commit --dry-run"
-git diff --cached 2>/dev/null | autoship commit --dry-run || echo "(演示：无 staged changes)"
+echo '$ autoship commit --verbose 2>&1 | grep -i "redact\|mask\|***"'
+autoship commit --verbose 2>&1 | grep -i "redact\|mask\|***"
 
-# 9. 上传（演示模式）
+# 9. 上传（演示模式，不实际上传）
 clear
 echo "$ autoship upload --target pypi --dry-run"
 autoship upload --target pypi --dry-run

@@ -1,3 +1,6 @@
+---
+title: 1.0.0 Release Announcement
+---
 # 1.0.0 Release Announcement
 
 ## Chinese Announcement

@@ -1,3 +1,6 @@
+---
+title: commit
+---
 # commit
 
 Generate a commit message and commit staged/unstaged changes.

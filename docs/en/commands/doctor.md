@@ -1,3 +1,6 @@
+---
+title: doctor
+---
 # doctor
 
 Diagnose the AutoShip environment and dependencies.

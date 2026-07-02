@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ms33834.github.io/autoship-cli/docs/sitemap.xml

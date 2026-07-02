@@ -1,3 +1,6 @@
+---
+title: commit
+---
 # commit
 
 コミットメッセージを生成して Git コミットを実行します。`-m` を指定しない場合、AutoShip はローカルモデルを呼び出し、diff と stats に基づいて Conventional Commits スタイルのコミットメッセージを生成します。

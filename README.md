@@ -16,7 +16,7 @@
 
 [View text demo](docs/demo.md)
 
-> The text demo is ready: [view docs/demo.md](docs/demo.md).
+> Demo coming soon — check out the [demo script](docs/demo.md).
 > Once the asciinema video is recorded, this section will be replaced by `docs/demo.cast`:
 >
 > ```bash

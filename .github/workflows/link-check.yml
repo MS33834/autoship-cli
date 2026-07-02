@@ -1,0 +1,61 @@
+name: Link check
+
+on:
+  schedule:
+    - cron: "0 3 * * *"  # nightly, after the full Nightly run
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "website/**"
+      - "README.md"
+      - "README.zh.md"
+      - "README.ja.md"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  external-links:
+    name: External link check (lychee)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build docs (so generated links exist)
+        run: |
+          uv sync --all-extras --dev 2>/dev/null || true
+          uv run mkdocs build --site-dir /tmp/mkdocs-build 2>/dev/null || true
+
+      - name: Link Checker
+        uses: lycheeverse/lychee-action@v2
+        with:
+          fail: true
+          args: >-
+            --no-progress
+            --max-concurrency 16
+            --exclude "localhost"
+            --exclude "127.0.0.1"
+            --exclude "autoship.dev"
+            --accept 200,301,302,429
+            "docs/**/*.md"
+            "website/**/*.html"
+            "README.md"
+            "README.zh.md"
+            "README.ja.md"
+
+      - name: Create issue on failure
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Broken external links detected (nightly ${new Date().toISOString().slice(0,10)})`,
+              body: `See ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              labels: ["docs", "broken-links"]
+            });

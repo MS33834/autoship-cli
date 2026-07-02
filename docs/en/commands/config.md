@@ -1,3 +1,6 @@
+---
+title: config
+---
 # config
 
 Inspect and manage AutoShip configuration.

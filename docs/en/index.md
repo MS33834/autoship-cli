@@ -1,8 +1,25 @@
+---
+title: AutoShip CLI
+---
 # AutoShip CLI
 
-> Local-first intelligent delivery assistant
+> Your code, never in the cloud
 
-AutoShip-CLI helps developers automate cleanup, verification, commit, and upload workflows after development. All core processing runs locally by default; your code never needs to leave your machine.
+<div align="center">
+
+**Local-first intelligent delivery assistant**
+
+Clean · Verify · Commit · Upload — without leaving your machine
+
+```bash
+pipx install autoship
+```
+
+[5-minute Quick Start](quickstart.md) · [Why AutoShip](why-autoship.md)
+
+</div>
+
+---
 
 ## Core Features
 

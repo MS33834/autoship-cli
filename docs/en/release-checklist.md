@@ -1,3 +1,6 @@
+---
+title: Release Checklist
+---
 # Release Checklist
 
 This checklist guides AutoShip-CLI maintainers through completing an official or pre-release version. Before release, at least two maintainers must cross-review and check off all items.

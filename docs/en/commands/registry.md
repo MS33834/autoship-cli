@@ -1,3 +1,6 @@
+---
+title: registry
+---
 # registry
 
 Browse the plugin registry and sync the index.

@@ -1,3 +1,6 @@
+---
+title: Plugin Publishing Guide
+---
 # Plugin Publishing Guide
 
 This document explains how to submit a plugin to the official AutoShip plugin store.

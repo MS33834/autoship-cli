@@ -1,3 +1,6 @@
+---
+title: Demo Script & Recording Guide
+---
 # Demo Script & Recording Guide
 
 This page provides the asciinema demo recording script for AutoShip-CLI. Save the script content and use [asciinema](https://asciinema.org/) to record and export it as `website/demo.cast`.
@@ -8,6 +11,13 @@ This page provides the asciinema demo recording script for AutoShip-CLI. Save th
 - Font: monospace font; Fira Code or JetBrains Mono recommended
 - Theme: dark background, high contrast
 - Clear command: `clear`
+
+## Recording Environment
+
+- Python 3.12
+- Ollama 0.5.x
+- Model: `qwen2.5-coder:1.5b`
+- OS: Ubuntu 22.04 (or macOS 14)
 
 ## Demo Script
 
