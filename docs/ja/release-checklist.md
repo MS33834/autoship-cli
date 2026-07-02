@@ -9,9 +9,9 @@
 - [ ] バージョン番号が [SemVer](https://semver.org/lang/ja/) に従っていることを確認。
   - 正式版：`MAJOR.MINOR.PATCH`（例：`1.0.0`）。
   - プレリリース版：`-alpha.N`、`-beta.N`、`-rc.N` を付加（例：`1.1.0-rc.1`）。
-- [ ] ルートディレクトリの [`CHANGELOG.md`](https://github.com/MS33834/autoship-cli/blob/main/CHANGELOG.md) とドキュメントの [`changelog.md`](./changelog.md) を更新。
-  - 新しいバージョンセクションを追加し、`Added` / `Changed` / `Deprecated` / `Removed` / `Fixed` / `Security` サブセクションを含める。
-  - リリース日（UTC+8）を明記。
+- [ ] ルートディレクトリの [`CHANGELOG.md`](https://github.com/MS33834/autoship-cli/blob/main/CHANGELOG.md) は GitHub Release 作成後に Release ワークフローが自動生成します（`scripts/release_changelog.py` → `update-changelog` job）。リリース後 `main` に戻り、自動書き込みされたバージョンセクションを確認。
+  - バージョンセクション形式：`Added` / `Changed` / `Deprecated` / `Removed` / `Fixed` / `Security` サブセクション、リリース日（UTC+8）を明記。
+- [ ] ドキュメントの [`changelog.md`](./changelog.md)（zh/en/ja の3言語）を同期更新。
 - [ ] `pyproject.toml` の `project.version` が対象バージョンと一致することを確認。
 - [ ] `autoship-sdk/pyproject.toml` のバージョン番号と依存制約が同期更新されていることを確認。
 

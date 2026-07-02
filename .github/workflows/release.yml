@@ -224,3 +224,61 @@ jobs:
           generate_release_notes: true
           prerelease: ${{ needs.resolve-target.outputs.repository == 'testpypi' }}
           files: artifacts/*
+
+  update-changelog:
+    name: Update CHANGELOG.md
+    runs-on: ubuntu-latest
+    needs: github-release
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Fetch release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          gh release view "$TAG" --json tagName,publishedAt,body -O release.json
+          python3 - <<'PY'
+          import datetime as dt
+          import json
+          import pathlib
+
+          data = json.loads(pathlib.Path("release.json").read_text())
+          version = (data.get("tagName") or "").lstrip("v")
+          published = data.get("publishedAt") or ""
+          date = published[:10] if published else dt.date.today().isoformat()
+          pathlib.Path("version.txt").write_text(version)
+          pathlib.Path("date.txt").write_text(date)
+          pathlib.Path("notes.md").write_text(data.get("body") or "")
+          PY
+
+      - name: Update CHANGELOG.md
+        run: |
+          python3 scripts/release_changelog.py \
+            --version "$(cat version.txt)" \
+            --date "$(cat date.txt)" \
+            --notes-file notes.md \
+            --changelog CHANGELOG.md
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "No CHANGELOG.md changes; skipping commit."
+            exit 0
+          fi
+          git add CHANGELOG.md
+          git commit -m "docs(changelog): automated update for v$(cat version.txt)"
+          git push origin main

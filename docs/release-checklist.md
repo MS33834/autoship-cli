@@ -9,9 +9,9 @@
 - [ ] 确认版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
   - 正式版：`MAJOR.MINOR.PATCH`，例如 `1.0.0`。
   - 预发布版：附加 `-alpha.N`、`-beta.N` 或 `-rc.N`，例如 `1.1.0-rc.1`。
-- [ ] 更新根目录 [`CHANGELOG.md`](https://github.com/MS33834/autoship-cli/blob/main/CHANGELOG.md) 与文档 [`changelog.md`](./changelog.md)。
-  - 新增版本节，包含 `Added` / `Changed` / `Deprecated` / `Removed` / `Fixed` / `Security` 子节。
-  - 标注发布日期（UTC+8）。
+- [ ] 根目录 [`CHANGELOG.md`](https://github.com/MS33834/autoship-cli/blob/main/CHANGELOG.md) 由 Release 工作流在 GitHub Release 创建后自动生成（`scripts/release_changelog.py` → `update-changelog` job）；发布后回到 `main` 复核自动写入的版本节。
+  - 版本节格式：`Added` / `Changed` / `Deprecated` / `Removed` / `Fixed` / `Security` 子节，标注发布日期（UTC+8）。
+- [ ] 同步更新文档 [`changelog.md`](./changelog.md)（zh/en/ja 三语版本）。
 - [ ] 确认 `pyproject.toml` 中 `project.version` 与目标版本一致。
 - [ ] 确认 `autoship-sdk/pyproject.toml` 中版本号与依赖约束同步更新。
 

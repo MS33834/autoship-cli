@@ -9,9 +9,9 @@ This checklist guides AutoShip-CLI maintainers through completing an official or
 - [ ] Confirm the version number follows [SemVer](https://semver.org/).
   - Stable release: `MAJOR.MINOR.PATCH`, e.g. `1.0.0`.
   - Pre-release: append `-alpha.N`, `-beta.N`, or `-rc.N`, e.g. `1.1.0-rc.1`.
-- [ ] Update the root [`CHANGELOG.md`](https://github.com/MS33834/autoship-cli/blob/main/CHANGELOG.md) and the documentation [`changelog.md`](./changelog.md).
-  - Add a new version section with `Added` / `Changed` / `Deprecated` / `Removed` / `Fixed` / `Security` subsections.
-  - Mark the release date (UTC+8).
+- [ ] The root [`CHANGELOG.md`](https://github.com/MS33834/autoship-cli/blob/main/CHANGELOG.md) is generated automatically by the Release workflow after the GitHub Release is created (`scripts/release_changelog.py` → `update-changelog` job); after release, return to `main` and review the auto-written version section.
+  - Version section format: `Added` / `Changed` / `Deprecated` / `Removed` / `Fixed` / `Security` subsections, with the release date (UTC+8).
+- [ ] Update the documentation [`changelog.md`](./changelog.md) (zh/en/ja locales) in sync.
 - [ ] Confirm that `project.version` in `pyproject.toml` matches the target version.
 - [ ] Confirm that the version number and dependency constraints in `autoship-sdk/pyproject.toml` are updated in sync.
 
