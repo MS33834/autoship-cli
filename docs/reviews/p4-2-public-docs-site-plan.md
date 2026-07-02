@@ -278,3 +278,48 @@
 > 每完成一个子任务，在此追加一行，便于回溯
 
 （执行时按时间顺序追加）
+
+### P4-2 执行记录（2026-07-02）
+
+| 序号 | 提交 | 内容 | 结果 |
+|---|---|---|---|
+| 0 | `058b1fc` | 统一升级 6 个 GitHub Actions（setup-uv v3→v7、upload-artifact v4→v7、download-artifact v4→v8、setup-node v4→v6、deploy-pages v4→v5），在一个分支合并后关闭 Dependabot PR #38–#42 | CI 绿 |
+| 1 | `8bc75eb` | P4-2 主体：三语 quickstart/why-autoship/troubleshooting/known-issues、mkdocs strict 门禁、CI docs job（i18n sync + command docs sync + secret scan）、lychee 外链检查、robots.txt、CJK 搜索、landing hero、跨语链接修复、front matter 补齐、demo 对齐、CONTRIBUTING 远程健康检查章节、PLAN/CHANGELOG 同步 | 本地全绿；CI 在 Command docs sync check 步骤失败 |
+| 2 | `2d3ef53` | fix(ci)：`sync_command_docs.py` 兼容非 TTY `--help` 输出（`_help_env()` 注入 `NO_COLOR=1`/`TERM=dumb`/`COLUMNS=120`/`_TYPER_FORCE_DISABLE_TERMINAL=1`，`OPTION_LEAD_RE` 剥离框字符，`parse_subcommands` 兼容 rich 框与纯文本两种头） | CI #149 绿、E2E #149 绿 |
+| 3 | `375edd9` | docs(changelog)：将 sync_command_docs.py 修复写入 `[Unreleased]/Fixed` | CI #150 绿、E2E #150 绿 |
+| 4 | workflow_dispatch | 手动触发 Deploy Website #27（因 `scripts/` 不在 website.yml paths 触发白名单内） | Deploy #27 绿，Pages 部署成功 |
+
+### 远程仓库健康检查（交付前）
+
+- **开放 PR**：0（Dependabot #38–#42 已由 #43 统一升级合并关闭）
+- **开放 Issue**：0
+- **分支**：GitHub 与 GitCode 均仅剩 `main`（5 个 dependabot 残留分支已在双仓库删除，本地 `git fetch --prune` 同步）
+- **CI**：`375edd9` 上 CI #150 + E2E #150 全绿；`2d3ef53` 上 CI #149 + E2E #149 全绿
+- **Deploy Website**：#27 全绿（此前 #25/#26 失败原因为 GitHub Pages 部署队列超时 `deployment_queued`，属瞬时基础设施问题，非构建问题）
+- **GitCode 镜像**：已同步至 `375edd9`
+- **Dependabot 安全公告**：无新增
+
+### 文档站点线上验证（2026-07-02）
+
+| 路径 | HTTP |
+|---|---|
+| `/` (landing) | 200 |
+| `/robots.txt` | 200 |
+| `/docs/` (zh index) | 200 |
+| `/docs/quickstart/` | 200 |
+| `/docs/why-autoship/` | 200 |
+| `/docs/troubleshooting/` | 200 |
+| `/docs/known-issues/` | 200 |
+| `/docs/en/quickstart/` | 200 |
+| `/docs/ja/quickstart/` | 200 |
+| `/docs/commands/init/` | 200 |
+| `/docs/sitemap.xml` | 200 |
+
+### 关键经验（供后续阶段参考）
+
+1. **Dependabot 跨大版本升级**：5 个 action 跨大版本升级有破坏性风险，应在一个 feature 分支统一升级 + CI 验证后一次性合并，关闭多个 Dependabot PR，避免逐个合并产生中间状态 CI 红。
+2. **TTY vs 非 TTY 解析差异**：typer 0.26.7 在 `HAS_RICH` 且非 dumb terminal 时用 rich 框渲染 `--help`；CI 环境（`GITHUB_ACTIONS=true`）会强制 `FORCE_TERMINAL=True`。任何依赖 `--help` 文本解析的脚本必须用确定性环境变量（`NO_COLOR=1`/`TERM=dumb`/`_TYPER_FORCE_DISABLE_TERMINAL=1`）锁定输出格式，并兼容 rich 框与纯文本两种布局。
+3. **GitHub Pages 部署超时**：`deploy-pages` action 在 Pages 部署队列卡在 `deployment_queued` 超过 ~1 分钟会超时失败，属 GitHub 侧瞬时问题，重跑或手动触发 workflow_dispatch 即可，不需改代码。
+4. **website.yml paths 白名单**：仅 docs/website/mkdocs.yml/registry 相关改动触发部署；scripts/ 改动不会触发，需手动 `workflow_dispatch` 验证部署。
+5. **mkdocs i18n snippet 文件**：`--8<--` 引入的 snippet 文件在 en/ja 独立维护，结构性校验（H2/H3/code block 数量）需跳过，否则误报。
+6. **远程仓库健康检查**：已写入 CONTRIBUTING.md，要求每个阶段前后必做 PR/Issue/分支/CI/Dependabot 五项检查。
