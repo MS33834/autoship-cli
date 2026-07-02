@@ -48,6 +48,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   en/ja aligned to zh heading/code-block counts.
 - `scripts/validate_registry.py` and `scripts/release_changelog.py` pyright
   strict-mode issues resolved.
+- `scripts/sync_command_docs.py` now parses `--help` output identically in a
+  local TTY and in CI's non-TTY context. typer renders a rich panel locally
+  (`╭─ Commands ─` with `│ --xxx` rows) but plain click text in GitHub Actions
+  (`Commands:`/`Options:` sections with `  --xxx` rows); the old parser only
+  recognised the panel layout, so every command reported a DIFF in CI. The
+  subprocess env is now pinned (`NO_COLOR=1`, `TERM=dumb`, `COLUMNS=120`,
+  `_TYPER_FORCE_DISABLE_TERMINAL=1`) and both layouts are parsed.
 
 ## [1.0.0] - 2026-06-19
 
